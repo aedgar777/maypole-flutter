@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1069925301177",
+    "project_id": "maypole-flutter-ce6c3",
+    "storage_bucket": "maypole-flutter-ce6c3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1069925301177:android:6c087b01bcd4f66c4e1468",
+        "android_client_info": {
+          "package_name": "app.maypole.maypole"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAySMsqTui6rG0iVCc4f3fmMhwLfsMd-W0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
