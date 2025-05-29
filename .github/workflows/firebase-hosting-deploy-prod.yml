@@ -30,3 +30,4 @@ jobs:
           fireBaseServiceAccount: ${{ secrets.MAYPOLE_FIREBASE_SERVICE_ACCOUNT }}
           projectId: maypole-flutter-ce6c3
           version: prod
+          channelId: live
