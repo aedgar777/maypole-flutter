@@ -1,11 +1,14 @@
-
-
 import 'package:go_router/go_router.dart';
+import '../features/identity/presentation/login_screen.dart';
 
-final GoRouter _router = GoRouter(
-    initialLocation: '/',
+final GoRouter router = GoRouter(
+    initialLocation: '/login',
     routes: <RouteBase>[
-      // Put Routes here
+        GoRoute(
+            path: '/login',
+            builder: (context, state) => const LoginScreen(),
+        ),
+
     ]
 
 );
