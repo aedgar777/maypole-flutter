@@ -28,11 +28,12 @@
     "indexes": "firestore.indexes.json"
   },
   "apphosting": {
-    "backendId": "maypole-flutter",
-    "rootDir": ".",
+    "site": "maypole-flutter-ce6c3",
+    "source": "build/web",
     "ignore": [
-      "node_modules",
-      ".git",
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
       "firebase-debug.log",
       "firebase-debug.*.log",
       "functions"
