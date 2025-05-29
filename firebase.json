@@ -22,14 +22,9 @@
       }
     }
   },
-  "firestore": {
-    "database": "(default)",
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  },
   "apphosting": {
-    "site": "maypole-flutter-ce6c3",
-    "source": "build/web",
+    "backendId": "default",
+    "rootDir": ".",
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -38,5 +33,12 @@
       "firebase-debug.*.log",
       "functions"
     ]
+
+  },
+  "firestore": {
+    "database": "(default)",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   }
+
 }
