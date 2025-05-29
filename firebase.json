@@ -1,1 +1,41 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"maypole-flutter-ce6c3","appId":"1:1069925301177:android:6c087b01bcd4f66c4e1468","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"maypole-flutter-ce6c3","configurations":{"android":"1:1069925301177:android:6c087b01bcd4f66c4e1468","ios":"1:1069925301177:ios:c53b497e66d5e9c24e1468","macos":"1:1069925301177:ios:c53b497e66d5e9c24e1468","web":"1:1069925301177:web:b34f1952febe6bce4e1468","windows":"1:1069925301177:web:a55c1912085f464e4e1468"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "maypole-flutter-ce6c3",
+          "appId": "1:1069925301177:android:6c087b01bcd4f66c4e1468",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "maypole-flutter-ce6c3",
+          "configurations": {
+            "android": "1:1069925301177:android:6c087b01bcd4f66c4e1468",
+            "ios": "1:1069925301177:ios:c53b497e66d5e9c24e1468",
+            "macos": "1:1069925301177:ios:c53b497e66d5e9c24e1468",
+            "web": "1:1069925301177:web:b34f1952febe6bce4e1468",
+            "windows": "1:1069925301177:web:a55c1912085f464e4e1468"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "database": "(default)",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "apphosting": {
+    "backendId": "maypole-backend",
+    "rootDir": "/",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "firebase-debug.log",
+      "firebase-debug.*.log",
+      "functions"
+    ]
+  }
+}
