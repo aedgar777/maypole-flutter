@@ -28,8 +28,8 @@
     "indexes": "firestore.indexes.json"
   },
   "apphosting": {
-    "backendId": "maypole-backend",
-    "rootDir": "/",
+    "backendId": "maypole-flutter",
+    "rootDir": ".",
     "ignore": [
       "node_modules",
       ".git",

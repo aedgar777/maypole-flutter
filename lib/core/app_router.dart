@@ -1,10 +1,7 @@
-
-
 import 'package:go_router/go_router.dart';
-
 import '../features/identity/presentation/login_screen.dart';
 
-final GoRouter _router = GoRouter(
+final GoRouter router = GoRouter(
     initialLocation: '/login',
     routes: <RouteBase>[
         GoRoute(
