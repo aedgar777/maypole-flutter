@@ -16,19 +16,6 @@
       }
     ]
   },
-  "apphosting": {
-    "backendId": "default",
-    "rootDir": ".",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**",
-      "firebase-debug.log",
-      "firebase-debug.*.log",
-      "functions"
-    ]
-
-  },
   "firestore": {
     "database": "(default)",
     "rules": "firestore.rules",
