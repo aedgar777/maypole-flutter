@@ -29,7 +29,7 @@
   },
   "apphosting": {
     "backendId": "maypole-flutter",
-    "rootDir": "build/web",
+    "rootDir": ".",
     "ignore": [
       "node_modules",
       ".git",
