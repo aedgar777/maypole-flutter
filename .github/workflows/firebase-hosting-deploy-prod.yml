@@ -24,9 +24,9 @@ jobs:
         run: flutter build web --release
 
       - name: Deploy to Firebase App Hosting
-        uses: google-github-actions/deploy-appengine@v1
+        uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          credentials: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}
+          credentials: ${{ secrets.MAYPOLE_FIREBASE_SERVICE_ACCOUNT }}
           deliverables: build/web
           project_id: maypole-flutter-ce6c3
           version: prod
