@@ -28,7 +28,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _showErrorSnackBar(String message) {
-    _scaffoldMessengerKey.currentState?.hideCurrentSnackBar(); // Hide any current snackbar
+    _scaffoldMessengerKey.currentState?.hideCurrentSnackBar();
     _scaffoldMessengerKey.currentState?.showSnackBar(
       SnackBar(
         content: Text(message),
@@ -47,8 +47,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // Read the LoginViewModel itself to call its methods
     final loginViewModel = ref.read(loginViewModelProvider.notifier);
 
-    // Listen for error messages from the ViewModel
-    // This will show a SnackBar whenever errorMessage changes and is not null
     ref.listen<LoginState>(loginViewModelProvider, (previous, current) {
       if (current.errorMessage != null && current.errorMessage != previous?.errorMessage) {
         _showErrorSnackBar(current.errorMessage!);
@@ -59,7 +57,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       key: _scaffoldMessengerKey,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Login / Register'),
         ),
         body: authState.when(
           data: (user) {
@@ -179,7 +176,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         loginViewModel.signInWithGoogle();
                       },
                       icon: Image.asset(
-                        'assets/google_logo.png', // Ensure this asset is in your pubspec.yaml
+                        'assets/icons/ic_google_logo.png', // Ensure this asset is in your pubspec.yaml
                         height: 24.0,
                       ),
                       label: const Text('Sign in with Google', style: TextStyle(fontSize: 18)),
