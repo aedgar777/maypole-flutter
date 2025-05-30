@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:maypole/features/identity/presentation/login_viewmodel.dart';
+import 'package:maypole/features/identity/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../providers.dart';
-import 'login_viewmodel.dart';
+import 'registration_screen.dart';
 
+final loginViewModelProvider = StateNotifierProvider<LoginViewModel, LoginState>((ref) {
+  final authService = ref.read(authServiceProvider);
+  return LoginViewModel(authService: authService);
+});
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -12,13 +20,9 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-
-  // Using a GlobalKey to manage the SnackBar state
-  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
-
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   @override
   void dispose() {
@@ -27,64 +31,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  void _showErrorSnackBar(String message) {
-    _scaffoldMessengerKey.currentState?.hideCurrentSnackBar();
-    _scaffoldMessengerKey.currentState?.showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    // Watch the auth state changes provider
-    final authState = ref.watch(authStateChangesProvider);
-
-    // Watch the LoginViewModel's state
+    final loginViewModel = ref.watch(loginViewModelProvider.notifier);
     final loginState = ref.watch(loginViewModelProvider);
-    // Read the LoginViewModel itself to call its methods
-    final loginViewModel = ref.read(loginViewModelProvider.notifier);
 
-    ref.listen<LoginState>(loginViewModelProvider, (previous, current) {
-      if (current.errorMessage != null && current.errorMessage != previous?.errorMessage) {
-        _showErrorSnackBar(current.errorMessage!);
-      }
-    });
-
-    return ScaffoldMessenger(
-      key: _scaffoldMessengerKey,
-      child: Scaffold(
-        appBar: AppBar(
-        ),
-        body: authState.when(
-          data: (user) {
-            if (user != null) {
-              // User is logged in, navigate to a home screen or show a success message
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('Logged in as: ${user.email ?? 'Google User'}'),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () async {
-                        await loginViewModel.signOut();
-                      },
-                      child: const Text('Sign Out'),
-                    ),
-                  ],
-                ),
-              );
-            } else {
-              // User is not logged in, show the login form
-              return _buildLoginForm(context, loginViewModel, loginState);
-            }
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err')),
-        ),
+    return Scaffold(
+      body: ref.watch(authStateProvider).when(
+        data: (user) {
+          if (user != null) {
+            // User is logged in, show user info and sign out button
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Logged in as: ${user.email ?? 'Google User'}'),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () async {
+                      await loginViewModel.signOut();
+                    },
+                    child: const Text('Sign Out'),
+                  ),
+                ],
+              ),
+            );
+          } else {
+            // User is not logged in, show the login form
+            return _buildLoginForm(context, loginViewModel, loginState);
+          }
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Error: $err')),
       ),
     );
   }
@@ -103,7 +81,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(
                   labelText: 'Email',
-                  border: OutlineInputBorder(),
+                  border: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey),
+                  ),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.purple),
+                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -121,7 +107,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 obscureText: true,
                 decoration: const InputDecoration(
                   labelText: 'Password',
-                  border: OutlineInputBorder(),
+                  border: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey),
+                  ),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.purple),
+                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -149,27 +143,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 50),
+                        padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 12),
                       ),
                       child: const Text('Sign In', style: TextStyle(fontSize: 18)),
                     ),
                     const SizedBox(height: 10),
-                    OutlinedButton(
+                    TextButton(
                       onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          loginViewModel.registerWithEmail(
-                            _emailController.text.trim(),
-                            _passwordController.text.trim(),
-                          );
-                        }
+                        context.go('/register'); // Navigate to registration screen
                       },
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 50),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       ),
-                      child: const Text('Register', style: TextStyle(fontSize: 18)),
+                      child: const Text('Register', style: TextStyle(fontSize: 14)),
                     ),
                     const SizedBox(height: 30),
-                    const Text('OR', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 30),
                     ElevatedButton.icon(
                       onPressed: () {
@@ -177,17 +165,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       },
                       icon: Image.asset(
                         'assets/icons/ic_google_logo.png', // Ensure this asset is in your pubspec.yaml
-                        height: 24.0,
+                        height: 32.0,
                       ),
                       label: const Text('Sign in with Google', style: TextStyle(fontSize: 18)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black,
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.0),
-                          side: const BorderSide(color: Colors.grey),
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 12),
                       ),
                     ),
                   ],

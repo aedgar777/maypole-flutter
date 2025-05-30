@@ -10,6 +10,6 @@ final loginViewModelProvider = StateNotifierProvider<LoginViewModel, LoginState>
       (ref) => LoginViewModel(authService: ref.read(authServiceProvider)),
 );
 
-final authStateChangesProvider = StreamProvider<User?>(
+final authStateProvider = StreamProvider<User?>(
       (ref) => ref.read(authServiceProvider).user,
 );

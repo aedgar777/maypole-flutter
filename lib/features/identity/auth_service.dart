@@ -17,7 +17,7 @@ class AuthService {
       );
       return result.user;
     } on FirebaseAuthException catch (e) {
-      rethrow; // Re-throw the exception for the ViewModel to handle
+      rethrow;
     } catch (e) {
       rethrow;
     }
@@ -31,7 +31,7 @@ class AuthService {
         password: password,
       );
       return result.user;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException {
 
       rethrow;
     } catch (e) {
@@ -71,7 +71,6 @@ class AuthService {
       await _googleSignIn.signOut();
       await _firebaseAuth.signOut();
     } catch (e) {
-      print('Error signing out: $e');
       rethrow;
     }
   }
