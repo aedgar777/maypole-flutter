@@ -1,29 +1,10 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../auth_service.dart';
+import '../../auth_service.dart';
+import '../../domain/states/auth_state.dart';
 
 
-@immutable
-class LoginState {
-  const LoginState({
-    this.isLoading = false,
-    this.errorMessage,
-  });
 
-  final bool isLoading;
-  final String? errorMessage;
-
-  LoginState copyWith({
-    bool? isLoading,
-    String? errorMessage,
-  }) {
-    return LoginState(
-      isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage ?? this.errorMessage,
-    );
-  }
-}
 
 class LoginViewModel extends StateNotifier<LoginState> {
   final AuthService _authService;
@@ -61,35 +42,6 @@ class LoginViewModel extends StateNotifier<LoginState> {
           break;
         default:
           message = 'Sign in failed: ${e.message}';
-      }
-      _setErrorMessage(message);
-    } catch (e) {
-      _setErrorMessage('An unexpected error occurred: $e');
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  Future<void> registerWithEmail(String email, String password) async {
-    _setLoading(true);
-    _setErrorMessage(null);
-    try {
-      await _authService.registerWithEmailAndPassword(email, password);
-      // Success
-    } on FirebaseAuthException catch (e) {
-      String message;
-      switch (e.code) {
-        case 'email-already-in-use':
-          message = 'The email address is already in use by another account.';
-          break;
-        case 'weak-password':
-          message = 'The password provided is too weak.';
-          break;
-        case 'invalid-email':
-          message = 'The email address is not valid.';
-          break;
-        default:
-          message = 'Registration failed: ${e.message}';
       }
       _setErrorMessage(message);
     } catch (e) {

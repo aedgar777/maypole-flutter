@@ -1,53 +1,95 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:maypole/core/app_session.dart';
+import 'package:maypole/features/identity/data/domain_user.dart';
+
 
 class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final AppSession _session = AppSession();
 
-  // Stream to listen to authentication state changes
   Stream<User?> get user => _firebaseAuth.authStateChanges();
 
-  // Email & Password Sign In
-  Future<User?> signInWithEmailAndPassword(String email, String password) async {
+  Future<bool> isUsernameAvailable(String username) async {
+    final querySnapshot = await _firestore
+        .collection('users')
+        .where('username', isEqualTo: username)
+        .get();
+    return querySnapshot.docs.isEmpty;
+  }
+
+  Future<String?> registerWithEmailAndPassword(
+      String email,
+      String password,
+      String username,
+      ) async {
+    try {
+      // Check username availability
+      if (!await isUsernameAvailable(username)) {
+        throw FirebaseAuthException(
+          code: 'username-taken',
+          message: 'Username is already taken',
+        );
+      }
+
+      // Create Firebase Auth user
+      UserCredential result = await _firebaseAuth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Create domain user
+
+      final DomainUser user = DomainUser(
+        username: username,
+        email: email,
+        firebaseID: result.user!.uid,
+      );
+
+      // Store in Firestore
+      await _firestore
+          .collection('users')
+          .doc(result.user!.uid)
+          .set(user.toMap());
+
+      // Set current user in session
+      _session.currentUser = user;
+
+      return result.user?.uid;
+    } on FirebaseAuthException {
+      rethrow;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<String?> signInWithEmailAndPassword(String email, String password) async {
     try {
       UserCredential result = await _firebaseAuth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
-      return result.user;
-    } on FirebaseAuthException catch (e) {
-      rethrow;
-    } catch (e) {
-      rethrow;
-    }
-  }
 
-  // Email & Password Registration
-  Future<User?> registerWithEmailAndPassword(String email, String password) async {
-    try {
-      UserCredential result = await _firebaseAuth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      return result.user;
+      // Fetch and set domain user
+      if (result.user != null) {
+        await _fetchAndSetDomainUser(result.user!.uid);
+      }
+
+      return result.user?.uid;
     } on FirebaseAuthException {
-
       rethrow;
     } catch (e) {
-
       rethrow;
     }
   }
 
-  // Google Sign In
-  Future<User?> signInWithGoogle() async {
+  Future<String?> signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-
-        return null;
-      }
+      if (googleUser == null) return null;
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
@@ -56,20 +98,34 @@ class AuthService {
       );
 
       UserCredential result = await _firebaseAuth.signInWithCredential(credential);
-      return result.user;
-    } on FirebaseAuthException catch (e) {
+
+      // Fetch and set domain user
+      if (result.user != null) {
+        await _fetchAndSetDomainUser(result.user!.uid);
+      }
+
+      return result.user?.uid;
+    } on FirebaseAuthException {
       rethrow;
     } catch (e) {
-
       rethrow;
     }
   }
 
-  // Sign Out
+  Future<void> _fetchAndSetDomainUser(String uid) async {
+    final docSnapshot = await _firestore.collection('users').doc(uid).get();
+    if (docSnapshot.exists) {
+      _session.currentUser = DomainUser.fromMap(
+          docSnapshot.data() as Map<String, dynamic>
+      );
+    }
+  }
+
   Future<void> signOut() async {
     try {
       await _googleSignIn.signOut();
       await _firebaseAuth.signOut();
+      _session.currentUser = null;
     } catch (e) {
       rethrow;
     }
