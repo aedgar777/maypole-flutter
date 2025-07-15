@@ -50,7 +50,7 @@ class RegistrationViewModel extends StateNotifier<RegistrationState> {
       state = state.copyWith(
         isLoading: false,
         isUsernameValid: false,
-        errorMessage: 'Error checking username',
+        errorMessage: 'Error checking username: ${e.toString()}',
       );
     }
   }
