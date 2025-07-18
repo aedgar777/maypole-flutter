@@ -10,7 +10,6 @@ class RegistrationViewModel extends StateNotifier<RegistrationState> {
       : _authService = authService,
         super(const RegistrationState());
 
-
   Future<void> register({
     required String email,
     required String password,
@@ -18,6 +17,17 @@ class RegistrationViewModel extends StateNotifier<RegistrationState> {
   }) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
+
+      final isAvailable = await _authService.isUsernameAvailable(username);
+      if (!isAvailable) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Username is already taken',
+        );
+        return;
+      }
+
+      // Proceed with registration if username is available
       await _authService.registerWithEmailAndPassword(
         email,
         password,
@@ -28,29 +38,6 @@ class RegistrationViewModel extends StateNotifier<RegistrationState> {
       state = state.copyWith(
         isLoading: false,
         errorMessage: e.toString(),
-      );
-    }
-  }
-
-  Future<void> validateUsername(String username) async {
-    if (username.isEmpty) {
-      state = state.copyWith(isUsernameValid: false, errorMessage: 'Username cannot be empty');
-      return;
-    }
-
-    state = state.copyWith(isLoading: true, errorMessage: null);
-    try {
-      final isAvailable = await _authService.isUsernameAvailable(username);
-      state = state.copyWith(
-        isLoading: false,
-        isUsernameValid: isAvailable,
-        errorMessage: isAvailable ? null : 'Username is already taken',
-      );
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        isUsernameValid: false,
-        errorMessage: 'Error checking username: ${e.toString()}',
       );
     }
   }

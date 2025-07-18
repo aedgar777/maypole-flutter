@@ -2,11 +2,13 @@ class DomainUser {
   String username;
   String email;
   String firebaseID;
+  String profilePictureUrl;
 
   DomainUser({
     required this.username,
     required this.email,
     required this.firebaseID,
+    this.profilePictureUrl = '',
   });
 
   Map<String, dynamic> toMap() {
@@ -14,6 +16,7 @@ class DomainUser {
       'username': username,
       'email': email,
       'firebaseID': firebaseID,
+      'profilePictureUrl': profilePictureUrl,
     };
   }
 
@@ -22,6 +25,7 @@ class DomainUser {
       username: map['username'],
       email: map['email'],
       firebaseID: map['firebaseID'],
+      profilePictureUrl: map['profilePictureUrl'] ?? '',
     );
   }
 }

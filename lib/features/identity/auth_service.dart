@@ -14,11 +14,21 @@ class AuthService {
   Stream<User?> get user => _firebaseAuth.authStateChanges();
 
   Future<bool> isUsernameAvailable(String username) async {
-    final querySnapshot = await _firestore
-        .collection('users')
-        .where('username', isEqualTo: username)
-        .get();
-    return querySnapshot.docs.isEmpty;
+    try {
+      print('Checking username: $username');
+
+      final QuerySnapshot result = await _firestore
+          .collection('users')
+          .where('username', isEqualTo: username)
+          .get();
+
+      print('Query completed. Found ${result.docs.length} documents');
+      return result.docs.isEmpty;
+    } catch (e) {
+      print('Username check failed: $e');
+      // Instead of throwing, return false to indicate username is not available
+      return false;
+    }
   }
 
   Future<String?> registerWithEmailAndPassword(

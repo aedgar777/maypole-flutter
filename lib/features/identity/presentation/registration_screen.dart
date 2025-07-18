@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:maypole/core/utils/string_utils.dart';
 import './widgets/auth_form_field.dart';
 import './providers/auth_providers.dart';
 import '../domain/states/auth_state.dart';
@@ -54,49 +55,21 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
               AuthFormField(
                 controller: _usernameController,
                 labelText: 'Username',
-                onChanged: (value) {
-                  ref.read(registrationViewModelProvider.notifier)
-                      .validateUsername(value);
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a username';
-                  }
-                  if (!registrationState.isUsernameValid) {
-                    return 'Username is not available';
-                  }
-                  return null;
-                },
+                validator: StringUtils.validateUsername
               ),
               const SizedBox(height: 20),
               AuthFormField(
                 controller: _emailController,
                 labelText: 'Email',
                 keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your email';
-                  }
-                  if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                    return 'Please enter a valid email';
-                  }
-                  return null;
-                },
+                validator: StringUtils.validateEmail
               ),
               const SizedBox(height: 20),
               AuthFormField(
                 controller: _passwordController,
                 labelText: 'Password',
                 obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a password';
-                  }
-                  if (value.length < 6) {
-                    return 'Password must be at least 6 characters';
-                  }
-                  return null;
-                },
+                validator: StringUtils.validatePassword
               ),
               const SizedBox(height: 30),
               if (registrationState.isLoading)
