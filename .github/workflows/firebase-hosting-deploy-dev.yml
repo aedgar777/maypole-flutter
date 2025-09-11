@@ -1,13 +1,13 @@
-name: Deploy to Firebase Hosting (Production)
+name: Deploy to Firebase Hosting (Development)
 on:
   push:
     branches:
-      - master
+      - develop
 
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
-    environment: production
+    environment: development
     steps:
       - uses: actions/checkout@v3
 
@@ -27,7 +27,7 @@ jobs:
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          fireBaseServiceAccount: ${{ secrets.MAYPOLE_FIREBASE_SERVICE_ACCOUNT }}
-          projectId: maypole-flutter-ce6c3
-          version: prod
+          fireBaseServiceAccount: ${{ secrets.MAYPOLE_FIREBASE_SERVICE_ACCOUNT_DEV }}
+          projectId: maypole-flutter-dev
+          version: dev
           channelId: live
