@@ -150,17 +150,4 @@ class AuthService {
       rethrow;
     }
   }
-
-  // Helper method to clean up username reservation (call this when deleting user account)
-  Future<void> _cleanupUsername(String username) async {
-    try {
-      await _firestore
-          .collection('usernames')
-          .doc(username.toLowerCase())
-          .delete();
-    } catch (e) {
-      print('Failed to cleanup username: $e');
-      // Don't rethrow as this is cleanup
-    }
-  }
 }

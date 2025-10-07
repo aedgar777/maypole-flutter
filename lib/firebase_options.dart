@@ -3,6 +3,7 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
@@ -16,9 +17,8 @@ import 'package:flutter/foundation.dart'
 /// ```
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
-    // Check for environment configuration
-    const environment = String.fromEnvironment(
-        'ENVIRONMENT', defaultValue: 'dev');
+    // Check for environment configuration from dotenv
+    final environment = dotenv.env['ENVIRONMENT'] ?? 'dev';
 
     if (environment == 'production') {
       return _getProductionOptions();
@@ -78,152 +78,128 @@ class DefaultFirebaseOptions {
   }
 
   // Development Environment (maypole-flutter-dev)
-  static const FirebaseOptions webDev = FirebaseOptions(
-    apiKey: String.fromEnvironment(
-        'FIREBASE_DEV_WEB_API_KEY', defaultValue: ''),
-    appId: String.fromEnvironment('FIREBASE_DEV_WEB_APP_ID', defaultValue: ''),
-    messagingSenderId: String.fromEnvironment(
-        'FIREBASE_DEV_MESSAGING_SENDER_ID', defaultValue: ''),
-    projectId: String.fromEnvironment(
-        'FIREBASE_DEV_PROJECT_ID', defaultValue: 'maypole-flutter-dev'),
-    authDomain: String.fromEnvironment('FIREBASE_DEV_AUTH_DOMAIN',
-        defaultValue: 'maypole-flutter-dev.firebaseapp.com'),
-    storageBucket: String.fromEnvironment('FIREBASE_DEV_STORAGE_BUCKET',
-        defaultValue: 'maypole-flutter-dev.firebasestorage.app'),
-    measurementId: String.fromEnvironment(
-        'FIREBASE_DEV_WEB_MEASUREMENT_ID', defaultValue: ''),
+  static FirebaseOptions get webDev => FirebaseOptions(
+    apiKey: dotenv.env['FIREBASE_DEV_WEB_API_KEY'] ?? '',
+    appId: dotenv.env['FIREBASE_DEV_WEB_APP_ID'] ?? '',
+    messagingSenderId: dotenv.env['FIREBASE_DEV_MESSAGING_SENDER_ID'] ?? '',
+    projectId: dotenv.env['FIREBASE_DEV_PROJECT_ID'] ?? 'maypole-flutter-dev',
+    authDomain:
+        dotenv.env['FIREBASE_DEV_AUTH_DOMAIN'] ??
+        'maypole-flutter-dev.firebaseapp.com',
+    storageBucket:
+        dotenv.env['FIREBASE_DEV_STORAGE_BUCKET'] ??
+        'maypole-flutter-dev.firebasestorage.app',
+    measurementId: dotenv.env['FIREBASE_DEV_WEB_MEASUREMENT_ID'] ?? '',
   );
 
-  static const FirebaseOptions androidDev = FirebaseOptions(
-    apiKey: String.fromEnvironment(
-        'FIREBASE_DEV_ANDROID_API_KEY', defaultValue: ''),
-    appId: String.fromEnvironment(
-        'FIREBASE_DEV_ANDROID_APP_ID', defaultValue: ''),
-    messagingSenderId: String.fromEnvironment(
-        'FIREBASE_DEV_MESSAGING_SENDER_ID', defaultValue: ''),
-    projectId: String.fromEnvironment(
-        'FIREBASE_DEV_PROJECT_ID', defaultValue: 'maypole-flutter-dev'),
-    storageBucket: String.fromEnvironment('FIREBASE_DEV_STORAGE_BUCKET',
-        defaultValue: 'maypole-flutter-dev.firebasestorage.app'),
+  static FirebaseOptions get androidDev => FirebaseOptions(
+    apiKey: dotenv.env['FIREBASE_DEV_ANDROID_API_KEY'] ?? '',
+    appId: dotenv.env['FIREBASE_DEV_ANDROID_APP_ID'] ?? '',
+    messagingSenderId: dotenv.env['FIREBASE_DEV_MESSAGING_SENDER_ID'] ?? '',
+    projectId: dotenv.env['FIREBASE_DEV_PROJECT_ID'] ?? 'maypole-flutter-dev',
+    storageBucket: dotenv.env['FIREBASE_DEV_STORAGE_BUCKET'] ??
+        'maypole-flutter-dev.firebasestorage.app',
   );
 
-  static const FirebaseOptions iosDev = FirebaseOptions(
-    apiKey: String.fromEnvironment(
-        'FIREBASE_DEV_IOS_API_KEY', defaultValue: ''),
-    appId: String.fromEnvironment('FIREBASE_DEV_IOS_APP_ID', defaultValue: ''),
-    messagingSenderId: String.fromEnvironment(
-        'FIREBASE_DEV_MESSAGING_SENDER_ID', defaultValue: ''),
-    projectId: String.fromEnvironment(
-        'FIREBASE_DEV_PROJECT_ID', defaultValue: 'maypole-flutter-dev'),
-    storageBucket: String.fromEnvironment('FIREBASE_DEV_STORAGE_BUCKET',
-        defaultValue: 'maypole-flutter-dev.firebasestorage.app'),
-    iosBundleId: String.fromEnvironment(
-        'IOS_BUNDLE_ID', defaultValue: 'app.maypole.maypole'),
+  static FirebaseOptions get iosDev => FirebaseOptions(
+    apiKey: dotenv.env['FIREBASE_DEV_IOS_API_KEY'] ?? '',
+    appId: dotenv.env['FIREBASE_DEV_IOS_APP_ID'] ?? '',
+    messagingSenderId: dotenv.env['FIREBASE_DEV_MESSAGING_SENDER_ID'] ?? '',
+    projectId: dotenv.env['FIREBASE_DEV_PROJECT_ID'] ?? 'maypole-flutter-dev',
+    storageBucket:
+        dotenv.env['FIREBASE_DEV_STORAGE_BUCKET'] ??
+        'maypole-flutter-dev.firebasestorage.app',
+    iosBundleId: dotenv.env['IOS_BUNDLE_ID'] ?? 'app.maypole.maypole',
   );
 
-  static const FirebaseOptions macosDev = FirebaseOptions(
-    apiKey: String.fromEnvironment(
-        'FIREBASE_DEV_IOS_API_KEY', defaultValue: ''),
-    appId: String.fromEnvironment('FIREBASE_DEV_IOS_APP_ID', defaultValue: ''),
-    messagingSenderId: String.fromEnvironment(
-        'FIREBASE_DEV_MESSAGING_SENDER_ID', defaultValue: ''),
-    projectId: String.fromEnvironment(
-        'FIREBASE_DEV_PROJECT_ID', defaultValue: 'maypole-flutter-dev'),
-    storageBucket: String.fromEnvironment('FIREBASE_DEV_STORAGE_BUCKET',
-        defaultValue: 'maypole-flutter-dev.firebasestorage.app'),
-    iosBundleId: String.fromEnvironment(
-        'IOS_BUNDLE_ID', defaultValue: 'app.maypole.maypole'),
+  static FirebaseOptions get macosDev => FirebaseOptions(
+    apiKey: dotenv.env['FIREBASE_DEV_IOS_API_KEY'] ?? '',
+    appId: dotenv.env['FIREBASE_DEV_IOS_APP_ID'] ?? '',
+    messagingSenderId: dotenv.env['FIREBASE_DEV_MESSAGING_SENDER_ID'] ?? '',
+    projectId: dotenv.env['FIREBASE_DEV_PROJECT_ID'] ?? 'maypole-flutter-dev',
+    storageBucket:
+        dotenv.env['FIREBASE_DEV_STORAGE_BUCKET'] ??
+        'maypole-flutter-dev.firebasestorage.app',
+    iosBundleId: dotenv.env['IOS_BUNDLE_ID'] ?? 'app.maypole.maypole',
   );
 
-  static const FirebaseOptions windowsDev = FirebaseOptions(
-    apiKey: String.fromEnvironment(
-        'FIREBASE_DEV_WEB_API_KEY', defaultValue: ''),
-    appId: String.fromEnvironment('FIREBASE_DEV_WEB_APP_ID', defaultValue: ''),
-    messagingSenderId: String.fromEnvironment(
-        'FIREBASE_DEV_MESSAGING_SENDER_ID', defaultValue: ''),
-    projectId: String.fromEnvironment(
-        'FIREBASE_DEV_PROJECT_ID', defaultValue: 'maypole-flutter-dev'),
-    authDomain: String.fromEnvironment('FIREBASE_DEV_AUTH_DOMAIN',
-        defaultValue: 'maypole-flutter-dev.firebaseapp.com'),
-    storageBucket: String.fromEnvironment('FIREBASE_DEV_STORAGE_BUCKET',
-        defaultValue: 'maypole-flutter-dev.firebasestorage.app'),
-    measurementId: String.fromEnvironment(
-        'FIREBASE_DEV_WEB_MEASUREMENT_ID', defaultValue: ''),
+  static FirebaseOptions get windowsDev => FirebaseOptions(
+    apiKey: dotenv.env['FIREBASE_DEV_WEB_API_KEY'] ?? '',
+    appId: dotenv.env['FIREBASE_DEV_WEB_APP_ID'] ?? '',
+    messagingSenderId: dotenv.env['FIREBASE_DEV_MESSAGING_SENDER_ID'] ?? '',
+    projectId: dotenv.env['FIREBASE_DEV_PROJECT_ID'] ?? 'maypole-flutter-dev',
+    authDomain:
+        dotenv.env['FIREBASE_DEV_AUTH_DOMAIN'] ??
+        'maypole-flutter-dev.firebaseapp.com',
+    storageBucket:
+        dotenv.env['FIREBASE_DEV_STORAGE_BUCKET'] ??
+        'maypole-flutter-dev.firebasestorage.app',
+    measurementId: dotenv.env['FIREBASE_DEV_WEB_MEASUREMENT_ID'] ?? '',
   );
 
   // Production Environment (maypole-flutter-ce6c3)
-  static const FirebaseOptions webProduction = FirebaseOptions(
-    apiKey: String.fromEnvironment(
-        'FIREBASE_PROD_WEB_API_KEY', defaultValue: ''),
-    appId: String.fromEnvironment('FIREBASE_PROD_WEB_APP_ID', defaultValue: ''),
-    messagingSenderId: String.fromEnvironment(
-        'FIREBASE_PROD_MESSAGING_SENDER_ID', defaultValue: ''),
-    projectId: String.fromEnvironment(
-        'FIREBASE_PROD_PROJECT_ID', defaultValue: 'maypole-flutter-ce6c3'),
-    authDomain: String.fromEnvironment('FIREBASE_PROD_AUTH_DOMAIN',
-        defaultValue: 'maypole-flutter-ce6c3.firebaseapp.com'),
-    storageBucket: String.fromEnvironment('FIREBASE_PROD_STORAGE_BUCKET',
-        defaultValue: 'maypole-flutter-ce6c3.firebasestorage.app'),
-    measurementId: String.fromEnvironment(
-        'FIREBASE_PROD_WEB_MEASUREMENT_ID', defaultValue: ''),
+  static FirebaseOptions get webProduction => FirebaseOptions(
+    apiKey: dotenv.env['FIREBASE_PROD_WEB_API_KEY'] ?? '',
+    appId: dotenv.env['FIREBASE_PROD_WEB_APP_ID'] ?? '',
+    messagingSenderId: dotenv.env['FIREBASE_PROD_MESSAGING_SENDER_ID'] ?? '',
+    projectId:
+        dotenv.env['FIREBASE_PROD_PROJECT_ID'] ?? 'maypole-flutter-ce6c3',
+    authDomain:
+        dotenv.env['FIREBASE_PROD_AUTH_DOMAIN'] ??
+        'maypole-flutter-ce6c3.firebaseapp.com',
+    storageBucket:
+        dotenv.env['FIREBASE_PROD_STORAGE_BUCKET'] ??
+        'maypole-flutter-ce6c3.firebasestorage.app',
+    measurementId: dotenv.env['FIREBASE_PROD_WEB_MEASUREMENT_ID'] ?? '',
   );
 
-  static const FirebaseOptions androidProduction = FirebaseOptions(
-    apiKey: String.fromEnvironment(
-        'FIREBASE_PROD_ANDROID_API_KEY', defaultValue: ''),
-    appId: String.fromEnvironment(
-        'FIREBASE_PROD_ANDROID_APP_ID', defaultValue: ''),
-    messagingSenderId: String.fromEnvironment(
-        'FIREBASE_PROD_MESSAGING_SENDER_ID', defaultValue: ''),
-    projectId: String.fromEnvironment(
-        'FIREBASE_PROD_PROJECT_ID', defaultValue: 'maypole-flutter-ce6c3'),
-    storageBucket: String.fromEnvironment('FIREBASE_PROD_STORAGE_BUCKET',
-        defaultValue: 'maypole-flutter-ce6c3.firebasestorage.app'),
+  static FirebaseOptions get androidProduction => FirebaseOptions(
+    apiKey: dotenv.env['FIREBASE_PROD_ANDROID_API_KEY'] ?? '',
+    appId: dotenv.env['FIREBASE_PROD_ANDROID_APP_ID'] ?? '',
+    messagingSenderId: dotenv.env['FIREBASE_PROD_MESSAGING_SENDER_ID'] ?? '',
+    projectId:
+        dotenv.env['FIREBASE_PROD_PROJECT_ID'] ?? 'maypole-flutter-ce6c3',
+    storageBucket:
+        dotenv.env['FIREBASE_PROD_STORAGE_BUCKET'] ??
+        'maypole-flutter-ce6c3.firebasestorage.app',
   );
 
-  static const FirebaseOptions iosProduction = FirebaseOptions(
-    apiKey: String.fromEnvironment(
-        'FIREBASE_PROD_IOS_API_KEY', defaultValue: ''),
-    appId: String.fromEnvironment('FIREBASE_PROD_IOS_APP_ID', defaultValue: ''),
-    messagingSenderId: String.fromEnvironment(
-        'FIREBASE_PROD_MESSAGING_SENDER_ID', defaultValue: ''),
-    projectId: String.fromEnvironment(
-        'FIREBASE_PROD_PROJECT_ID', defaultValue: 'maypole-flutter-ce6c3'),
-    storageBucket: String.fromEnvironment('FIREBASE_PROD_STORAGE_BUCKET',
-        defaultValue: 'maypole-flutter-ce6c3.firebasestorage.app'),
-    iosBundleId: String.fromEnvironment(
-        'IOS_BUNDLE_ID', defaultValue: 'app.maypole.maypole'),
+  static FirebaseOptions get iosProduction => FirebaseOptions(
+    apiKey: dotenv.env['FIREBASE_PROD_IOS_API_KEY'] ?? '',
+    appId: dotenv.env['FIREBASE_PROD_IOS_APP_ID'] ?? '',
+    messagingSenderId: dotenv.env['FIREBASE_PROD_MESSAGING_SENDER_ID'] ?? '',
+    projectId:
+        dotenv.env['FIREBASE_PROD_PROJECT_ID'] ?? 'maypole-flutter-ce6c3',
+    storageBucket:
+        dotenv.env['FIREBASE_PROD_STORAGE_BUCKET'] ??
+        'maypole-flutter-ce6c3.firebasestorage.app',
+    iosBundleId: dotenv.env['IOS_BUNDLE_ID'] ?? 'app.maypole.maypole',
   );
 
-  static const FirebaseOptions macosProduction = FirebaseOptions(
-    apiKey: String.fromEnvironment(
-        'FIREBASE_PROD_IOS_API_KEY', defaultValue: ''),
-    appId: String.fromEnvironment('FIREBASE_PROD_IOS_APP_ID', defaultValue: ''),
-    messagingSenderId: String.fromEnvironment(
-        'FIREBASE_PROD_MESSAGING_SENDER_ID', defaultValue: ''),
-    projectId: String.fromEnvironment(
-        'FIREBASE_PROD_PROJECT_ID', defaultValue: 'maypole-flutter-ce6c3'),
-    storageBucket: String.fromEnvironment('FIREBASE_PROD_STORAGE_BUCKET',
-        defaultValue: 'maypole-flutter-ce6c3.firebasestorage.app'),
-    iosBundleId: String.fromEnvironment(
-        'IOS_BUNDLE_ID', defaultValue: 'app.maypole.maypole'),
+  static FirebaseOptions get macosProduction => FirebaseOptions(
+    apiKey: dotenv.env['FIREBASE_PROD_IOS_API_KEY'] ?? '',
+    appId: dotenv.env['FIREBASE_PROD_IOS_APP_ID'] ?? '',
+    messagingSenderId: dotenv.env['FIREBASE_PROD_MESSAGING_SENDER_ID'] ?? '',
+    projectId:
+        dotenv.env['FIREBASE_PROD_PROJECT_ID'] ?? 'maypole-flutter-ce6c3',
+    storageBucket:
+        dotenv.env['FIREBASE_PROD_STORAGE_BUCKET'] ??
+        'maypole-flutter-ce6c3.firebasestorage.app',
+    iosBundleId: dotenv.env['IOS_BUNDLE_ID'] ?? 'app.maypole.maypole',
   );
 
-  static const FirebaseOptions windowsProduction = FirebaseOptions(
-    apiKey: String.fromEnvironment(
-        'FIREBASE_PROD_WEB_API_KEY', defaultValue: ''),
-    appId: String.fromEnvironment(
-        'FIREBASE_PROD_WINDOWS_APP_ID', defaultValue: ''),
-    messagingSenderId: String.fromEnvironment(
-        'FIREBASE_PROD_MESSAGING_SENDER_ID', defaultValue: ''),
-    projectId: String.fromEnvironment(
-        'FIREBASE_PROD_PROJECT_ID', defaultValue: 'maypole-flutter-ce6c3'),
-    authDomain: String.fromEnvironment('FIREBASE_PROD_AUTH_DOMAIN',
-        defaultValue: 'maypole-flutter-ce6c3.firebaseapp.com'),
-    storageBucket: String.fromEnvironment('FIREBASE_PROD_STORAGE_BUCKET',
-        defaultValue: 'maypole-flutter-ce6c3.firebasestorage.app'),
-    measurementId: String.fromEnvironment(
-        'FIREBASE_PROD_WINDOWS_MEASUREMENT_ID', defaultValue: ''),
+  static FirebaseOptions get windowsProduction => FirebaseOptions(
+    apiKey: dotenv.env['FIREBASE_PROD_WEB_API_KEY'] ?? '',
+    appId: dotenv.env['FIREBASE_PROD_WINDOWS_APP_ID'] ?? '',
+    messagingSenderId: dotenv.env['FIREBASE_PROD_MESSAGING_SENDER_ID'] ?? '',
+    projectId:
+        dotenv.env['FIREBASE_PROD_PROJECT_ID'] ?? 'maypole-flutter-ce6c3',
+    authDomain:
+        dotenv.env['FIREBASE_PROD_AUTH_DOMAIN'] ??
+        'maypole-flutter-ce6c3.firebaseapp.com',
+    storageBucket:
+        dotenv.env['FIREBASE_PROD_STORAGE_BUCKET'] ??
+        'maypole-flutter-ce6c3.firebasestorage.app',
+    measurementId: dotenv.env['FIREBASE_PROD_WINDOWS_MEASUREMENT_ID'] ?? '',
   );
-
 }
