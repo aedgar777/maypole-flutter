@@ -17,13 +17,14 @@ class AuthService {
     try {
       print('Checking username: $username');
 
-      final QuerySnapshot result = await _firestore
-          .collection('users')
-          .where('username', isEqualTo: username)
+      // Check the usernames collection instead of querying users
+      final DocumentSnapshot result = await _firestore
+          .collection('usernames')
+          .doc(username.toLowerCase()) // Use lowercase for consistency
           .get();
 
-      print('Query completed. Found ${result.docs.length} documents');
-      return result.docs.isEmpty;
+      print('Query completed. Username exists: ${result.exists}');
+      return !result.exists; // Username is available if document doesn't exist
     } catch (e) {
       print('Username check failed: $e');
       // Instead of throwing, return false to indicate username is not available
@@ -67,6 +68,15 @@ class AuthService {
 
       // Set current user in session
       _session.currentUser = user;
+
+      // Reserve the username
+      await _firestore
+          .collection('usernames')
+          .doc(username.toLowerCase())
+          .set({
+        'taken': true,
+        'owner': result.user!.uid,
+      });
 
       return result.user?.uid;
     } on FirebaseAuthException {
@@ -138,6 +148,19 @@ class AuthService {
       _session.currentUser = null;
     } catch (e) {
       rethrow;
+    }
+  }
+
+  // Helper method to clean up username reservation (call this when deleting user account)
+  Future<void> _cleanupUsername(String username) async {
+    try {
+      await _firestore
+          .collection('usernames')
+          .doc(username.toLowerCase())
+          .delete();
+    } catch (e) {
+      print('Failed to cleanup username: $e');
+      // Don't rethrow as this is cleanup
     }
   }
 }
