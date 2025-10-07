@@ -25,6 +25,21 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
     
+    // Usernames collection for username availability checking
+    match /usernames/{username} {
+      // Allow anyone to read username documents (they only contain minimal data)
+      allow read: if true;
+      
+      // Allow authenticated users to create username documents with proper structure
+      allow create: if request.auth != null 
+                    && request.resource.data.keys().hasAll(['taken', 'owner'])
+                    && request.resource.data.owner == request.auth.uid
+                    && request.resource.data.taken == true;
+      
+      // Allow users to delete their own username documents
+      allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
+    }
+    
     // Default deny for all other documents
     match /{document=**} {
       allow read, write: if false;

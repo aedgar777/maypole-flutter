@@ -16,18 +16,30 @@ import 'package:flutter/foundation.dart'
 /// ```
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
+    // Check for environment configuration
+    const environment = String.fromEnvironment(
+        'ENVIRONMENT', defaultValue: 'dev');
+
+    if (environment == 'production') {
+      return _getProductionOptions();
+    } else {
+      return _getDevOptions();
+    }
+  }
+
+  static FirebaseOptions _getProductionOptions() {
     if (kIsWeb) {
-      return web;
+      return webProduction;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        return android;
+        return androidProduction;
       case TargetPlatform.iOS:
-        return ios;
+        return iosProduction;
       case TargetPlatform.macOS:
-        return macos;
+        return macosProduction;
       case TargetPlatform.windows:
-        return windows;
+        return windowsProduction;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -40,50 +52,178 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyB6CdLLhnvhcRCMQDcPs6OxvRKnLC1ey1Y',
-    appId: '1:1069925301177:web:b34f1952febe6bce4e1468',
-    messagingSenderId: '1069925301177',
-    projectId: 'maypole-flutter-ce6c3',
-    authDomain: 'maypole-flutter-ce6c3.firebaseapp.com',
-    storageBucket: 'maypole-flutter-ce6c3.firebasestorage.app',
-    measurementId: 'G-YTP58985GW',
+  static FirebaseOptions _getDevOptions() {
+    if (kIsWeb) {
+      return webDev;
+    }
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return androidDev;
+      case TargetPlatform.iOS:
+        return iosDev;
+      case TargetPlatform.macOS:
+        return macosDev;
+      case TargetPlatform.windows:
+        return windowsDev;
+      case TargetPlatform.linux:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for linux - '
+              'you can reconfigure this by running the FlutterFire CLI again.',
+        );
+      default:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions are not supported for this platform.',
+        );
+    }
+  }
+
+  // Development Environment (maypole-flutter-dev)
+  static const FirebaseOptions webDev = FirebaseOptions(
+    apiKey: String.fromEnvironment(
+        'FIREBASE_DEV_WEB_API_KEY', defaultValue: ''),
+    appId: String.fromEnvironment('FIREBASE_DEV_WEB_APP_ID', defaultValue: ''),
+    messagingSenderId: String.fromEnvironment(
+        'FIREBASE_DEV_MESSAGING_SENDER_ID', defaultValue: ''),
+    projectId: String.fromEnvironment(
+        'FIREBASE_DEV_PROJECT_ID', defaultValue: 'maypole-flutter-dev'),
+    authDomain: String.fromEnvironment('FIREBASE_DEV_AUTH_DOMAIN',
+        defaultValue: 'maypole-flutter-dev.firebaseapp.com'),
+    storageBucket: String.fromEnvironment('FIREBASE_DEV_STORAGE_BUCKET',
+        defaultValue: 'maypole-flutter-dev.firebasestorage.app'),
+    measurementId: String.fromEnvironment(
+        'FIREBASE_DEV_WEB_MEASUREMENT_ID', defaultValue: ''),
   );
 
-  static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAySMsqTui6rG0iVCc4f3fmMhwLfsMd-W0',
-    appId: '1:1069925301177:android:6c087b01bcd4f66c4e1468',
-    messagingSenderId: '1069925301177',
-    projectId: 'maypole-flutter-ce6c3',
-    storageBucket: 'maypole-flutter-ce6c3.firebasestorage.app',
+  static const FirebaseOptions androidDev = FirebaseOptions(
+    apiKey: String.fromEnvironment(
+        'FIREBASE_DEV_ANDROID_API_KEY', defaultValue: ''),
+    appId: String.fromEnvironment(
+        'FIREBASE_DEV_ANDROID_APP_ID', defaultValue: ''),
+    messagingSenderId: String.fromEnvironment(
+        'FIREBASE_DEV_MESSAGING_SENDER_ID', defaultValue: ''),
+    projectId: String.fromEnvironment(
+        'FIREBASE_DEV_PROJECT_ID', defaultValue: 'maypole-flutter-dev'),
+    storageBucket: String.fromEnvironment('FIREBASE_DEV_STORAGE_BUCKET',
+        defaultValue: 'maypole-flutter-dev.firebasestorage.app'),
   );
 
-  static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBFvVqMZ3hvmsCbvLm1tXPyWnD5KcmMNhU',
-    appId: '1:1069925301177:ios:c53b497e66d5e9c24e1468',
-    messagingSenderId: '1069925301177',
-    projectId: 'maypole-flutter-ce6c3',
-    storageBucket: 'maypole-flutter-ce6c3.firebasestorage.app',
-    iosBundleId: 'app.maypole.maypole',
+  static const FirebaseOptions iosDev = FirebaseOptions(
+    apiKey: String.fromEnvironment(
+        'FIREBASE_DEV_IOS_API_KEY', defaultValue: ''),
+    appId: String.fromEnvironment('FIREBASE_DEV_IOS_APP_ID', defaultValue: ''),
+    messagingSenderId: String.fromEnvironment(
+        'FIREBASE_DEV_MESSAGING_SENDER_ID', defaultValue: ''),
+    projectId: String.fromEnvironment(
+        'FIREBASE_DEV_PROJECT_ID', defaultValue: 'maypole-flutter-dev'),
+    storageBucket: String.fromEnvironment('FIREBASE_DEV_STORAGE_BUCKET',
+        defaultValue: 'maypole-flutter-dev.firebasestorage.app'),
+    iosBundleId: String.fromEnvironment(
+        'IOS_BUNDLE_ID', defaultValue: 'app.maypole.maypole'),
   );
 
-  static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyBFvVqMZ3hvmsCbvLm1tXPyWnD5KcmMNhU',
-    appId: '1:1069925301177:ios:c53b497e66d5e9c24e1468',
-    messagingSenderId: '1069925301177',
-    projectId: 'maypole-flutter-ce6c3',
-    storageBucket: 'maypole-flutter-ce6c3.firebasestorage.app',
-    iosBundleId: 'app.maypole.maypole',
+  static const FirebaseOptions macosDev = FirebaseOptions(
+    apiKey: String.fromEnvironment(
+        'FIREBASE_DEV_IOS_API_KEY', defaultValue: ''),
+    appId: String.fromEnvironment('FIREBASE_DEV_IOS_APP_ID', defaultValue: ''),
+    messagingSenderId: String.fromEnvironment(
+        'FIREBASE_DEV_MESSAGING_SENDER_ID', defaultValue: ''),
+    projectId: String.fromEnvironment(
+        'FIREBASE_DEV_PROJECT_ID', defaultValue: 'maypole-flutter-dev'),
+    storageBucket: String.fromEnvironment('FIREBASE_DEV_STORAGE_BUCKET',
+        defaultValue: 'maypole-flutter-dev.firebasestorage.app'),
+    iosBundleId: String.fromEnvironment(
+        'IOS_BUNDLE_ID', defaultValue: 'app.maypole.maypole'),
   );
 
-  static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyB6CdLLhnvhcRCMQDcPs6OxvRKnLC1ey1Y',
-    appId: '1:1069925301177:web:a55c1912085f464e4e1468',
-    messagingSenderId: '1069925301177',
-    projectId: 'maypole-flutter-ce6c3',
-    authDomain: 'maypole-flutter-ce6c3.firebaseapp.com',
-    storageBucket: 'maypole-flutter-ce6c3.firebasestorage.app',
-    measurementId: 'G-NZ5CEHM1T9',
+  static const FirebaseOptions windowsDev = FirebaseOptions(
+    apiKey: String.fromEnvironment(
+        'FIREBASE_DEV_WEB_API_KEY', defaultValue: ''),
+    appId: String.fromEnvironment('FIREBASE_DEV_WEB_APP_ID', defaultValue: ''),
+    messagingSenderId: String.fromEnvironment(
+        'FIREBASE_DEV_MESSAGING_SENDER_ID', defaultValue: ''),
+    projectId: String.fromEnvironment(
+        'FIREBASE_DEV_PROJECT_ID', defaultValue: 'maypole-flutter-dev'),
+    authDomain: String.fromEnvironment('FIREBASE_DEV_AUTH_DOMAIN',
+        defaultValue: 'maypole-flutter-dev.firebaseapp.com'),
+    storageBucket: String.fromEnvironment('FIREBASE_DEV_STORAGE_BUCKET',
+        defaultValue: 'maypole-flutter-dev.firebasestorage.app'),
+    measurementId: String.fromEnvironment(
+        'FIREBASE_DEV_WEB_MEASUREMENT_ID', defaultValue: ''),
+  );
+
+  // Production Environment (maypole-flutter-ce6c3)
+  static const FirebaseOptions webProduction = FirebaseOptions(
+    apiKey: String.fromEnvironment(
+        'FIREBASE_PROD_WEB_API_KEY', defaultValue: ''),
+    appId: String.fromEnvironment('FIREBASE_PROD_WEB_APP_ID', defaultValue: ''),
+    messagingSenderId: String.fromEnvironment(
+        'FIREBASE_PROD_MESSAGING_SENDER_ID', defaultValue: ''),
+    projectId: String.fromEnvironment(
+        'FIREBASE_PROD_PROJECT_ID', defaultValue: 'maypole-flutter-ce6c3'),
+    authDomain: String.fromEnvironment('FIREBASE_PROD_AUTH_DOMAIN',
+        defaultValue: 'maypole-flutter-ce6c3.firebaseapp.com'),
+    storageBucket: String.fromEnvironment('FIREBASE_PROD_STORAGE_BUCKET',
+        defaultValue: 'maypole-flutter-ce6c3.firebasestorage.app'),
+    measurementId: String.fromEnvironment(
+        'FIREBASE_PROD_WEB_MEASUREMENT_ID', defaultValue: ''),
+  );
+
+  static const FirebaseOptions androidProduction = FirebaseOptions(
+    apiKey: String.fromEnvironment(
+        'FIREBASE_PROD_ANDROID_API_KEY', defaultValue: ''),
+    appId: String.fromEnvironment(
+        'FIREBASE_PROD_ANDROID_APP_ID', defaultValue: ''),
+    messagingSenderId: String.fromEnvironment(
+        'FIREBASE_PROD_MESSAGING_SENDER_ID', defaultValue: ''),
+    projectId: String.fromEnvironment(
+        'FIREBASE_PROD_PROJECT_ID', defaultValue: 'maypole-flutter-ce6c3'),
+    storageBucket: String.fromEnvironment('FIREBASE_PROD_STORAGE_BUCKET',
+        defaultValue: 'maypole-flutter-ce6c3.firebasestorage.app'),
+  );
+
+  static const FirebaseOptions iosProduction = FirebaseOptions(
+    apiKey: String.fromEnvironment(
+        'FIREBASE_PROD_IOS_API_KEY', defaultValue: ''),
+    appId: String.fromEnvironment('FIREBASE_PROD_IOS_APP_ID', defaultValue: ''),
+    messagingSenderId: String.fromEnvironment(
+        'FIREBASE_PROD_MESSAGING_SENDER_ID', defaultValue: ''),
+    projectId: String.fromEnvironment(
+        'FIREBASE_PROD_PROJECT_ID', defaultValue: 'maypole-flutter-ce6c3'),
+    storageBucket: String.fromEnvironment('FIREBASE_PROD_STORAGE_BUCKET',
+        defaultValue: 'maypole-flutter-ce6c3.firebasestorage.app'),
+    iosBundleId: String.fromEnvironment(
+        'IOS_BUNDLE_ID', defaultValue: 'app.maypole.maypole'),
+  );
+
+  static const FirebaseOptions macosProduction = FirebaseOptions(
+    apiKey: String.fromEnvironment(
+        'FIREBASE_PROD_IOS_API_KEY', defaultValue: ''),
+    appId: String.fromEnvironment('FIREBASE_PROD_IOS_APP_ID', defaultValue: ''),
+    messagingSenderId: String.fromEnvironment(
+        'FIREBASE_PROD_MESSAGING_SENDER_ID', defaultValue: ''),
+    projectId: String.fromEnvironment(
+        'FIREBASE_PROD_PROJECT_ID', defaultValue: 'maypole-flutter-ce6c3'),
+    storageBucket: String.fromEnvironment('FIREBASE_PROD_STORAGE_BUCKET',
+        defaultValue: 'maypole-flutter-ce6c3.firebasestorage.app'),
+    iosBundleId: String.fromEnvironment(
+        'IOS_BUNDLE_ID', defaultValue: 'app.maypole.maypole'),
+  );
+
+  static const FirebaseOptions windowsProduction = FirebaseOptions(
+    apiKey: String.fromEnvironment(
+        'FIREBASE_PROD_WEB_API_KEY', defaultValue: ''),
+    appId: String.fromEnvironment(
+        'FIREBASE_PROD_WINDOWS_APP_ID', defaultValue: ''),
+    messagingSenderId: String.fromEnvironment(
+        'FIREBASE_PROD_MESSAGING_SENDER_ID', defaultValue: ''),
+    projectId: String.fromEnvironment(
+        'FIREBASE_PROD_PROJECT_ID', defaultValue: 'maypole-flutter-ce6c3'),
+    authDomain: String.fromEnvironment('FIREBASE_PROD_AUTH_DOMAIN',
+        defaultValue: 'maypole-flutter-ce6c3.firebaseapp.com'),
+    storageBucket: String.fromEnvironment('FIREBASE_PROD_STORAGE_BUCKET',
+        defaultValue: 'maypole-flutter-ce6c3.firebasestorage.app'),
+    measurementId: String.fromEnvironment(
+        'FIREBASE_PROD_WINDOWS_MEASUREMENT_ID', defaultValue: ''),
   );
 
 }

@@ -43,3 +43,36 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Environment files with sensitive data
+.env.local
+.env.dev
+.env.prod
+.env.production
+
+# Firebase configuration files with sensitive data
+/android/app/google-services.json
+/ios/Runner/GoogleService-Info.plist
+/macos/Runner/GoogleService-Info.plist
+
+# Local properties (contains SDK paths)
+android/local.properties
+
+# Sensitive Firebase files
+firebase-debug.log
+firebase-debug.*.log
+
+# Functions environment
+/functions/.env*
+!/functions/.env.example
+
+# Python virtual environment (functions)
+/functions/venv/
+/functions/__pycache__/
+
+# Any backup files of sensitive data
+*.backup
+firebase_options.dart.backup
+
+# Team secrets management
+.secrets-project
