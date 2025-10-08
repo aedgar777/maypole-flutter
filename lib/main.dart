@@ -10,13 +10,16 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Load environment variables - try .env first (CI/CD), then .env.local (local dev)
+  bool dotenvLoaded = false;
   try {
     await dotenv.load(fileName: ".env");
     print('Loaded .env file (CI/CD environment)');
+    dotenvLoaded = true;
   } catch (e) {
     try {
       await dotenv.load(fileName: ".env.local");
       print('Loaded .env.local file (local development)');
+      dotenvLoaded = true;
     } catch (e) {
       print('Warning: No .env or .env.local file found. Using default values.');
     }
@@ -25,7 +28,7 @@ Future<void> main() async {
   // Debug: Print environment information
   const String dartDefineEnv = String.fromEnvironment(
       'ENVIRONMENT', defaultValue: '');
-  final dotenvEnv = dotenv.env['ENVIRONMENT'] ?? 'dev';
+  final dotenvEnv = dotenvLoaded ? (dotenv.env['ENVIRONMENT'] ?? 'dev') : 'dev';
   final environment = dartDefineEnv.isNotEmpty ? dartDefineEnv : dotenvEnv;
 
   print('🔧 Environment Debug Info:');

@@ -16,13 +16,301 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 /// );
 /// ```
 class DefaultFirebaseOptions {
+  // Helper methods to get specific environment variables with dart-define priority
+  static String _getEnvironment() {
+    const String dartDefineValue = String.fromEnvironment(
+        'ENVIRONMENT', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['ENVIRONMENT'] ?? 'dev';
+    } catch (e) {
+      return 'dev';
+    }
+  }
+
+  static String _getFirebaseDevWebApiKey() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_DEV_WEB_API_KEY', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_DEV_WEB_API_KEY'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String _getFirebaseDevWebAppId() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_DEV_WEB_APP_ID', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_DEV_WEB_APP_ID'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String _getFirebaseDevMessagingSenderId() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_DEV_MESSAGING_SENDER_ID', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_DEV_MESSAGING_SENDER_ID'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String _getFirebaseDevProjectId() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_DEV_PROJECT_ID', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_DEV_PROJECT_ID'] ?? 'maypole-flutter-dev';
+    } catch (e) {
+      return 'maypole-flutter-dev';
+    }
+  }
+
+  static String _getFirebaseDevAuthDomain() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_DEV_AUTH_DOMAIN', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_DEV_AUTH_DOMAIN'] ??
+          'maypole-flutter-dev.firebaseapp.com';
+    } catch (e) {
+      return 'maypole-flutter-dev.firebaseapp.com';
+    }
+  }
+
+  static String _getFirebaseDevStorageBucket() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_DEV_STORAGE_BUCKET', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_DEV_STORAGE_BUCKET'] ??
+          'maypole-flutter-dev.firebasestorage.app';
+    } catch (e) {
+      return 'maypole-flutter-dev.firebasestorage.app';
+    }
+  }
+
+  static String _getFirebaseDevWebMeasurementId() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_DEV_WEB_MEASUREMENT_ID', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_DEV_WEB_MEASUREMENT_ID'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String _getFirebaseDevAndroidApiKey() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_DEV_ANDROID_API_KEY', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_DEV_ANDROID_API_KEY'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String _getFirebaseDevAndroidAppId() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_DEV_ANDROID_APP_ID', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_DEV_ANDROID_APP_ID'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String _getFirebaseDevIosApiKey() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_DEV_IOS_API_KEY', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_DEV_IOS_API_KEY'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String _getFirebaseDevIosAppId() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_DEV_IOS_APP_ID', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_DEV_IOS_APP_ID'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String _getIosBundleId() {
+    const String dartDefineValue = String.fromEnvironment(
+        'IOS_BUNDLE_ID', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['IOS_BUNDLE_ID'] ?? 'app.maypole.maypole';
+    } catch (e) {
+      return 'app.maypole.maypole';
+    }
+  }
+
+  // Production environment getters
+  static String _getFirebaseProdWebApiKey() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_PROD_WEB_API_KEY', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_PROD_WEB_API_KEY'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String _getFirebaseProdWebAppId() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_PROD_WEB_APP_ID', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_PROD_WEB_APP_ID'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String _getFirebaseProdMessagingSenderId() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_PROD_MESSAGING_SENDER_ID', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_PROD_MESSAGING_SENDER_ID'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String _getFirebaseProdProjectId() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_PROD_PROJECT_ID', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_PROD_PROJECT_ID'] ?? 'maypole-flutter-ce6c3';
+    } catch (e) {
+      return 'maypole-flutter-ce6c3';
+    }
+  }
+
+  static String _getFirebaseProdAuthDomain() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_PROD_AUTH_DOMAIN', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_PROD_AUTH_DOMAIN'] ??
+          'maypole-flutter-ce6c3.firebaseapp.com';
+    } catch (e) {
+      return 'maypole-flutter-ce6c3.firebaseapp.com';
+    }
+  }
+
+  static String _getFirebaseProdStorageBucket() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_PROD_STORAGE_BUCKET', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_PROD_STORAGE_BUCKET'] ??
+          'maypole-flutter-ce6c3.firebasestorage.app';
+    } catch (e) {
+      return 'maypole-flutter-ce6c3.firebasestorage.app';
+    }
+  }
+
+  static String _getFirebaseProdWebMeasurementId() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_PROD_WEB_MEASUREMENT_ID', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_PROD_WEB_MEASUREMENT_ID'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String _getFirebaseProdAndroidApiKey() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_PROD_ANDROID_API_KEY', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_PROD_ANDROID_API_KEY'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String _getFirebaseProdAndroidAppId() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_PROD_ANDROID_APP_ID', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_PROD_ANDROID_APP_ID'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String _getFirebaseProdIosApiKey() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_PROD_IOS_API_KEY', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_PROD_IOS_API_KEY'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String _getFirebaseProdIosAppId() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_PROD_IOS_APP_ID', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_PROD_IOS_APP_ID'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String _getFirebaseProdWindowsAppId() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_PROD_WINDOWS_APP_ID', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_PROD_WINDOWS_APP_ID'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static String _getFirebaseProdWindowsMeasurementId() {
+    const String dartDefineValue = String.fromEnvironment(
+        'FIREBASE_PROD_WINDOWS_MEASUREMENT_ID', defaultValue: '');
+    if (dartDefineValue.isNotEmpty) return dartDefineValue;
+    try {
+      return dotenv.env['FIREBASE_PROD_WINDOWS_MEASUREMENT_ID'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
   static FirebaseOptions get currentPlatform {
     // Get environment from dart-define, fallback to dotenv, then default to dev
-    const String dartDefineEnv = String.fromEnvironment(
-        'ENVIRONMENT', defaultValue: '');
-    final dotenvEnv = dotenv.env['ENVIRONMENT'] ?? 'dev';
-
-    final environment = dartDefineEnv.isNotEmpty ? dartDefineEnv : dotenvEnv;
+    final environment = _getEnvironment();
 
     if (environment == 'production' || environment == 'prod') {
       return _getProductionOptions();
@@ -83,127 +371,95 @@ class DefaultFirebaseOptions {
 
   // Development Environment (maypole-flutter-dev)
   static FirebaseOptions get webDev => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_DEV_WEB_API_KEY'] ?? '',
-    appId: dotenv.env['FIREBASE_DEV_WEB_APP_ID'] ?? '',
-    messagingSenderId: dotenv.env['FIREBASE_DEV_MESSAGING_SENDER_ID'] ?? '',
-    projectId: dotenv.env['FIREBASE_DEV_PROJECT_ID'] ?? 'maypole-flutter-dev',
-    authDomain:
-        dotenv.env['FIREBASE_DEV_AUTH_DOMAIN'] ??
-        'maypole-flutter-dev.firebaseapp.com',
-    storageBucket:
-        dotenv.env['FIREBASE_DEV_STORAGE_BUCKET'] ??
-        'maypole-flutter-dev.firebasestorage.app',
-    measurementId: dotenv.env['FIREBASE_DEV_WEB_MEASUREMENT_ID'] ?? '',
+    apiKey: _getFirebaseDevWebApiKey(),
+    appId: _getFirebaseDevWebAppId(),
+    messagingSenderId: _getFirebaseDevMessagingSenderId(),
+    projectId: _getFirebaseDevProjectId(),
+    authDomain: _getFirebaseDevAuthDomain(),
+    storageBucket: _getFirebaseDevStorageBucket(),
+    measurementId: _getFirebaseDevWebMeasurementId(),
   );
 
   static FirebaseOptions get androidDev => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_DEV_ANDROID_API_KEY'] ?? '',
-    appId: dotenv.env['FIREBASE_DEV_ANDROID_APP_ID'] ?? '',
-    messagingSenderId: dotenv.env['FIREBASE_DEV_MESSAGING_SENDER_ID'] ?? '',
-    projectId: dotenv.env['FIREBASE_DEV_PROJECT_ID'] ?? 'maypole-flutter-dev',
-    storageBucket: dotenv.env['FIREBASE_DEV_STORAGE_BUCKET'] ??
-        'maypole-flutter-dev.firebasestorage.app',
+    apiKey: _getFirebaseDevAndroidApiKey(),
+    appId: _getFirebaseDevAndroidAppId(),
+    messagingSenderId: _getFirebaseDevMessagingSenderId(),
+    projectId: _getFirebaseDevProjectId(),
+    storageBucket: _getFirebaseDevStorageBucket(),
   );
 
   static FirebaseOptions get iosDev => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_DEV_IOS_API_KEY'] ?? '',
-    appId: dotenv.env['FIREBASE_DEV_IOS_APP_ID'] ?? '',
-    messagingSenderId: dotenv.env['FIREBASE_DEV_MESSAGING_SENDER_ID'] ?? '',
-    projectId: dotenv.env['FIREBASE_DEV_PROJECT_ID'] ?? 'maypole-flutter-dev',
-    storageBucket:
-        dotenv.env['FIREBASE_DEV_STORAGE_BUCKET'] ??
-        'maypole-flutter-dev.firebasestorage.app',
-    iosBundleId: dotenv.env['IOS_BUNDLE_ID'] ?? 'app.maypole.maypole',
+    apiKey: _getFirebaseDevIosApiKey(),
+    appId: _getFirebaseDevIosAppId(),
+    messagingSenderId: _getFirebaseDevMessagingSenderId(),
+    projectId: _getFirebaseDevProjectId(),
+    storageBucket: _getFirebaseDevStorageBucket(),
+    iosBundleId: _getIosBundleId(),
   );
 
   static FirebaseOptions get macosDev => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_DEV_IOS_API_KEY'] ?? '',
-    appId: dotenv.env['FIREBASE_DEV_IOS_APP_ID'] ?? '',
-    messagingSenderId: dotenv.env['FIREBASE_DEV_MESSAGING_SENDER_ID'] ?? '',
-    projectId: dotenv.env['FIREBASE_DEV_PROJECT_ID'] ?? 'maypole-flutter-dev',
-    storageBucket:
-        dotenv.env['FIREBASE_DEV_STORAGE_BUCKET'] ??
-        'maypole-flutter-dev.firebasestorage.app',
-    iosBundleId: dotenv.env['IOS_BUNDLE_ID'] ?? 'app.maypole.maypole',
+    apiKey: _getFirebaseDevIosApiKey(),
+    appId: _getFirebaseDevIosAppId(),
+    messagingSenderId: _getFirebaseDevMessagingSenderId(),
+    projectId: _getFirebaseDevProjectId(),
+    storageBucket: _getFirebaseDevStorageBucket(),
+    iosBundleId: _getIosBundleId(),
   );
 
   static FirebaseOptions get windowsDev => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_DEV_WEB_API_KEY'] ?? '',
-    appId: dotenv.env['FIREBASE_DEV_WEB_APP_ID'] ?? '',
-    messagingSenderId: dotenv.env['FIREBASE_DEV_MESSAGING_SENDER_ID'] ?? '',
-    projectId: dotenv.env['FIREBASE_DEV_PROJECT_ID'] ?? 'maypole-flutter-dev',
-    authDomain:
-        dotenv.env['FIREBASE_DEV_AUTH_DOMAIN'] ??
-        'maypole-flutter-dev.firebaseapp.com',
-    storageBucket:
-        dotenv.env['FIREBASE_DEV_STORAGE_BUCKET'] ??
-        'maypole-flutter-dev.firebasestorage.app',
-    measurementId: dotenv.env['FIREBASE_DEV_WEB_MEASUREMENT_ID'] ?? '',
+    apiKey: _getFirebaseDevWebApiKey(),
+    appId: _getFirebaseDevWebAppId(),
+    messagingSenderId: _getFirebaseDevMessagingSenderId(),
+    projectId: _getFirebaseDevProjectId(),
+    authDomain: _getFirebaseDevAuthDomain(),
+    storageBucket: _getFirebaseDevStorageBucket(),
+    measurementId: _getFirebaseDevWebMeasurementId(),
   );
 
   // Production Environment (maypole-flutter-ce6c3)
   static FirebaseOptions get webProduction => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_PROD_WEB_API_KEY'] ?? '',
-    appId: dotenv.env['FIREBASE_PROD_WEB_APP_ID'] ?? '',
-    messagingSenderId: dotenv.env['FIREBASE_PROD_MESSAGING_SENDER_ID'] ?? '',
-    projectId:
-        dotenv.env['FIREBASE_PROD_PROJECT_ID'] ?? 'maypole-flutter-ce6c3',
-    authDomain:
-        dotenv.env['FIREBASE_PROD_AUTH_DOMAIN'] ??
-        'maypole-flutter-ce6c3.firebaseapp.com',
-    storageBucket:
-        dotenv.env['FIREBASE_PROD_STORAGE_BUCKET'] ??
-        'maypole-flutter-ce6c3.firebasestorage.app',
-    measurementId: dotenv.env['FIREBASE_PROD_WEB_MEASUREMENT_ID'] ?? '',
+    apiKey: _getFirebaseProdWebApiKey(),
+    appId: _getFirebaseProdWebAppId(),
+    messagingSenderId: _getFirebaseProdMessagingSenderId(),
+    projectId: _getFirebaseProdProjectId(),
+    authDomain: _getFirebaseProdAuthDomain(),
+    storageBucket: _getFirebaseProdStorageBucket(),
+    measurementId: _getFirebaseProdWebMeasurementId(),
   );
 
   static FirebaseOptions get androidProduction => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_PROD_ANDROID_API_KEY'] ?? '',
-    appId: dotenv.env['FIREBASE_PROD_ANDROID_APP_ID'] ?? '',
-    messagingSenderId: dotenv.env['FIREBASE_PROD_MESSAGING_SENDER_ID'] ?? '',
-    projectId:
-        dotenv.env['FIREBASE_PROD_PROJECT_ID'] ?? 'maypole-flutter-ce6c3',
-    storageBucket:
-        dotenv.env['FIREBASE_PROD_STORAGE_BUCKET'] ??
-        'maypole-flutter-ce6c3.firebasestorage.app',
+    apiKey: _getFirebaseProdAndroidApiKey(),
+    appId: _getFirebaseProdAndroidAppId(),
+    messagingSenderId: _getFirebaseProdMessagingSenderId(),
+    projectId: _getFirebaseProdProjectId(),
+    storageBucket: _getFirebaseProdStorageBucket(),
   );
 
   static FirebaseOptions get iosProduction => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_PROD_IOS_API_KEY'] ?? '',
-    appId: dotenv.env['FIREBASE_PROD_IOS_APP_ID'] ?? '',
-    messagingSenderId: dotenv.env['FIREBASE_PROD_MESSAGING_SENDER_ID'] ?? '',
-    projectId:
-        dotenv.env['FIREBASE_PROD_PROJECT_ID'] ?? 'maypole-flutter-ce6c3',
-    storageBucket:
-        dotenv.env['FIREBASE_PROD_STORAGE_BUCKET'] ??
-        'maypole-flutter-ce6c3.firebasestorage.app',
-    iosBundleId: dotenv.env['IOS_BUNDLE_ID'] ?? 'app.maypole.maypole',
+    apiKey: _getFirebaseProdIosApiKey(),
+    appId: _getFirebaseProdIosAppId(),
+    messagingSenderId: _getFirebaseProdMessagingSenderId(),
+    projectId: _getFirebaseProdProjectId(),
+    storageBucket: _getFirebaseProdStorageBucket(),
+    iosBundleId: _getIosBundleId(),
   );
 
   static FirebaseOptions get macosProduction => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_PROD_IOS_API_KEY'] ?? '',
-    appId: dotenv.env['FIREBASE_PROD_IOS_APP_ID'] ?? '',
-    messagingSenderId: dotenv.env['FIREBASE_PROD_MESSAGING_SENDER_ID'] ?? '',
-    projectId:
-        dotenv.env['FIREBASE_PROD_PROJECT_ID'] ?? 'maypole-flutter-ce6c3',
-    storageBucket:
-        dotenv.env['FIREBASE_PROD_STORAGE_BUCKET'] ??
-        'maypole-flutter-ce6c3.firebasestorage.app',
-    iosBundleId: dotenv.env['IOS_BUNDLE_ID'] ?? 'app.maypole.maypole',
+    apiKey: _getFirebaseProdIosApiKey(),
+    appId: _getFirebaseProdIosAppId(),
+    messagingSenderId: _getFirebaseProdMessagingSenderId(),
+    projectId: _getFirebaseProdProjectId(),
+    storageBucket: _getFirebaseProdStorageBucket(),
+    iosBundleId: _getIosBundleId(),
   );
 
   static FirebaseOptions get windowsProduction => FirebaseOptions(
-    apiKey: dotenv.env['FIREBASE_PROD_WEB_API_KEY'] ?? '',
-    appId: dotenv.env['FIREBASE_PROD_WINDOWS_APP_ID'] ?? '',
-    messagingSenderId: dotenv.env['FIREBASE_PROD_MESSAGING_SENDER_ID'] ?? '',
-    projectId:
-        dotenv.env['FIREBASE_PROD_PROJECT_ID'] ?? 'maypole-flutter-ce6c3',
-    authDomain:
-        dotenv.env['FIREBASE_PROD_AUTH_DOMAIN'] ??
-        'maypole-flutter-ce6c3.firebaseapp.com',
-    storageBucket:
-        dotenv.env['FIREBASE_PROD_STORAGE_BUCKET'] ??
-        'maypole-flutter-ce6c3.firebasestorage.app',
-    measurementId: dotenv.env['FIREBASE_PROD_WINDOWS_MEASUREMENT_ID'] ?? '',
+    apiKey: _getFirebaseProdWebApiKey(),
+    appId: _getFirebaseProdWindowsAppId(),
+    messagingSenderId: _getFirebaseProdMessagingSenderId(),
+    projectId: _getFirebaseProdProjectId(),
+    authDomain: _getFirebaseProdAuthDomain(),
+    storageBucket: _getFirebaseProdStorageBucket(),
+    measurementId: _getFirebaseProdWindowsMeasurementId(),
   );
 }
