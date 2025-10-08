@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/features/identity/data/domain_user.dart';
 
@@ -13,7 +14,7 @@ class AuthService {
 
   Future<bool> isUsernameAvailable(String username) async {
     try {
-      print('Checking username: $username');
+      debugPrint('Checking username: $username');
 
       // Check the usernames collection instead of querying users
       final DocumentSnapshot result = await _firestore
@@ -21,10 +22,10 @@ class AuthService {
           .doc(username.toLowerCase()) // Use lowercase for consistency
           .get();
 
-      print('Query completed. Username exists: ${result.exists}');
+      debugPrint('Query completed. Username exists: ${result.exists}');
       return !result.exists; // Username is available if document doesn't exist
     } catch (e) {
-      print('Username check failed: $e');
+      debugPrint('Username check failed: $e');
       // Instead of throwing, return false to indicate username is not available
       return false;
     }
