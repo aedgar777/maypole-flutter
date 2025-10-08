@@ -9,8 +9,18 @@ import 'core/app_router.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables
-  await dotenv.load(fileName: ".env.local");
+  // Load environment variables - try .env first (CI/CD), then .env.local (local dev)
+  try {
+    await dotenv.load(fileName: ".env");
+    print('Loaded .env file (CI/CD environment)');
+  } catch (e) {
+    try {
+      await dotenv.load(fileName: ".env.local");
+      print('Loaded .env.local file (local development)');
+    } catch (e) {
+      print('Warning: No .env or .env.local file found. Using default values.');
+    }
+  }
 
   // Initialize Firebase with error handling for duplicate initialization
   try {
