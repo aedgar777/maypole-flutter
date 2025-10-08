@@ -10,23 +10,40 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Load environment variables - try .env first (CI/CD), then .env.local (local dev)
+  bool dotenvLoaded = false;
   try {
     await dotenv.load(fileName: ".env");
     print('Loaded .env file (CI/CD environment)');
+    dotenvLoaded = true;
   } catch (e) {
     try {
       await dotenv.load(fileName: ".env.local");
       print('Loaded .env.local file (local development)');
+      dotenvLoaded = true;
     } catch (e) {
       print('Warning: No .env or .env.local file found. Using default values.');
     }
   }
+
+  // Debug: Print environment information
+  const String dartDefineEnv = String.fromEnvironment(
+      'ENVIRONMENT', defaultValue: '');
+  final dotenvEnv = dotenvLoaded ? (dotenv.env['ENVIRONMENT'] ?? 'dev') : 'dev';
+  final environment = dartDefineEnv.isNotEmpty ? dartDefineEnv : dotenvEnv;
+
+  print('🔧 Environment Debug Info:');
+  print('  • Dart Define ENVIRONMENT: "$dartDefineEnv"');
+  print('  • .env ENVIRONMENT: "$dotenvEnv"');
+  print('  • Final Environment: "$environment"');
+  print('  • Firebase Project: ${DefaultFirebaseOptions.currentPlatform
+      .projectId}');
 
   // Initialize Firebase with error handling for duplicate initialization
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    print('✅ Firebase initialized successfully');
   } catch (e) {
     // If Firebase is already initialized, continue silently
     if (e.toString().contains('duplicate-app')) {

@@ -1,13 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/features/identity/data/domain_user.dart';
 
 
 class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final AppSession _session = AppSession();
 
@@ -106,32 +104,6 @@ class AuthService {
     }
   }
 
-  Future<String?> signInWithGoogle() async {
-    try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      UserCredential result = await _firebaseAuth.signInWithCredential(credential);
-
-      // Fetch and set domain user
-      if (result.user != null) {
-        await _fetchAndSetDomainUser(result.user!.uid);
-      }
-
-      return result.user?.uid;
-    } on FirebaseAuthException {
-      rethrow;
-    } catch (e) {
-      rethrow;
-    }
-  }
-
   Future<void> _fetchAndSetDomainUser(String uid) async {
     final docSnapshot = await _firestore.collection('users').doc(uid).get();
     if (docSnapshot.exists) {
@@ -143,7 +115,6 @@ class AuthService {
 
   Future<void> signOut() async {
     try {
-      await _googleSignIn.signOut();
       await _firebaseAuth.signOut();
       _session.currentUser = null;
     } catch (e) {
