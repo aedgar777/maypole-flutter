@@ -17,10 +17,14 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 /// ```
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
-    // Check for environment configuration from dotenv
-    final environment = dotenv.env['ENVIRONMENT'] ?? 'dev';
+    // Get environment from dart-define, fallback to dotenv, then default to dev
+    const String dartDefineEnv = String.fromEnvironment(
+        'ENVIRONMENT', defaultValue: '');
+    final dotenvEnv = dotenv.env['ENVIRONMENT'] ?? 'dev';
 
-    if (environment == 'production') {
+    final environment = dartDefineEnv.isNotEmpty ? dartDefineEnv : dotenvEnv;
+
+    if (environment == 'production' || environment == 'prod') {
       return _getProductionOptions();
     } else {
       return _getDevOptions();

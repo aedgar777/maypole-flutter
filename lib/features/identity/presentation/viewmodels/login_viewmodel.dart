@@ -51,21 +51,6 @@ class LoginViewModel extends StateNotifier<LoginState> {
     }
   }
 
-  Future<void> signInWithGoogle() async {
-    _setLoading(true);
-    _setErrorMessage(null);
-    try {
-      await _authService.signInWithGoogle();
-      // Success
-    } on FirebaseAuthException catch (e) {
-      _setErrorMessage('Google Sign In failed: ${e.message}');
-    } catch (e) {
-      _setErrorMessage('An unexpected error occurred during Google Sign In: $e');
-    } finally {
-      _setLoading(false);
-    }
-  }
-
   Future<void> signOut() async {
     _setLoading(true);
     _setErrorMessage(null);

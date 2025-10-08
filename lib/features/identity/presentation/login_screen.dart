@@ -120,30 +120,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           onPressed: () => context.go('/register'),
                           child: const Text('Register'),
                         ),
-                        const SizedBox(height: 30),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            ref.read(loginViewModelProvider.notifier).signInWithGoogle();
-                          },
-                          icon: Image.asset(
-                            'assets/icons/ic_google_logo.png',
-                            height: 32.0,
+                        if (loginState.errorMessage != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 16),
+                            child: Text(
+                              loginState.errorMessage!,
+                              style: const TextStyle(color: Colors.red),
+                            ),
                           ),
-                          label: const Text('Sign in with Google'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
-                          ),
-                        ),
                       ],
-                    ),
-                  if (loginState.errorMessage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16),
-                      child: Text(
-                        loginState.errorMessage!,
-                        style: const TextStyle(color: Colors.red),
-                      ),
                     ),
                 ],
               ),

@@ -22,11 +22,25 @@ Future<void> main() async {
     }
   }
 
+  // Debug: Print environment information
+  const String dartDefineEnv = String.fromEnvironment(
+      'ENVIRONMENT', defaultValue: '');
+  final dotenvEnv = dotenv.env['ENVIRONMENT'] ?? 'dev';
+  final environment = dartDefineEnv.isNotEmpty ? dartDefineEnv : dotenvEnv;
+
+  print('🔧 Environment Debug Info:');
+  print('  • Dart Define ENVIRONMENT: "$dartDefineEnv"');
+  print('  • .env ENVIRONMENT: "$dotenvEnv"');
+  print('  • Final Environment: "$environment"');
+  print('  • Firebase Project: ${DefaultFirebaseOptions.currentPlatform
+      .projectId}');
+
   // Initialize Firebase with error handling for duplicate initialization
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    print('✅ Firebase initialized successfully');
   } catch (e) {
     // If Firebase is already initialized, continue silently
     if (e.toString().contains('duplicate-app')) {
