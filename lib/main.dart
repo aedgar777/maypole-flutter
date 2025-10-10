@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -61,18 +60,38 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  String _getAppTitle() {
+    const String dartDefineEnv = String.fromEnvironment(
+        'ENVIRONMENT', defaultValue: '');
+    String dotenvEnv = 'dev';
+
+    try {
+      dotenvEnv = dotenv.env['ENVIRONMENT'] ?? 'dev';
+    } catch (e) {
+      dotenvEnv = 'dev';
+    }
+
+    final environment = dartDefineEnv.isNotEmpty ? dartDefineEnv : dotenvEnv;
+
+    switch (environment) {
+      case 'production':
+      case 'prod':
+        return 'Maypole';
+      case 'dev':
+      case 'development':
+      default:
+        return 'Maypole (Dev)';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-    title: 'Flutter Demo',
-    theme: ThemeData(
-    colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-    ),
-    routerConfig: router, 
+      title: _getAppTitle(),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+      ),
+      routerConfig: router,
     );
   }
 }
-
-
-
