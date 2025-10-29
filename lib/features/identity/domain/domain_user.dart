@@ -1,14 +1,18 @@
+import 'package:maypole/features/chat/domain/thread_metadata.dart';
+
 class DomainUser {
   String username;
   String email;
   String firebaseID;
   String profilePictureUrl;
+  List<ThreadMetadata> threads;
 
   DomainUser({
     required this.username,
     required this.email,
     required this.firebaseID,
     this.profilePictureUrl = '',
+    this.threads = const [],
   });
 
   Map<String, dynamic> toMap() {
@@ -17,6 +21,7 @@ class DomainUser {
       'email': email,
       'firebaseID': firebaseID,
       'profilePictureUrl': profilePictureUrl,
+      'threads': threads,
     };
   }
 
@@ -26,6 +31,7 @@ class DomainUser {
       email: map['email'],
       firebaseID: map['firebaseID'],
       profilePictureUrl: map['profilePictureUrl'] ?? '',
+      threads: List<ThreadMetadata>.from(map['threads'] ?? []),
     );
   }
 }

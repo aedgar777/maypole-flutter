@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:maypole/core/app_session.dart';
-import 'package:maypole/features/identity/data/domain_user.dart';
+import 'package:maypole/features/identity/domain/domain_user.dart';
 
 
 class AuthService {
