@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:maypole_flutter/features/chat/domain/thread_metadata.dart';
+
+import '../../domain/thread_metadata.dart';
 
 class PlaceChatThreadList extends StatelessWidget {
   final List<PlaceChatThreadMetadata> threads;
