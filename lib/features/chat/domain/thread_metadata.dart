@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:maypole/features/chat/domain/message.dart';
 
 // Parent class for all thread metadata types
 abstract class ThreadMetadata {
@@ -42,8 +43,8 @@ class PlaceChatThreadMetadata extends ThreadMetadata {
 class DMThreadMetadata extends ThreadMetadata {
   final String partnerName;
   final String partnerId;
-  final dynamic
-      lastMessage; // Will be Message type when Message class is created
+  final String partnerProfpic;
+  final DirectMessage lastMessage; // Will be Message type when Message class is created
 
   DMThreadMetadata({
     required super.id,
@@ -51,6 +52,7 @@ class DMThreadMetadata extends ThreadMetadata {
     required super.lastMessageTime,
     required this.partnerName,
     required this.partnerId,
+    required this.partnerProfpic,
     required this.lastMessage,
   });
 
@@ -61,6 +63,7 @@ class DMThreadMetadata extends ThreadMetadata {
       lastMessageTime: (map['lastMessageTime'] as Timestamp).toDate(),
       partnerName: map['partnerName'] ?? '',
       partnerId: map['partnerId'] ?? '',
+      partnerProfpic: map['partnerProfpic'] ?? '',
       lastMessage: map['lastMessage'],
     );
   }

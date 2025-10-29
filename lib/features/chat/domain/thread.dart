@@ -1,18 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import './message.dart';
 
 // Parent class for all thread types
-class Thread {
+abstract class Thread {
   final String id;
   final String name;
   final DateTime lastMessageTime;
-  final List<dynamic>
-      messages; // Will be List<Message> when Message class is created
 
-  Thread({
+  const Thread({
     required this.id,
     required this.name,
     required this.lastMessageTime,
-    required this.messages,
   });
 
   factory Thread.fromMap(Map<String, dynamic> map) {
@@ -22,15 +20,16 @@ class Thread {
       return PlaceChatThread.fromMap(map);
     }
   }
+
+  Map<String, dynamic> toMap();
 }
 
 // Subclass for place-based chat threads
 class PlaceChatThread extends Thread {
-  PlaceChatThread({
+  const PlaceChatThread({
     required super.id,
     required super.name,
     required super.lastMessageTime,
-    required super.messages,
   });
 
   factory PlaceChatThread.fromMap(Map<String, dynamic> map) {
@@ -38,8 +37,16 @@ class PlaceChatThread extends Thread {
       id: map['id'] ?? '',
       name: map['name'] ?? '',
       lastMessageTime: (map['lastMessageTime'] as Timestamp).toDate(),
-      messages: List<dynamic>.from(map['messages'] ?? []),
     );
+  }
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'lastMessageTime': Timestamp.fromDate(lastMessageTime),
+    };
   }
 }
 
@@ -47,17 +54,17 @@ class PlaceChatThread extends Thread {
 class DMThread extends Thread {
   final String partnerName;
   final String partnerId;
-  final dynamic
-      lastMessage; // Will be Message type when Message class is created
+  final String partnerProfpic;
+  final Message? lastMessage;
 
-  DMThread({
+  const DMThread({
     required super.id,
     required super.name,
     required super.lastMessageTime,
-    required super.messages,
     required this.partnerName,
     required this.partnerId,
-    required this.lastMessage,
+    required this.partnerProfpic,
+    this.lastMessage,
   });
 
   factory DMThread.fromMap(Map<String, dynamic> map) {
@@ -65,10 +72,25 @@ class DMThread extends Thread {
       id: map['id'] ?? '',
       name: map['name'] ?? '',
       lastMessageTime: (map['lastMessageTime'] as Timestamp).toDate(),
-      messages: List<dynamic>.from(map['messages'] ?? []),
       partnerName: map['partnerName'] ?? '',
       partnerId: map['partnerId'] ?? '',
-      lastMessage: map['lastMessage'],
+      partnerProfpic: map['partnerProfpic'] ?? '',
+      lastMessage: map['lastMessage'] != null
+          ? Message.fromMap(map['lastMessage'] as Map<String, dynamic>)
+          : null,
     );
+  }
+
+  @override
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'lastMessageTime': Timestamp.fromDate(lastMessageTime),
+      'partnerName': partnerName,
+      'partnerId': partnerId,
+      'partnerProfpic': partnerProfpic,
+      'lastMessage': lastMessage?.toMap(),
+    };
   }
 }

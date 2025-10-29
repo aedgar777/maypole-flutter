@@ -1,7 +1,7 @@
 import 'package:go_router/go_router.dart';
 import '../features/identity/presentation/login_screen.dart';
 import '../features/identity/presentation/registration_screen.dart';
-import '../features/chat/presentation/chatlist_screen.dart';
+import '../features/chat/presentation/home_screen.dart';
 
 final GoRouter router = GoRouter(
   initialLocation: '/home',
@@ -13,7 +13,7 @@ final GoRouter router = GoRouter(
     ),
     GoRoute(
       path: '/home',
-      builder: (context, state) => const ChatListScreen(),
+      builder: (context, state) => const HomeScreen(),
     ),
   ],
 );
