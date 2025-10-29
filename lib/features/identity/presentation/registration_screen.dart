@@ -29,6 +29,11 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   }
 
   Widget _buildLoggedInView(User user) {
+    // Automatically navigate to chat list when user is registered and logged in
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.go('/home');
+    });
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

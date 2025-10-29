@@ -26,6 +26,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Widget _buildLoggedInView(User user) {
+    // Automatically navigate to chat list when user is logged in
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.go('/home');
+    });
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
