@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -53,18 +51,6 @@ Future<void> main() async {
     } else {
       // Re-throw other errors
       rethrow;
-    }
-  }
-
-  // Use emulators if defined by --dart-define=USE_EMULATOR=true
-  const bool useEmulator = bool.fromEnvironment('USE_EMULATOR');
-  if (useEmulator) {
-    try {
-      debugPrint('⚠️ Using Firebase Emulators');
-      await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
-      FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
-    } catch (e) {
-      debugPrint('Error using Firebase emulators: $e');
     }
   }
 
