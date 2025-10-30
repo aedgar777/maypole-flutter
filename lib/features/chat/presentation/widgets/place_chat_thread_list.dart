@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../domain/thread_metadata.dart';
 
 class PlaceChatThreadList extends StatelessWidget {

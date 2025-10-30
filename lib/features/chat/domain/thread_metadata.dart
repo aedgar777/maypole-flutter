@@ -44,7 +44,7 @@ class DMThreadMetadata extends ThreadMetadata {
   final String partnerName;
   final String partnerId;
   final String partnerProfpic;
-  final DirectMessage lastMessage; // Will be Message type when Message class is created
+  final DirectMessage lastMessage;
 
   DMThreadMetadata({
     required super.id,

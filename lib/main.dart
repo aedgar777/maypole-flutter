@@ -56,8 +56,9 @@ Future<void> main() async {
     }
   }
 
-  // Use emulators if in local development
-  if (dotenv.env['USE_EMULATOR'] == 'true') {
+  // Use emulators if defined by --dart-define=USE_EMULATOR=true
+  const bool useEmulator = bool.fromEnvironment('USE_EMULATOR');
+  if (useEmulator) {
     try {
       debugPrint('⚠️ Using Firebase Emulators');
       await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
