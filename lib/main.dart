@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:go_router/go_router.dart';
 import 'firebase_options.dart';
 import 'core/app_router.dart';
 import 'core/app_theme.dart';
@@ -25,6 +26,9 @@ Future<void> main() async {
           'Warning: No .env or .env.local file found. Using default values.');
     }
   }
+
+  // Initialize the router
+  final router = createRouter();
 
   // Debug: Print environment information
   const String dartDefineEnv = String.fromEnvironment(
@@ -55,11 +59,13 @@ Future<void> main() async {
     }
   }
 
-  runApp(ProviderScope(child: MyApp()));
+  runApp(ProviderScope(child: MyApp(router: router)));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, required this.router});
+
+  final GoRouter router;
 
   String _getAppTitle() {
     const String dartDefineEnv = String.fromEnvironment(
