@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_places_flutter/google_places_flutter.dart';
-import 'package:maypole/core/app_config.dart';
 
 class PlaceSearchScreen extends StatefulWidget {
-  const PlaceSearchScreen({super.key});
+  final String googleApiKey;
+  const PlaceSearchScreen({super.key, required this.googleApiKey});
 
   @override
   State<PlaceSearchScreen> createState() => _PlaceSearchScreenState();
@@ -20,7 +20,7 @@ class _PlaceSearchScreenState extends State<PlaceSearchScreen> {
       ),
       body: GooglePlaceAutoCompleteTextField(
         textEditingController: _searchController,
-        googleAPIKey: AppConfig.googlePlacesApiKey,
+        googleAPIKey: widget.googleApiKey,
         inputDecoration: const InputDecoration(
           hintText: "Search for a place",
           border: InputBorder.none,
