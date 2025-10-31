@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/features/chat/presentation/widgets/dm_thread_list.dart';
 import 'package:maypole/features/chat/presentation/widgets/place_chat_thread_list.dart';
-import '../../identity/presentation/providers/auth_providers.dart';
+import '../../../identity/auth_providers.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
