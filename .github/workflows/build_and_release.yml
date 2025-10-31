@@ -2,9 +2,12 @@ name: Build and Release Cross-Platform
 
 on:
   push:
-    branches:
-      - develop
-      - master
+    # To re-enable, comment out branches-ignore and uncomment the branches list.
+    branches-ignore:
+      - '**' # Ignore all pushes to all branches
+    # branches:
+    #   - develop
+    #   - master
 
 jobs:
   build:
@@ -116,7 +119,7 @@ jobs:
       - name: Zip macOS build artifact
         if: matrix.platform == 'macOS'
         run: ditto -c -k --sequesterRsrc --keepParent "${{ matrix.artifact_path }}" "${{ matrix.zip_name }}"
-        
+
       - name: Zip Windows build artifact
         if: matrix.platform == 'Windows'
         shell: pwsh
