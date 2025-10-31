@@ -7,8 +7,10 @@ class AutocompleteResponse {
 
   factory AutocompleteResponse.fromMap(Map<String, dynamic> map) {
     return AutocompleteResponse(
-      predictions: List<PlacePrediction>.from(
-          map['predictions']?.map((x) => PlacePrediction.fromMap(x)) ?? []),
+      predictions: (map['suggestions'] as List<dynamic>?)
+              ?.map((e) => PlacePrediction.fromMap(e as Map<String, dynamic>))
+              .toList() ??
+          [],
     );
   }
 
@@ -23,9 +25,10 @@ class PlacePrediction {
   PlacePrediction({required this.place, required this.placeId});
 
   factory PlacePrediction.fromMap(Map<String, dynamic> map) {
+    final prediction = map['placePrediction'] as Map<String, dynamic>?;
     return PlacePrediction(
-      place: map['place'] ?? '',
-      placeId: map['placeId'] ?? '',
+      place: prediction?['text']?['text'] as String? ?? '',
+      placeId: prediction?['placeId'] as String? ?? '',
     );
   }
 

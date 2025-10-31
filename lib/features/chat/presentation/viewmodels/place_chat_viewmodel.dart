@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../chat/domain/message.dart';
-import '../../../chat/data/services/thread_service.dart';
+import '../../domain/message.dart';
+import '../../data/services/thread_service.dart';
 
 class PlaceChatViewModel extends StateNotifier<AsyncValue<List<Message>>> {
   final ThreadService _threadService;

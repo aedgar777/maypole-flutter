@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/app_session.dart';
 
 import '../../../chat/presentation/viewmodels/place_chat_viewmodel.dart';
-import '../providers/chat_providers.dart';
+import '../../chat_providers.dart';
 
 class PlaceChatScreen extends ConsumerStatefulWidget {
   final String threadId;

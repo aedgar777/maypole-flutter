@@ -1,4 +1,4 @@
-import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../../core/app_config.dart';
@@ -23,6 +23,8 @@ class PlacesService {
     );
 
     if (response.statusCode == 200) {
+
+      debugPrint("Place Response: ${response.body}");
       return AutocompleteResponse.fromJson(response.body);
     } else {
       throw Exception('Failed to load predictions');

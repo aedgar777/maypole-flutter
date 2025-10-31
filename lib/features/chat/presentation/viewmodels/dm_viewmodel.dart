@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:maypole/features/chat/presentation/providers/chat_providers.dart';
+import 'package:maypole/features/chat/chat_providers.dart';
 
 import '../../domain/message.dart';
 import '../../data/services/thread_service.dart';
