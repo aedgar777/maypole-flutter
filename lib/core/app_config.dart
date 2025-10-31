@@ -6,8 +6,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 /// and provides the correct keys based on whether the app is in
 /// 'prod' or 'dev' mode.
 class AppConfig {
-  // Determine the environment ('prod' or 'dev')
-  static final String _environment = dotenv.env['ENVIRONMENT'] ?? 'dev';
+
+  static String get _environment => dotenv.env['ENVIRONMENT'] ?? 'dev';
 
   /// Returns true if the current environment is production.
   static bool get isProduction => _environment.toLowerCase() == 'prod' || _environment.toLowerCase() == 'production';
@@ -125,7 +125,7 @@ class AppConfig {
   static String get iosBundleId {
     return dotenv.env['IOS_BUNDLE_ID'] ?? 'app.maypole.maypole';
   }
-  
+
   /// Provides the correct Google Places API key based on the environment.
   static String get googlePlacesApiKey {
     if (isProduction) {

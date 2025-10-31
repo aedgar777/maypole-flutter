@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:maypole/core/utils/string_utils.dart';
 import './widgets/auth_form_field.dart';
-import './providers/auth_providers.dart';
+import '../auth_providers.dart';
 import '../domain/states/auth_state.dart';
 
 class RegistrationScreen extends ConsumerStatefulWidget {

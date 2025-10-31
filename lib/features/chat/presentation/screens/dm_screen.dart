@@ -4,6 +4,8 @@ import 'package:maypole/core/app_session.dart';
 import 'package:maypole/features/chat/domain/thread.dart';
 import 'package:maypole/features/chat/presentation/viewmodels/dm_viewmodel.dart';
 
+import '../../chat_providers.dart';
+
 class DmScreen extends ConsumerStatefulWidget {
   final DMThread thread;
 

@@ -2,15 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../chat/domain/message.dart';
-import '../../../chat/data/services/thread_service.dart';
-import '../../../chat/data/services/thread_service_provider.dart';
-
-final placeChatViewModelProvider = StateNotifierProvider.autoDispose
-    .family<PlaceChatViewModel, AsyncValue<List<Message>>, String>((ref, threadId) {
-  final threadService = ref.watch(threadServiceProvider);
-  return PlaceChatViewModel(threadService, threadId);
-});
+import '../../domain/message.dart';
+import '../../data/services/thread_service.dart';
 
 class PlaceChatViewModel extends StateNotifier<AsyncValue<List<Message>>> {
   final ThreadService _threadService;
