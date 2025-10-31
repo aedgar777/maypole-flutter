@@ -34,7 +34,6 @@ class HomeScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Chats'),
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
           actions: [
             IconButton(
               icon: const Icon(Icons.logout),
@@ -44,8 +43,9 @@ class HomeScreen extends ConsumerWidget {
               },
             ),
           ],
-          bottom: const TabBar(
-            tabs: [
+          bottom: TabBar(
+            dividerColor: Colors.white.withOpacity(0.1),
+            tabs: const [
               Tab(text: 'Places'),
               Tab(text: 'Direct Messages'),
             ],

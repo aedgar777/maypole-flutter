@@ -112,12 +112,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       children: [
                         ElevatedButton(
                           onPressed: _handleSignIn,
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 60,
-                              vertical: 12,
-                            ),
-                          ),
                           child: const Text('Sign In', style: TextStyle(fontSize: 18)),
                         ),
                         const SizedBox(height: 10),
@@ -130,7 +124,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             padding: const EdgeInsets.only(top: 16),
                             child: Text(
                               loginState.errorMessage!,
-                              style: const TextStyle(color: Colors.red),
+                              style: TextStyle(color: Theme.of(context).colorScheme.error),
                             ),
                           ),
                       ],

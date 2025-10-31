@@ -97,7 +97,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   padding: const EdgeInsets.only(top: 16),
                   child: Text(
                     registrationState.errorMessage!,
-                    style: const TextStyle(color: Colors.red),
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
                   ),
                 ),
             ],
