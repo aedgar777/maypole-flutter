@@ -59,12 +59,7 @@ class HomeScreen extends ConsumerWidget {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
-            // TODO: Navigate to create new chat screen
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('New chat feature coming soon!'),
-              ),
-            );
+            context.go('/search');
           },
           child: const Icon(Icons.add),
         ),

@@ -125,7 +125,7 @@ class AppConfig {
   static String get iosBundleId {
     return dotenv.env['IOS_BUNDLE_ID'] ?? 'app.maypole.maypole';
   }
-  
+
   /// Provides the correct Google Places API key based on the environment.
   static String get googlePlacesApiKey {
     if (isProduction) {
