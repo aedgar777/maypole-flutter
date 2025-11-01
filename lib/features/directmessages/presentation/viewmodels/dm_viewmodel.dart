@@ -1,15 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:maypole/features/chat/chat_providers.dart';
+import 'package:maypole/features/directmessages/domain/direct_message.dart';
+import 'package:maypole/features/directmessages/data/dm_thread_service.dart';
 
-import '../../domain/message.dart';
-import '../../data/services/thread_service.dart';
-
-class DmViewModel extends StateNotifier<AsyncValue<List<Message>>> {
-  final ThreadService _threadService;
+class DmViewModel extends StateNotifier<AsyncValue<List<DirectMessage>>> {
+  final DMThreadService _threadService;
   final String _threadId;
-  StreamSubscription<List<Message>>? _messagesSubscription;
+  StreamSubscription<List<DirectMessage>>? _messagesSubscription;
   bool _isLoadingMore = false;
 
   DmViewModel(this._threadService, this._threadId)
@@ -46,7 +44,7 @@ class DmViewModel extends StateNotifier<AsyncValue<List<Message>>> {
       final newMessages =
           await _threadService.getMoreDmMessages(_threadId, lastMessage);
       state = AsyncValue.data([...currentMessages, ...newMessages]);
-    } catch (e, st) {
+    } catch (e) {
       // Maybe show a snackbar or some other error indication
       print('Error loading more messages: $e');
     } finally {

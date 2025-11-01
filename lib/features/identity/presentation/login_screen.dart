@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:maypole/features/identity/domain/domain_user.dart';
 import '../domain/states/auth_state.dart';
 import '../auth_providers.dart';
 import './widgets/auth_form_field.dart';
@@ -25,8 +25,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  Widget _buildLoggedInView(User user) {
-    // Automatically navigate to chat list when user is logged in
+  Widget _buildLoggedInView(DomainUser user) {
+    // Automatically navigate to home list when user is logged in
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.go('/home');
     });

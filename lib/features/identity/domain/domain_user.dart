@@ -1,18 +1,21 @@
-import 'package:maypole/features/chat/domain/thread_metadata.dart';
+import 'package:maypole/features/directmessages/domain/dm_thread.dart';
+import 'package:maypole/features/placechat/domain/place_chat_thread.dart';
 
 class DomainUser {
   String username;
   String email;
   String firebaseID;
   String profilePictureUrl;
-  List<ThreadMetadata> threads;
+  List<PlaceChatThreadMetaData> placeChatThreads;
+  List<DMThreadMetaData> dmThreads;
 
   DomainUser({
     required this.username,
     required this.email,
     required this.firebaseID,
     this.profilePictureUrl = '',
-    this.threads = const [],
+    this.placeChatThreads = const [],
+    this.dmThreads = const [],
   });
 
   Map<String, dynamic> toMap() {
@@ -21,7 +24,8 @@ class DomainUser {
       'email': email,
       'firebaseID': firebaseID,
       'profilePictureUrl': profilePictureUrl,
-      'threads': threads,
+      'placeChatThreads': placeChatThreads.map((e) => e.toMap()).toList(),
+      'dmThreads': dmThreads.map((e) => e.toMap()).toList(),
     };
   }
 
@@ -31,7 +35,8 @@ class DomainUser {
       email: map['email'],
       firebaseID: map['firebaseID'],
       profilePictureUrl: map['profilePictureUrl'] ?? '',
-      threads: List<ThreadMetadata>.from(map['threads'] ?? []),
+      placeChatThreads: List<PlaceChatThreadMetaData>.from(map['placeChatThreads']?.map((x) => PlaceChatThreadMetaData.fromMap(x)) ?? []),
+      dmThreads: List<DMThreadMetaData>.from(map['dmThreads']?.map((x) => DMThreadMetaData.fromMap(x)) ?? []),
     );
   }
 }

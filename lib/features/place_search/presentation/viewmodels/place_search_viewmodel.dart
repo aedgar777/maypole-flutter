@@ -1,4 +1,3 @@
-import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/autocomplete_request.dart';
 import '../../data/models/autocomplete_response.dart';

@@ -46,6 +46,8 @@ dependencies:
   google_places_api_flutter: ^1.0.0
 
 
+  http: any
+  riverpod: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

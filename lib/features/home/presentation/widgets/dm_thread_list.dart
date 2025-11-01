@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../domain/thread_metadata.dart';
+import 'package:maypole/features/directmessages/domain/dm_thread.dart';
+
 
 class DMThreadList extends StatelessWidget {
-  final List<DMThreadMetadata> threads;
+  final List<DMThreadMetaData> threads;
 
   const DMThreadList({super.key, required this.threads});
 

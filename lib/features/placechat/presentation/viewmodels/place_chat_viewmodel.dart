@@ -1,14 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maypole/features/placechat/data/place_chat_thread_service.dart';
+import 'package:maypole/features/placechat/domain/place_chat_message.dart';
 
-import '../../domain/message.dart';
-import '../../data/services/thread_service.dart';
-
-class PlaceChatViewModel extends StateNotifier<AsyncValue<List<Message>>> {
-  final ThreadService _threadService;
+class PlaceChatViewModel extends StateNotifier<AsyncValue<List<PlaceChatMessage>>> {
+  final PlaceChatThreadService _threadService;
   final String _threadId;
-  StreamSubscription<List<Message>>? _messagesSubscription;
+  StreamSubscription<List<PlaceChatMessage>>? _messagesSubscription;
   bool _isLoadingMore = false;
 
   PlaceChatViewModel(this._threadService, this._threadId)
@@ -45,7 +44,7 @@ class PlaceChatViewModel extends StateNotifier<AsyncValue<List<Message>>> {
       final newMessages =
           await _threadService.getMoreMessages(_threadId, lastMessage);
       state = AsyncValue.data([...currentMessages, ...newMessages]);
-    } catch (e, st) {
+    } catch (e) {
       // Maybe show a snackbar or some other error indication
       print('Error loading more messages: $e');
     } finally {

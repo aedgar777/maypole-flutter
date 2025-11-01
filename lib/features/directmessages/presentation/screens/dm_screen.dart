@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/app_session.dart';
-import 'package:maypole/features/chat/domain/thread.dart';
-import 'package:maypole/features/chat/presentation/viewmodels/dm_viewmodel.dart';
-
-import '../../chat_providers.dart';
+import '../../domain/dm_thread.dart';
+import '../dm_providers.dart';
 
 class DmScreen extends ConsumerStatefulWidget {
   final DMThread thread;

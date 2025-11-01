@@ -10,7 +10,16 @@ class AuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final AppSession _session = AppSession();
 
-  Stream<User?> get user => _firebaseAuth.authStateChanges();
+  Stream<DomainUser?> get user {
+    return _firebaseAuth.authStateChanges().asyncMap((firebaseUser) async {
+      if (firebaseUser == null) {
+        _session.currentUser = null;
+        return null;
+      }
+      await _fetchAndSetDomainUser(firebaseUser.uid);
+      return _session.currentUser;
+    });
+  }
 
   Future<bool> isUsernameAvailable(String username) async {
     try {
@@ -111,6 +120,8 @@ class AuthService {
       _session.currentUser = DomainUser.fromMap(
           docSnapshot.data() as Map<String, dynamic>
       );
+    } else {
+      _session.currentUser = null;
     }
   }
 

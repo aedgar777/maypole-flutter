@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../domain/thread_metadata.dart';
+import 'package:maypole/features/placechat/domain/place_chat_thread.dart';
 
 class PlaceChatThreadList extends StatelessWidget {
-  final List<PlaceChatThreadMetadata> threads;
+  final List<PlaceChatThreadMetaData> threads;
 
   const PlaceChatThreadList({super.key, required this.threads});
 
@@ -20,3 +20,4 @@ class PlaceChatThreadList extends StatelessWidget {
     );
   }
 }
+

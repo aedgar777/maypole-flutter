@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:maypole/core/utils/string_utils.dart';
+import '../domain/domain_user.dart';
 import './widgets/auth_form_field.dart';
 import '../auth_providers.dart';
 import '../domain/states/auth_state.dart';
@@ -28,8 +28,8 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
     super.dispose();
   }
 
-  Widget _buildLoggedInView(User user) {
-    // Automatically navigate to chat list when user is registered and logged in
+  Widget _buildLoggedInView(DomainUser user) {
+    // Automatically navigate to home list when user is registered and logged in
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.go('/home');
     });

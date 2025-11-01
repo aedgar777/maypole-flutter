@@ -1,9 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:maypole/core/app_config.dart';
 import '../features/place_search/presentation/screens/place_search_screen.dart';
 import '../features/identity/presentation/login_screen.dart';
 import '../features/identity/presentation/registration_screen.dart';
-import '../features/chat/presentation/screens/home_screen.dart';
+import '../features/home/presentation/screens/home_screen.dart';
 
 GoRouter createRouter() {
   return GoRouter(
@@ -21,7 +21,10 @@ GoRouter createRouter() {
       ),
       GoRoute(
         path: '/search',
-        builder: (context, state) => PlaceSearchScreen(),
+        pageBuilder: (context, state) => const MaterialPage(
+          fullscreenDialog: true,
+          child: PlaceSearchScreen(),
+        ),
       ),
     ],
   );
