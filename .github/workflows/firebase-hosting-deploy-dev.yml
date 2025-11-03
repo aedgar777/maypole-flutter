@@ -41,6 +41,9 @@ jobs:
           IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
           EOF
 
+      - name: Create dummy .env.local
+        run: touch .env.local
+
       - name: Build Web
         run: flutter build web --release
 

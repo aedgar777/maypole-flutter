@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../domain/states/auth_state.dart';
-import './providers/auth_providers.dart';
+import '../auth_providers.dart';
 import './widgets/auth_form_field.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -26,6 +26,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Widget _buildLoggedInView(User user) {
+    // Automatically navigate to chat list when user is logged in
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.go('/home');
+    });
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -107,12 +112,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       children: [
                         ElevatedButton(
                           onPressed: _handleSignIn,
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 60,
-                              vertical: 12,
-                            ),
-                          ),
                           child: const Text('Sign In', style: TextStyle(fontSize: 18)),
                         ),
                         const SizedBox(height: 10),
@@ -125,7 +124,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             padding: const EdgeInsets.only(top: 16),
                             child: Text(
                               loginState.errorMessage!,
-                              style: const TextStyle(color: Colors.red),
+                              style: TextStyle(color: Theme.of(context).colorScheme.error),
                             ),
                           ),
                       ],

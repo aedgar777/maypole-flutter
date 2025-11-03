@@ -2,44 +2,48 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Flutter (Development)",
+      "name": "maypole (dev)",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",
       "args": [
         "--dart-define=ENVIRONMENT=dev",
-        "--flavor=dev"
+        "--flavor",
+        "dev"
       ]
     },
     {
-      "name": "Flutter (Production)",
+      "name": "maypole (production)",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",
       "args": [
         "--dart-define=ENVIRONMENT=production",
-        "--flavor=prod"
+        "--flavor",
+        "prod"
       ]
     },
     {
-      "name": "Flutter Dev (Release)",
+      "name": "maypole (dev-release)",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",
       "args": [
         "--dart-define=ENVIRONMENT=dev",
-        "--flavor=dev",
+        "--flavor",
+        "dev",
         "--release"
       ]
     },
     {
-      "name": "Flutter Prod (Release)",
+      "name": "maypole (prod-release)",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",
       "args": [
         "--dart-define=ENVIRONMENT=production",
-        "--flavor=prod",
+        "--flavor",
+        "prod",
         "--release"
       ]
     }
