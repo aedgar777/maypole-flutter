@@ -66,9 +66,9 @@ class DefaultFirebaseOptions {
         'FIREBASE_DEV_PROJECT_ID', defaultValue: '');
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
-      return dotenv.env['FIREBASE_DEV_PROJECT_ID'] ?? 'maypole-flutter-dev';
+      return dotenv.env['FIREBASE_DEV_PROJECT_ID'] ?? '';
     } catch (e) {
-      return 'maypole-flutter-dev';
+      return '';
     }
   }
 
@@ -77,10 +77,9 @@ class DefaultFirebaseOptions {
         'FIREBASE_DEV_AUTH_DOMAIN', defaultValue: '');
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
-      return dotenv.env['FIREBASE_DEV_AUTH_DOMAIN'] ??
-          'maypole-flutter-dev.firebaseapp.com';
+      return dotenv.env['FIREBASE_DEV_AUTH_DOMAIN'] ?? '';
     } catch (e) {
-      return 'maypole-flutter-dev.firebaseapp.com';
+      return '';
     }
   }
 
@@ -89,10 +88,9 @@ class DefaultFirebaseOptions {
         'FIREBASE_DEV_STORAGE_BUCKET', defaultValue: '');
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
-      return dotenv.env['FIREBASE_DEV_STORAGE_BUCKET'] ??
-          'maypole-flutter-dev.firebasestorage.app';
+      return dotenv.env['FIREBASE_DEV_STORAGE_Bucket'] ?? '';
     } catch (e) {
-      return 'maypole-flutter-dev.firebasestorage.app';
+      return '';
     }
   }
 
@@ -156,9 +154,9 @@ class DefaultFirebaseOptions {
         'IOS_BUNDLE_ID', defaultValue: '');
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
-      return dotenv.env['IOS_BUNDLE_ID'] ?? 'app.maypole.maypole';
+      return dotenv.env['IOS_BUNDLE_ID'] ?? '';
     } catch (e) {
-      return 'app.maypole.maypole';
+      return '';
     }
   }
 
@@ -201,9 +199,9 @@ class DefaultFirebaseOptions {
         'FIREBASE_PROD_PROJECT_ID', defaultValue: '');
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
-      return dotenv.env['FIREBASE_PROD_PROJECT_ID'] ?? 'maypole-flutter-ce6c3';
+      return dotenv.env['FIREBASE_PROD_PROJECT_ID'] ?? '';
     } catch (e) {
-      return 'maypole-flutter-ce6c3';
+      return '';
     }
   }
 
@@ -212,10 +210,9 @@ class DefaultFirebaseOptions {
         'FIREBASE_PROD_AUTH_DOMAIN', defaultValue: '');
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
-      return dotenv.env['FIREBASE_PROD_AUTH_DOMAIN'] ??
-          'maypole-flutter-ce6c3.firebaseapp.com';
+      return dotenv.env['FIREBASE_PROD_AUTH_DOMAIN'] ?? '';
     } catch (e) {
-      return 'maypole-flutter-ce6c3.firebaseapp.com';
+      return '';
     }
   }
 
@@ -224,10 +221,9 @@ class DefaultFirebaseOptions {
         'FIREBASE_PROD_STORAGE_BUCKET', defaultValue: '');
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
-      return dotenv.env['FIREBASE_PROD_STORAGE_BUCKET'] ??
-          'maypole-flutter-ce6c3.firebasestorage.app';
+      return dotenv.env['FIREBASE_PROD_STORAGE_BUCKET'] ?? '';
     } catch (e) {
-      return 'maypole-flutter-ce6c3.firebasestorage.app';
+      return '';
     }
   }
 

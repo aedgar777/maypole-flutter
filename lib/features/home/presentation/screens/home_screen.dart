@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
-import 'package:maypole/features/place_search/data/models/autocomplete_response.dart';
+import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
 import '../../../identity/auth_providers.dart';
 
 class HomeScreen extends ConsumerWidget {

@@ -2,21 +2,21 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 @immutable
-class PlaceChatMessage {
+class MaypoleMessage {
   final String sender;
   final DateTime timestamp;
   final String body;
   final String taggedUser;
 
-  const PlaceChatMessage({
+  const MaypoleMessage({
     required this.sender,
     required this.timestamp,
     required this.body,
     required this.taggedUser,
   });
 
-  factory PlaceChatMessage.fromMap(Map<String, dynamic> map) {
-    return PlaceChatMessage(
+  factory MaypoleMessage.fromMap(Map<String, dynamic> map) {
+    return MaypoleMessage(
       sender: map['sender'],
       timestamp: (map['timestamp'] as Timestamp).toDate(),
       body: map['body'],

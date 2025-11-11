@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:maypole/features/placechat/domain/place_chat_thread.dart';
+import 'package:maypole/features/maypolechat/domain/maypole.dart';
 
-class PlaceChatThreadList extends StatelessWidget {
-  final List<PlaceChatThreadMetaData> threads;
+class MaypoleList extends StatelessWidget {
+  final List<MaypoleMetaData> threads;
 
-  const PlaceChatThreadList({super.key, required this.threads});
+  const MaypoleList({super.key, required this.threads});
 
   @override
   Widget build(BuildContext context) {
@@ -20,4 +20,3 @@ class PlaceChatThreadList extends StatelessWidget {
     );
   }
 }
-

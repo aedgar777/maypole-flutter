@@ -5,7 +5,7 @@ import '../../../../core/app_config.dart';
 import '../models/autocomplete_request.dart';
 import '../models/autocomplete_response.dart';
 
-class PlacesService {
+class MaypoleSearchService {
   final String _apiKey = AppConfig.googlePlacesApiKey;
   final String _baseUrl =
       'https://places.googleapis.com/v1/places:autocomplete';

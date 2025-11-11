@@ -1,16 +1,15 @@
 import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:maypole/features/placechat/data/place_chat_thread_service.dart';
-import 'package:maypole/features/placechat/domain/place_chat_message.dart';
+import 'package:maypole/features/maypolechat/domain/maypole_message.dart';
+import '../../data/maypole_chat_service.dart';
 
-class PlaceChatViewModel extends StateNotifier<AsyncValue<List<PlaceChatMessage>>> {
-  final PlaceChatThreadService _threadService;
+class MaypoleChatViewModel extends StateNotifier<AsyncValue<List<MaypoleMessage>>> {
+  final MaypoleChatService _threadService;
   final String _threadId;
-  StreamSubscription<List<PlaceChatMessage>>? _messagesSubscription;
+  StreamSubscription<List<MaypoleMessage>>? _messagesSubscription;
   bool _isLoadingMore = false;
 
-  PlaceChatViewModel(this._threadService, this._threadId)
+  MaypoleChatViewModel(this._threadService, this._threadId)
       : super(const AsyncValue.loading()) {
     _init();
   }
@@ -26,9 +25,17 @@ class PlaceChatViewModel extends StateNotifier<AsyncValue<List<PlaceChatMessage>
     });
   }
 
-  Future<void> sendPlaceMessage(String body, String sender) async {
+  Future<void> sendMessage(String body, String sender) async {
     try {
       await _threadService.sendMessage(_threadId, body, sender);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> sendPlaceMessage(String body, String sender) async {
+    try {
+      await _threadService.sendPlaceMessage(_threadId, body, sender);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }

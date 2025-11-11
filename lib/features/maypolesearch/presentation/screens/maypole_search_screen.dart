@@ -4,16 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/autocomplete_response.dart';
-import '../../place_search_providers.dart';
+import '../../maypole_search_providers.dart';
 
-class PlaceSearchScreen extends ConsumerStatefulWidget {
-  const PlaceSearchScreen({super.key});
+class MaypoleSearchScreen extends ConsumerStatefulWidget {
+  const MaypoleSearchScreen({super.key});
 
   @override
-  ConsumerState<PlaceSearchScreen> createState() => _PlaceSearchScreenState();
+  ConsumerState<MaypoleSearchScreen> createState() => _MaypoleSearchScreenState();
 }
 
-class _PlaceSearchScreenState extends ConsumerState<PlaceSearchScreen> {
+class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
 
@@ -33,11 +33,11 @@ class _PlaceSearchScreenState extends ConsumerState<PlaceSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final searchState = ref.watch(placeSearchViewModelProvider);
+    final searchState = ref.watch(maypoleSearchViewModelProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Search Places'),
+        title: const Text('Search Maypoles'),
       ),
       body: Column(
         children: [
@@ -46,7 +46,7 @@ class _PlaceSearchScreenState extends ConsumerState<PlaceSearchScreen> {
             child: TextField(
               controller: _searchController,
               decoration: const InputDecoration(
-                hintText: "Search for a place",
+                hintText: "Search for a maypole",
               ),
               autofocus: true,
             ),
@@ -73,7 +73,7 @@ class _PlaceSearchScreenState extends ConsumerState<PlaceSearchScreen> {
         return ListTile(
           title: Text(prediction.place),
           onTap: () {
-            // Handle the selection of a place
+            // Handle the selection of a maypole
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Selected: ${prediction.place}'),
@@ -90,8 +90,8 @@ class _PlaceSearchScreenState extends ConsumerState<PlaceSearchScreen> {
     if (_debounce?.isActive ?? false) _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
       ref
-          .read(placeSearchViewModelProvider.notifier)
-          .searchPlaces(_searchController.text);
+          .read(maypoleSearchViewModelProvider.notifier)
+          .searchMaypoles(_searchController.text);
     });
   }
 }

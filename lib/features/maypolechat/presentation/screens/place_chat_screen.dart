@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/app_session.dart';
-import '../place_chat_providers.dart';
+import 'package:maypole/features/maypolechat/presentation/maypole_chat_providers.dart';
 
 class PlaceChatScreen extends ConsumerStatefulWidget {
   final String threadId;
@@ -34,7 +34,7 @@ class _PlaceChatScreenState extends ConsumerState<PlaceChatScreen> {
       if (_scrollController.position.pixels ==
           _scrollController.position.maxScrollExtent) {
         ref
-            .read(placeChatViewModelProvider(widget.threadId).notifier)
+            .read(maypoleChatViewModelProvider(widget.threadId).notifier)
             .loadMoreMessages();
       }
     }
@@ -43,11 +43,11 @@ class _PlaceChatScreenState extends ConsumerState<PlaceChatScreen> {
   @override
   Widget build(BuildContext context) {
     final messagesAsyncValue =
-        ref.watch(placeChatViewModelProvider(widget.threadId));
+        ref.watch(maypoleChatViewModelProvider(widget.threadId));
     final currentUser = AppSession().currentUser;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Place Chat')),
+      appBar: AppBar(title: const Text('Maypole Chat')),
       body: Column(
         children: [
           Expanded(
@@ -102,7 +102,7 @@ class _PlaceChatScreenState extends ConsumerState<PlaceChatScreen> {
             onPressed: () {
               if (_messageController.text.isNotEmpty) {
                 ref
-                    .read(placeChatViewModelProvider(widget.threadId).notifier)
+                    .read(maypoleChatViewModelProvider(widget.threadId).notifier)
                     .sendPlaceMessage(_messageController.text, sender);
                 _messageController.clear();
               }

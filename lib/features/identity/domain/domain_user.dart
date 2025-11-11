@@ -1,12 +1,12 @@
 import 'package:maypole/features/directmessages/domain/dm_thread.dart';
-import 'package:maypole/features/placechat/domain/place_chat_thread.dart';
+import 'package:maypole/features/maypolechat/domain/maypole.dart';
 
 class DomainUser {
   String username;
   String email;
   String firebaseID;
   String profilePictureUrl;
-  List<PlaceChatThreadMetaData> placeChatThreads;
+  List<MaypoleMetaData> placeChatThreads;
   List<DMThreadMetaData> dmThreads;
 
   DomainUser({
@@ -35,7 +35,7 @@ class DomainUser {
       email: map['email'],
       firebaseID: map['firebaseID'],
       profilePictureUrl: map['profilePictureUrl'] ?? '',
-      placeChatThreads: List<PlaceChatThreadMetaData>.from(map['placeChatThreads']?.map((x) => PlaceChatThreadMetaData.fromMap(x)) ?? []),
+      placeChatThreads: List<MaypoleMetaData>.from(map['placeChatThreads']?.map((x) => MaypoleMetaData.fromMap(x)) ?? []),
       dmThreads: List<DMThreadMetaData>.from(map['dmThreads']?.map((x) => DMThreadMetaData.fromMap(x)) ?? []),
     );
   }
