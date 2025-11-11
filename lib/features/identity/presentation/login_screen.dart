@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:maypole/core/app_config.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import '../domain/states/auth_state.dart';
 import '../auth_providers.dart';
@@ -146,7 +147,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: ref.watch(authStateProvider).when(
         data: (user) => user != null
             ? _buildLoggedInView(user)
-            : _buildLoginForm(loginState),
+            : Stack(
+                children: [
+                  _buildLoginForm(loginState),
+                  if (!AppConfig.isProduction)
+                    const Positioned(
+                      bottom: 20,
+                      left: 16,
+                      child: Text(
+                        'DEV',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
       ),

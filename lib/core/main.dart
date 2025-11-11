@@ -1,11 +1,13 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'firebase_options.dart';
-import 'core/app_router.dart';
-import 'core/app_theme.dart';
+import 'app_router.dart';
+import 'app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,17 +38,55 @@ Future<void> main() async {
   final dotenvEnv = dotenvLoaded ? (dotenv.env['ENVIRONMENT'] ?? 'dev') : 'dev';
   final environment = dartDefineEnv.isNotEmpty ? dartDefineEnv : dotenvEnv;
 
+  final isProd = environment == 'prod' || environment == 'production';
+  final envPrefix = isProd ? "FIREBASE_PROD" : "FIREBASE_DEV";
+
+  // Create Firebase options from environment variables
+  final FirebaseOptions firebaseOptions;
+
+  if (kIsWeb) {
+    firebaseOptions = FirebaseOptions(
+      apiKey: dotenv.env['${envPrefix}_WEB_API_KEY']!,
+      appId: dotenv.env['${envPrefix}_WEB_APP_ID']!,
+      messagingSenderId: dotenv.env['${envPrefix}_MESSAGING_SENDER_ID']!,
+      projectId: dotenv.env['${envPrefix}_PROJECT_ID']!,
+      authDomain: dotenv.env['${envPrefix}_AUTH_DOMAIN']!,
+      storageBucket: dotenv.env['${envPrefix}_STORAGE_BUCKET']!,
+    );
+  } else if (Platform.isIOS) {
+    firebaseOptions = FirebaseOptions(
+      apiKey: dotenv.env['${envPrefix}_IOS_API_KEY']!,
+      appId: dotenv.env['${envPrefix}_IOS_APP_ID']!,
+      messagingSenderId: dotenv.env['${envPrefix}_MESSAGING_SENDER_ID']!,
+      projectId: dotenv.env['${envPrefix}_PROJECT_ID']!,
+      authDomain: dotenv.env['${envPrefix}_AUTH_DOMAIN']!,
+      storageBucket: dotenv.env['${envPrefix}_STORAGE_BUCKET']!,
+      iosBundleId: dotenv.env['IOS_BUNDLE_ID']!,
+    );
+  } else if (Platform.isAndroid) {
+    firebaseOptions = FirebaseOptions(
+      apiKey: dotenv.env['${envPrefix}_ANDROID_API_KEY']!,
+      appId: dotenv.env['${envPrefix}_ANDROID_APP_ID']!,
+      messagingSenderId: dotenv.env['${envPrefix}_MESSAGING_SENDER_ID']!,
+      projectId: dotenv.env['${envPrefix}_PROJECT_ID']!,
+      authDomain: dotenv.env['${envPrefix}_AUTH_DOMAIN']!,
+      storageBucket: dotenv.env['${envPrefix}_STORAGE_BUCKET']!,
+    );
+  } else {
+    // You can add support for other platforms here if needed
+    throw UnsupportedError('Unsupported platform for Firebase initialization');
+  }
+
   debugPrint('🔧 Environment Debug Info:');
   debugPrint('  • Dart Define ENVIRONMENT: "$dartDefineEnv"');
   debugPrint('  • .env ENVIRONMENT: "$dotenvEnv"');
   debugPrint('  • Final Environment: "$environment"');
-  debugPrint('  • Firebase Project: ${DefaultFirebaseOptions.currentPlatform
-      .projectId}');
+  debugPrint('  • Firebase Project: ${firebaseOptions.projectId}');
 
   // Initialize Firebase with error handling for duplicate initialization
   try {
     await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
+      options: firebaseOptions,
     );
     debugPrint('✅ Firebase initialized successfully');
   } catch (e) {
