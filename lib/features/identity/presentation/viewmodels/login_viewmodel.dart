@@ -3,15 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/services/auth_service.dart';
 import '../../domain/states/auth_state.dart';
 
+class LoginViewModel extends Notifier<LoginState> {
+  late final AuthService _authService;
 
-
-
-class LoginViewModel extends StateNotifier<LoginState> {
-  final AuthService _authService;
-
-  LoginViewModel({required AuthService authService})
-      : _authService = authService,
-        super(const LoginState()); // Initialize the state
+  @override
+  LoginState build() {
+    _authService = ref.watch(authServiceProvider);
+    return const LoginState();
+  }
 
   // Methods to update state
   void _setLoading(bool value) {
@@ -63,3 +62,8 @@ class LoginViewModel extends StateNotifier<LoginState> {
     }
   }
 }
+
+// Add the missing provider import
+final authServiceProvider = Provider<AuthService>((ref) {
+  return AuthService();
+});

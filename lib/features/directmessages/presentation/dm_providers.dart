@@ -8,8 +8,7 @@ final dmThreadServiceProvider = Provider<DMThreadService>((ref) {
   return DMThreadService();
 });
 
-final dmViewModelProvider = StateNotifierProvider.autoDispose
-    .family<DmViewModel, AsyncValue<List<DirectMessage>>, String>((ref, threadId) {
-  final threadService = ref.watch(dmThreadServiceProvider);
-  return DmViewModel(threadService, threadId);
-});
+final dmViewModelProvider = AsyncNotifierProvider.autoDispose
+    .family<DmViewModel, List<DirectMessage>, String>(
+      (threadId) => DmViewModel(threadId),
+    );

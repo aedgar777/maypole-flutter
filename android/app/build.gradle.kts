@@ -37,7 +37,7 @@ android {
         debug {
             isDebuggable = true
             isMinifyEnabled = false
-            applicationIdSuffix = ".debug"
+            // Removed applicationIdSuffix = ".debug" to avoid double suffixes
             versionNameSuffix = "-debug"
         }
         release {
@@ -58,7 +58,8 @@ android {
     productFlavors {
         create("dev") {
             dimension = "environment"
-            applicationIdSuffix = ".dev"
+            // Set applicationId directly to match Firebase config
+            applicationId = "app.maypole.dev"
             versionNameSuffix = "-dev"
             manifestPlaceholders["appName"] = "Maypole Dev"
         }

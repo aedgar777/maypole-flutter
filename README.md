@@ -80,7 +80,8 @@ This project uses a **private team approach** with shared Firebase projects:
 
 - ✅ **Shared development environment** for consistent testing
 - ✅ **Role-based access control** (Developer/Senior/Admin)
-- ✅ **Centralized secret management** via GitHub secrets
+- ✅ **Local development** uses `.env.local` file (not committed)
+- ✅ **CI/CD deployments** use GitHub Actions secrets (no .env files)
 - ✅ **Production environment protection** with restricted access
 - ✅ **Secure secret distribution** to team members
 
@@ -186,7 +187,8 @@ flutter build web --dart-define-from-file=.env.local --dart-define=ENVIRONMENT=p
 
 ### **For All Team Members**
 
-- 🔒 Keep your `.env.local` file secure and never commit it
+- 🔒 Keep your `.env.local` file secure and never commit it (local development only)
+- 🔒 CI/CD uses GitHub Actions secrets - no need to manage .env files there
 - 🔒 Don't share team secrets outside the organization
 - 🔒 Use development environment for all testing
 - 🔒 Report security issues immediately to team admin

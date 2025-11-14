@@ -3,16 +3,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/domain/maypole_message.dart';
 import '../../data/maypole_chat_service.dart';
+import '../maypole_chat_providers.dart';
 
-class MaypoleChatViewModel extends StateNotifier<AsyncValue<List<MaypoleMessage>>> {
-  final MaypoleChatService _threadService;
+class MaypoleChatViewModel extends AsyncNotifier<List<MaypoleMessage>> {
+  MaypoleChatViewModel(this._threadId);
+
   final String _threadId;
+  late final MaypoleChatService _threadService;
   StreamSubscription<List<MaypoleMessage>>? _messagesSubscription;
   bool _isLoadingMore = false;
 
-  MaypoleChatViewModel(this._threadService, this._threadId)
-      : super(const AsyncValue.loading()) {
+  @override
+  Future<List<MaypoleMessage>> build() async {
+    _threadService = ref.read(maypoleChatThreadServiceProvider);
+
+    // Cancel subscription when the provider is disposed
+    ref.onDispose(() {
+      _messagesSubscription?.cancel();
+    });
+
     _init();
+
+    // Return empty list initially, the stream will update it
+    return [];
   }
 
   void _init() {
@@ -60,10 +73,8 @@ class MaypoleChatViewModel extends StateNotifier<AsyncValue<List<MaypoleMessage>
       _isLoadingMore = false;
     }
   }
-
-  @override
-  void dispose() {
-    _messagesSubscription?.cancel();
-    super.dispose();
-  }
 }
+
+// Provider to hold the threadId parameter
+final maypoleChatThreadIdProvider = Provider<String>((
+    ref) => throw UnimplementedError());

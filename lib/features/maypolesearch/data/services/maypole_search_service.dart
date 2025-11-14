@@ -14,6 +14,8 @@ class MaypoleSearchService {
     final headers = {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': _apiKey,
+      'X-Goog-Field-Mask':
+          'suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat',
     };
 
     final response = await http.post(
@@ -27,7 +29,7 @@ class MaypoleSearchService {
       debugPrint("Place Response: ${response.body}");
       return AutocompleteResponse.fromJson(response.body);
     } else {
-      throw Exception('Failed to load predictions');
+      throw Exception('Failed to load predictions: ${response.body}');
     }
   }
 }

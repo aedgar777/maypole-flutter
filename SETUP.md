@@ -2,6 +2,22 @@
 
 This document explains how to set up the Maypole Flutter project with Firebase integration.
 
+## 🔑 Secret Management Overview
+
+**Important**: This project uses **two different approaches** for managing secrets:
+
+| Environment                | Secret Management                 | Configuration File           |
+|----------------------------|-----------------------------------|------------------------------|
+| **Local Development**      | `.env.local` file in project root | ✅ Required for `flutter run` |
+| **CI/CD (GitHub Actions)** | GitHub repository secrets         | ❌ No .env files used         |
+
+**Key Points**:
+
+- `.env.local` is **only for local development** and is never committed to the repository
+- GitHub Actions gets all variables from **repository secrets** configured in Settings
+- Both use the same variable names but are managed independently
+- When rotating secrets, update **both places** (repository secrets AND team .env files)
+
 ## Prerequisites
 
 - Flutter SDK (latest stable version)
@@ -11,10 +27,12 @@ This document explains how to set up the Maypole Flutter project with Firebase i
 
 ## Firebase Configuration Setup
 
-### 1. Environment Variables
+### 1. Environment Variables (Local Development Only)
 
-The project uses environment variables to securely manage Firebase configuration. You need to create
-your own environment file:
+The project uses environment variables for **local development only**. CI/CD pipelines use GitHub
+Actions secrets instead and do not require `.env` files.
+
+For local development, you need to create your own environment file:
 
 1. Copy the example environment file:
    ```bash
@@ -24,6 +42,7 @@ your own environment file:
 2. Fill in your actual Firebase configuration values in `.env.local`:
     - Get these values from your Firebase Console → Project Settings → General
     - Each platform (Web, Android, iOS) has different configuration values
+    - **Note**: This file is only for local development and is never committed to the repository
 
 ### 2. Google Services Files
 
@@ -64,9 +83,11 @@ flutter build apk --dart-define-from-file=.env.local --dart-define=ENVIRONMENT=p
 
 ### GitHub Actions (Current Setup)
 
+**Important**: GitHub Actions uses **repository secrets only** - no `.env` files are used in CI/CD.
+
 #### 1. Repository Secrets Setup
 
-You need to add all your Firebase configuration values as **GitHub repository secrets**:
+All Firebase configuration values are stored as **GitHub repository secrets**:
 
 1. Go to your GitHub repository → **Settings** → **Secrets and variables** → **Actions**
 2. Use the helper script to generate the secrets:
@@ -74,6 +95,9 @@ You need to add all your Firebase configuration values as **GitHub repository se
    ./scripts/generate-env-for-ci.sh github
    ```
 3. Copy each secret name and value into GitHub manually
+
+**Note**: These secrets are passed directly to the Flutter build commands via `--dart-define` flags.
+No `.env` files are created or used during CI/CD builds.
 
 #### 2. Alternative: Use Environment Groups (Recommended)
 
@@ -92,6 +116,8 @@ For better organization, use GitHub Environments:
 - **22 Firebase configuration secrets** (API keys, app IDs, etc.)
 - **2 Firebase service account secrets** (already configured)
 - **1 GitHub token** (automatically provided)
+
+All secrets are used directly in workflow files - no `.env` file generation occurs in CI/CD.
 
 ### Other CI/CD Platforms
 
@@ -163,13 +189,14 @@ build_web:
 ## Security Notes
 
 - Never commit actual API keys or configuration files to version control
-- The `.env.local` file is gitignored and should contain your actual secrets
+- **Local Development**: The `.env.local` file is gitignored and should contain your actual secrets
+- **CI/CD**: GitHub Actions uses repository secrets directly - no `.env` files are needed or created
 - Template files (`.env.example`, `google-services.json.example`) show the structure without
   exposing secrets
 - Firebase web API keys are not truly secret (they're exposed in the client), but Android/iOS keys
   should be protected
 - Use different Firebase projects for development and production
-- CI/CD secrets should be stored in your platform's secure secret management system
+- All environment variables are passed via `--dart-define` flags in both local and CI/CD builds
 
 ## Troubleshooting
 

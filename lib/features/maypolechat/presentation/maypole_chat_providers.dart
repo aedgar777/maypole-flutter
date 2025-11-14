@@ -8,8 +8,7 @@ final maypoleChatThreadServiceProvider = Provider<MaypoleChatService>((ref) {
   return MaypoleChatService();
 });
 
-final maypoleChatViewModelProvider = StateNotifierProvider.autoDispose
-    .family<MaypoleChatViewModel, AsyncValue<List<MaypoleMessage>>, String>((ref, threadId) {
-  final threadService = ref.watch(maypoleChatThreadServiceProvider);
-  return MaypoleChatViewModel(threadService, threadId);
-});
+final maypoleChatViewModelProvider = AsyncNotifierProvider.autoDispose
+    .family<MaypoleChatViewModel, List<MaypoleMessage>, String>(
+      (threadId) => MaypoleChatViewModel(threadId),
+    );

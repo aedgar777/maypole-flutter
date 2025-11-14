@@ -11,6 +11,8 @@ own:
 - ✅ Production environment access (for senior team members)
 - ✅ Shared Firestore data and user accounts for testing
 - ✅ Consistent environment across all team members
+- ✅ `.env.local` file for **local development only** (not used in CI/CD)
+- ✅ GitHub Actions uses repository secrets (no .env files needed)
 
 ## 🚀 Quick Setup (2 minutes)
 
@@ -24,7 +26,10 @@ Contact your team admin to:
 
 ### Step 2: Choose Your Secrets Access Method
 
-Your team admin will provide secrets via one of these methods:
+Your team admin will provide secrets via one of these methods **for local development only**:
+
+**Note**: These secrets are only needed for running the app locally. GitHub Actions CI/CD uses
+repository secrets and does not require `.env` files.
 
 #### **Option A: Direct Secrets File** (Simple)
 
@@ -32,7 +37,7 @@ Team admin provides you with a pre-configured `.env.local` file:
 
 ```bash
 # Team admin sends you .env.local with actual values
-# Just place it in your project root - that's it!
+# Just place it in your project root for local development - that's it!
 ```
 
 #### **Option B: Google Secret Manager** (Enterprise)
@@ -186,10 +191,11 @@ flutter build web --dart-define-from-file=.env.local --dart-define=ENVIRONMENT=p
 
 ### **Secrets Management**
 
-- 🔒 Keep `.env.local` secure on your machine
+- 🔒 Keep `.env.local` secure on your machine (local development only)
 - 🔒 Never commit secrets to version control
 - 🔒 Don't share secrets via chat/email
 - 🔒 Use secure file sharing if needed
+- ℹ️ GitHub Actions uses repository secrets - you don't need to manage .env files for CI/CD
 
 ## 🆘 Troubleshooting
 

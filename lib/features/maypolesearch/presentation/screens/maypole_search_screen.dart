@@ -73,12 +73,6 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
         return ListTile(
           title: Text(prediction.place),
           onTap: () {
-            // Handle the selection of a maypole
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Selected: ${prediction.place}'),
-              ),
-            );
             context.pop(prediction);
           },
         );

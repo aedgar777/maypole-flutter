@@ -11,13 +11,27 @@ class AuthService {
   final AppSession _session = AppSession();
 
   Stream<DomainUser?> get user {
-    return _firebaseAuth.authStateChanges().asyncMap((firebaseUser) async {
+    return _firebaseAuth.authStateChanges().asyncExpand((firebaseUser) {
       if (firebaseUser == null) {
         _session.currentUser = null;
-        return null;
+        return Stream.value(null);
       }
-      await _fetchAndSetDomainUser(firebaseUser.uid);
-      return _session.currentUser;
+      // Listen to real-time Firestore updates
+      return _firestore
+          .collection('users')
+          .doc(firebaseUser.uid)
+          .snapshots()
+          .map((docSnapshot) {
+        if (docSnapshot.exists) {
+          final user = DomainUser.fromMap(
+              docSnapshot.data() as Map<String, dynamic>);
+          _session.currentUser = user;
+          return user;
+        } else {
+          _session.currentUser = null;
+          return null;
+        }
+      });
     });
   }
 

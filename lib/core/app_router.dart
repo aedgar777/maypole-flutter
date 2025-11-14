@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../features/maypolesearch/presentation/screens/maypole_search_screen.dart';
+import '../features/maypolechat/presentation/screens/maypole_chat_screen.dart';
 import '../features/identity/presentation/login_screen.dart';
 import '../features/identity/presentation/registration_screen.dart';
 import '../features/home/presentation/screens/home_screen.dart';
@@ -25,6 +26,17 @@ GoRouter createRouter() {
           fullscreenDialog: true,
           child: MaypoleSearchScreen(),
         ),
+      ),
+      GoRoute(
+        path: '/chat/:threadId',
+        builder: (context, state) {
+          final threadId = state.pathParameters['threadId']!;
+          final maypoleName = state.extra as String? ?? 'Unknown';
+          return MaypoleChatScreen(
+            threadId: threadId,
+            maypoleName: maypoleName,
+          );
+        },
       ),
     ],
   );

@@ -3,12 +3,12 @@ import '../../data/models/autocomplete_request.dart';
 import '../../data/models/autocomplete_response.dart';
 import '../../data/services/maypole_search_service_provider.dart';
 
-// State Notifier
-class MaypoleSearchViewModel
-    extends StateNotifier<AsyncValue<List<PlacePrediction>>> {
-  final Ref _ref;
-
-  MaypoleSearchViewModel(this._ref) : super(const AsyncValue.data([]));
+// Async Notifier
+class MaypoleSearchViewModel extends AsyncNotifier<List<PlacePrediction>> {
+  @override
+  Future<List<PlacePrediction>> build() async {
+    return [];
+  }
 
   Future<void> searchMaypoles(String input) async {
     // Set state to loading
@@ -23,7 +23,7 @@ class MaypoleSearchViewModel
       final request = AutocompleteRequest(input: input);
 
       // Call the service
-      final maypoleSearchService = _ref.read(maypoleSearchServiceProvider);
+      final maypoleSearchService = ref.read(maypoleSearchServiceProvider);
       final response = await maypoleSearchService.autocomplete(request);
 
       // Set state to data

@@ -3,16 +3,29 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/features/directmessages/domain/direct_message.dart';
 import 'package:maypole/features/directmessages/data/dm_thread_service.dart';
+import 'package:maypole/features/directmessages/presentation/dm_providers.dart';
 
-class DmViewModel extends StateNotifier<AsyncValue<List<DirectMessage>>> {
-  final DMThreadService _threadService;
+class DmViewModel extends AsyncNotifier<List<DirectMessage>> {
+  DmViewModel(this._threadId);
+
   final String _threadId;
+  late final DMThreadService _threadService;
   StreamSubscription<List<DirectMessage>>? _messagesSubscription;
   bool _isLoadingMore = false;
 
-  DmViewModel(this._threadService, this._threadId)
-      : super(const AsyncValue.loading()) {
+  @override
+  Future<List<DirectMessage>> build() async {
+    _threadService = ref.read(dmThreadServiceProvider);
+
+    // Cancel subscription when the provider is disposed
+    ref.onDispose(() {
+      _messagesSubscription?.cancel();
+    });
+
     _init();
+
+    // Return empty list initially, the stream will update it
+    return [];
   }
 
   void _init() {
@@ -51,10 +64,8 @@ class DmViewModel extends StateNotifier<AsyncValue<List<DirectMessage>>> {
       _isLoadingMore = false;
     }
   }
-
-  @override
-  void dispose() {
-    _messagesSubscription?.cancel();
-    super.dispose();
-  }
 }
+
+// Provider to hold the threadId parameter
+final dmThreadIdProvider = Provider<String>((
+    ref) => throw UnimplementedError());

@@ -19,15 +19,26 @@ class AutocompleteResponse {
 }
 
 class PlacePrediction {
-  final String place;
+  final String place; // Full text (business name + address) for display in search
+  final String placeName; // Just the business name for the chat screen
   final String placeId;
 
-  PlacePrediction({required this.place, required this.placeId});
+  PlacePrediction({
+    required this.place,
+    required this.placeName,
+    required this.placeId,
+  });
 
   factory PlacePrediction.fromMap(Map<String, dynamic> map) {
     final prediction = map['placePrediction'] as Map<String, dynamic>?;
+    final structuredFormat =
+        prediction?['structuredFormat'] as Map<String, dynamic>?;
+
     return PlacePrediction(
       place: prediction?['text']?['text'] as String? ?? '',
+      placeName:
+          structuredFormat?['mainText']?['text'] as String? ??
+          prediction?['text']?['text'] as String? ?? '',
       placeId: prediction?['placeId'] as String? ?? '',
     );
   }

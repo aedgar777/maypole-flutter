@@ -6,7 +6,7 @@ class DomainUser {
   String email;
   String firebaseID;
   String profilePictureUrl;
-  List<MaypoleMetaData> placeChatThreads;
+  List<MaypoleMetaData> maypoleChatThreads;
   List<DMThreadMetaData> dmThreads;
 
   DomainUser({
@@ -14,7 +14,7 @@ class DomainUser {
     required this.email,
     required this.firebaseID,
     this.profilePictureUrl = '',
-    this.placeChatThreads = const [],
+    this.maypoleChatThreads = const [],
     this.dmThreads = const [],
   });
 
@@ -24,7 +24,7 @@ class DomainUser {
       'email': email,
       'firebaseID': firebaseID,
       'profilePictureUrl': profilePictureUrl,
-      'placeChatThreads': placeChatThreads.map((e) => e.toMap()).toList(),
+      'placeChatThreads': maypoleChatThreads.map((e) => e.toMap()).toList(),
       'dmThreads': dmThreads.map((e) => e.toMap()).toList(),
     };
   }
@@ -35,7 +35,7 @@ class DomainUser {
       email: map['email'],
       firebaseID: map['firebaseID'],
       profilePictureUrl: map['profilePictureUrl'] ?? '',
-      placeChatThreads: List<MaypoleMetaData>.from(map['placeChatThreads']?.map((x) => MaypoleMetaData.fromMap(x)) ?? []),
+      maypoleChatThreads: List<MaypoleMetaData>.from(map['placeChatThreads']?.map((x) => MaypoleMetaData.fromMap(x)) ?? []),
       dmThreads: List<DMThreadMetaData>.from(map['dmThreads']?.map((x) => DMThreadMetaData.fromMap(x)) ?? []),
     );
   }

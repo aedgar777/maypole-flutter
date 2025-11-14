@@ -61,10 +61,10 @@ class HomeScreen extends ConsumerWidget {
           onPressed: () async {
             final result = await context.push<PlacePrediction>('/search');
 
-            if (result != null) {
+            if (result != null && context.mounted) {
               // Navigate to the chat screen, passing the placeId as the threadId
-              // and the place name as the maypoleName.
-              context.go('/chat/${result.placeId}', extra: {'maypoleName': result.place});
+              // and the place name (business name only) as the maypoleName.
+              context.push('/chat/${result.placeId}', extra: result.placeName);
             }
           },
           child: const Icon(Icons.add),
@@ -74,7 +74,7 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildPlaceChatList(BuildContext context, DomainUser user) {
-    if (user.placeChatThreads.isEmpty) {
+    if (user.maypoleChatThreads.isEmpty) {
       return const Center(
           child: Padding(
         padding: EdgeInsets.all(8.0),
@@ -82,14 +82,14 @@ class HomeScreen extends ConsumerWidget {
       ));
     }
     return ListView.builder(
-      itemCount: user.placeChatThreads.length,
+      itemCount: user.maypoleChatThreads.length,
       itemBuilder: (context, index) {
-        final thread = user.placeChatThreads[index];
+        final thread = user.maypoleChatThreads[index];
         return ListTile(
           title: Text(thread.name),
           subtitle: Text('Last message: ${thread.lastMessageTime}'),
           onTap: () {
-            context.go('/chat/${thread.id}', extra: {'maypoleName': thread.name});
+            context.push('/chat/${thread.id}', extra: thread.name);
           },
         );
       },

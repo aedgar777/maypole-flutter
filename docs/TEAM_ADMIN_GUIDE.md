@@ -7,8 +7,9 @@ project.
 
 - ✅ **Manage GitHub repository access** and permissions
 - ✅ **Control Firebase project access** for team members
-- ✅ **Distribute team secrets** securely to team members
-- ✅ **Monitor and rotate secrets** regularly
+- ✅ **Distribute team secrets** securely to team members (for local development)
+- ✅ **Manage GitHub Actions secrets** (for CI/CD - no .env files needed)
+- ✅ **Monitor and rotate secrets** regularly in both locations
 - ✅ **Onboard new team members** and offboard departing ones
 
 ## 🚀 New Team Member Onboarding
@@ -53,9 +54,12 @@ project.
    # - Editor: Only for DevOps/senior developers
    ```
 
-### Step 3: Distribute Team Secrets
+### Step 3: Distribute Team Secrets (For Local Development)
 
-Choose one of these methods to securely share configuration:
+Choose one of these methods to securely share configuration for **local development only**:
+
+**Note**: GitHub Actions CI/CD uses repository secrets (managed separately in GitHub Settings) and
+does not require `.env` files.
 
 #### **Method A: Direct File Sharing** (Recommended for small teams)
 
@@ -154,13 +158,14 @@ Choose one of these methods to securely share configuration:
    ```bash
    # Firebase Console → Project Settings → Service accounts
    # Generate new private keys
-   # Update GitHub repository secrets
-   # Update .env.local template
+   # Update GitHub repository secrets (for CI/CD)
+   # Update .env.local template (for local development)
    # Notify team of new secrets
    ```
 
 2. **Update team configurations:**
    ```bash
+   # Update GitHub Actions secrets in repository Settings → Secrets
    # Update your local .env.local with new values
    # Redistribute to team members via secure method
    # Update Google Secret Manager (if using)
@@ -168,10 +173,15 @@ Choose one of these methods to securely share configuration:
 
 3. **Test rotation:**
    ```bash
-   # Verify GitHub Actions still work with new secrets
+   # Verify GitHub Actions still work with new secrets (automatic via workflows)
    # Test local development with new configuration
    # Confirm team members can still access Firebase
    ```
+
+**Important**: Remember to update secrets in **two places**:
+
+- GitHub repository secrets (for CI/CD deployments)
+- Team members' `.env.local` files (for local development)
 
 ## 👋 Team Member Offboarding
 
@@ -223,7 +233,8 @@ Choose one of these methods to securely share configuration:
 
 ### Secret Distribution
 
-- ✅ **Use encrypted channels** for sharing secrets
+- ✅ **Local Development**: Use encrypted channels for sharing `.env.local` files with team
+- ✅ **CI/CD**: Manage secrets via GitHub repository settings (no .env files)
 - ✅ **Verify recipient identity** before sharing
 - ✅ **Use time-limited access** when possible
 - ✅ **Document who has what access** and when
@@ -240,9 +251,10 @@ Choose one of these methods to securely share configuration:
 
 1. **Suspected secret compromise:**
    ```bash
-   # Immediately rotate all affected secrets
+   # Immediately rotate all affected secrets in BOTH places:
+   # 1. Update GitHub repository secrets (Settings → Secrets)
+   # 2. Update team members' .env.local files
    # Revoke access for suspected compromised accounts
-   # Update GitHub secrets and redistribute team config
    # Document incident and lessons learned
    ```
 
