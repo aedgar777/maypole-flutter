@@ -89,22 +89,22 @@ class MaypoleChatService {
       );
       final userRef = _firestore.collection('users').doc(sender.firebaseID);
       batch.update(userRef, {
-        'placeChatThreads': FieldValue.arrayUnion([maypoleMetaData.toMap()])
+        'maypoleChatThreads': FieldValue.arrayUnion([maypoleMetaData.toMap()])
       });
     }
 
     await batch.commit();
   }
 
-  Future<void> sendPlaceMessage(
-      String threadId, String maypoleName, String body, DomainUser sender) async {
+  Future<void> sendMaypoleMessage(String threadId, String maypoleName,
+      String body, DomainUser sender) async {
     final now = DateTime.now();
     final message = MaypoleMessage(
       sender: sender.username,
       timestamp: now,
       body: body,
       taggedUser:
-          '', // TODO This needs to be implemented based on your app's user tagging logic
+      '', // TODO This needs to be implemented based on your app's user tagging logic
     );
 
     final maypoleRef = _firestore.collection('maypoles').doc(threadId);
@@ -127,7 +127,7 @@ class MaypoleChatService {
       MaypoleMetaData(id: threadId, name: maypoleName, lastMessageTime: now);
       final userRef = _firestore.collection('users').doc(sender.firebaseID);
       batch.update(userRef, {
-        'placeChatThreads': FieldValue.arrayUnion([maypoleMetaData.toMap()])
+        'maypoleChatThreads': FieldValue.arrayUnion([maypoleMetaData.toMap()])
       });
     }
 

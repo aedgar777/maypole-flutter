@@ -24,7 +24,7 @@ class DomainUser {
       'email': email,
       'firebaseID': firebaseID,
       'profilePictureUrl': profilePictureUrl,
-      'placeChatThreads': maypoleChatThreads.map((e) => e.toMap()).toList(),
+      'maypoleChatThreads': maypoleChatThreads.map((e) => e.toMap()).toList(),
       'dmThreads': dmThreads.map((e) => e.toMap()).toList(),
     };
   }
@@ -35,7 +35,7 @@ class DomainUser {
       email: map['email'],
       firebaseID: map['firebaseID'],
       profilePictureUrl: map['profilePictureUrl'] ?? '',
-      maypoleChatThreads: List<MaypoleMetaData>.from(map['placeChatThreads']?.map((x) => MaypoleMetaData.fromMap(x)) ?? []),
+      maypoleChatThreads: List<MaypoleMetaData>.from(map['maypoleChatThreads']?.map((x) => MaypoleMetaData.fromMap(x)) ?? []),
       dmThreads: List<DMThreadMetaData>.from(map['dmThreads']?.map((x) => DMThreadMetaData.fromMap(x)) ?? []),
     );
   }

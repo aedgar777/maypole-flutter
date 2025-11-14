@@ -50,7 +50,7 @@ class MaypoleChatViewModel extends AsyncNotifier<List<MaypoleMessage>> {
   Future<void> sendPlaceMessage(
       String maypoleName, String body, DomainUser sender) async {
     try {
-      await _threadService.sendPlaceMessage(_threadId, maypoleName, body, sender);
+      await _threadService.sendMaypoleMessage(_threadId, maypoleName, body, sender);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }

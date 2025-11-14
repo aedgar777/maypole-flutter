@@ -53,7 +53,7 @@ class HomeScreen extends ConsumerWidget {
         ),
         body: TabBarView(
           children: [
-            _buildPlaceChatList(context, user),
+            _buildMaypoleChatList(context, user),
             _buildDmList(context, user),
           ],
         ),
@@ -73,7 +73,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildPlaceChatList(BuildContext context, DomainUser user) {
+  Widget _buildMaypoleChatList(BuildContext context, DomainUser user) {
     if (user.maypoleChatThreads.isEmpty) {
       return const Center(
           child: Padding(
