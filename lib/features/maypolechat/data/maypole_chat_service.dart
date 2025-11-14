@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:maypole/features/identity/domain/domain_user.dart';
 import '../domain/maypole.dart';
 import '../domain/maypole_message.dart';
 
@@ -30,7 +31,8 @@ class MaypoleChatService {
             .toList());
   }
 
-  Future<List<MaypoleMessage>> getMoreMessages(String threadId, MaypoleMessage lastMessage) async {
+  Future<List<MaypoleMessage>> getMoreMessages(
+      String threadId, MaypoleMessage lastMessage) async {
     final snapshot = await _firestore
         .collection('maypoles')
         .doc(threadId)
@@ -40,36 +42,94 @@ class MaypoleChatService {
         .limit(_messageLimit)
         .get();
 
-    return snapshot.docs.map((doc) => MaypoleMessage.fromMap(doc.data())).toList();
+    return snapshot.docs
+        .map((doc) => MaypoleMessage.fromMap(doc.data()))
+        .toList();
   }
 
   Future<void> sendMessage(
-      String threadId, String body, String sender) async {
+    String threadId,
+    String maypoleName,
+    String body,
+    DomainUser sender,
+  ) async {
+    final now = DateTime.now();
     final message = MaypoleMessage(
-      sender: sender,
-      timestamp: DateTime.now(),
+      sender: sender.username,
+      timestamp: now,
       body: body,
-      taggedUser: '', // TODO This needs to be implemented based on your app's user tagging logic
+      taggedUser:
+          '', // TODO This needs to be implemented based on your app's user tagging logic
     );
-    await _firestore
-        .collection('maypoles')
-        .doc(threadId)
-        .collection('messages')
-        .add(message.toMap());
+
+    final maypoleRef = _firestore.collection('maypoles').doc(threadId);
+    final messageRef = maypoleRef.collection('messages').doc();
+
+    final batch = _firestore.batch();
+
+    // "Upsert" the maypole document: create if it doesn't exist, update if it does
+    batch.set(
+        maypoleRef,
+        {
+          'id': threadId,
+          'name': maypoleName,
+          'lastMessageTime': Timestamp.fromDate(now)
+        },
+        SetOptions(merge: true));
+
+    // Add the new message to the subcollection
+    batch.set(messageRef, message.toMap());
+
+    // Update user's list if needed
+    if (!sender.placeChatThreads.any((element) => element.id == threadId)) {
+      final maypoleMetaData = MaypoleMetaData(
+        id: threadId,
+        name: maypoleName,
+        lastMessageTime: now,
+      );
+      final userRef = _firestore.collection('users').doc(sender.firebaseID);
+      batch.update(userRef, {
+        'placeChatThreads': FieldValue.arrayUnion([maypoleMetaData.toMap()])
+      });
+    }
+
+    await batch.commit();
   }
 
   Future<void> sendPlaceMessage(
-      String threadId, String body, String sender) async {
+      String threadId, String maypoleName, String body, DomainUser sender) async {
+    final now = DateTime.now();
     final message = MaypoleMessage(
-      sender: sender,
-      timestamp: DateTime.now(),
+      sender: sender.username,
+      timestamp: now,
       body: body,
-      taggedUser: '', // TODO This needs to be implemented based on your app's user tagging logic
+      taggedUser:
+          '', // TODO This needs to be implemented based on your app's user tagging logic
     );
-    await _firestore
-        .collection('maypoles')
-        .doc(threadId)
-        .collection('messages')
-        .add(message.toMap());
+
+    final maypoleRef = _firestore.collection('maypoles').doc(threadId);
+    final messageRef = maypoleRef.collection('messages').doc();
+
+    final batch = _firestore.batch();
+    batch.set(
+        maypoleRef,
+        {
+          'id': threadId,
+          'name': maypoleName,
+          'lastMessageTime': Timestamp.fromDate(now)
+        },
+        SetOptions(merge: true));
+    batch.set(messageRef, message.toMap());
+
+    if (!sender.placeChatThreads.any((element) => element.id == threadId)) {
+      final maypoleMetaData =
+          MaypoleMetaData(id: threadId, name: maypoleName, lastMessageTime: now);
+      final userRef = _firestore.collection('users').doc(sender.firebaseID);
+      batch.update(userRef, {
+        'placeChatThreads': FieldValue.arrayUnion([maypoleMetaData.toMap()])
+      });
+    }
+
+    await batch.commit();
   }
 }

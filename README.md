@@ -34,6 +34,40 @@ meet there.
    flutter run --dart-define-from-file=.env.local --dart-define=ENVIRONMENT=dev
    ```
 
+## 🏗️ Build Configurations
+
+The app supports four build configurations across both iOS and Android platforms:
+
+| Configuration    | Purpose              | iOS (Xcode)  | Android (Gradle) |
+|------------------|----------------------|--------------|------------------|
+| **dev-debug**    | Daily development    | dev-debug    | devDebug         |
+| **dev-release**  | Test performance     | dev-release  | devRelease       |
+| **prod-debug**   | Production debugging | prod-debug   | prodDebug        |
+| **prod-release** | Store releases       | prod-release | prodRelease      |
+
+### Quick Selection
+
+**Android Studio:**
+
+- Open "Build Variants" panel → Select variant (e.g., `devDebug`)
+
+**Xcode:**
+
+- Edit Scheme → Run → Build Configuration (e.g., `dev-debug`)
+
+**Command Line:**
+
+```bash
+# Development
+flutter run --debug --flavor dev --dart-define=ENVIRONMENT=dev
+
+# Production
+flutter run --release --flavor prod --dart-define=ENVIRONMENT=production
+```
+
+📖 **[Quick Start Guide](./QUICK_START_BUILD_CONFIGS.md)** | *
+*[Full Documentation](./BUILD_CONFIGURATIONS_SUMMARY.md)**
+
 ## 🏗️ Project Structure
 
 - **Development Environment**: `maypole-flutter-dev` (shared by all team members)

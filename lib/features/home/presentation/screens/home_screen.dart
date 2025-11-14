@@ -62,12 +62,9 @@ class HomeScreen extends ConsumerWidget {
             final result = await context.push<PlacePrediction>('/search');
 
             if (result != null) {
-              // TODO: Use the result to navigate to a home
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Selected: ${result.place}'),
-                ),
-              );
+              // Navigate to the chat screen, passing the placeId as the threadId
+              // and the place name as the maypoleName.
+              context.go('/chat/${result.placeId}', extra: {'maypoleName': result.place});
             }
           },
           child: const Icon(Icons.add),
@@ -82,7 +79,7 @@ class HomeScreen extends ConsumerWidget {
           child: Padding(
         padding: EdgeInsets.all(8.0),
         child: Text('No place chats yet.'),
-      )); // TODO: Make this look nice
+      ));
     }
     return ListView.builder(
       itemCount: user.placeChatThreads.length,
@@ -92,7 +89,7 @@ class HomeScreen extends ConsumerWidget {
           title: Text(thread.name),
           subtitle: Text('Last message: ${thread.lastMessageTime}'),
           onTap: () {
-            // TODO: Navigate to place chat screen
+            context.go('/chat/${thread.id}', extra: {'maypoleName': thread.name});
           },
         );
       },

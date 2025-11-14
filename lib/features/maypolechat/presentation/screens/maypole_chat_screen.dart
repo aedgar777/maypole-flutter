@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/app_session.dart';
+import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/presentation/maypole_chat_providers.dart';
 
 class MaypoleChatScreen extends ConsumerStatefulWidget {
   final String threadId;
+  final String maypoleName;
 
-  const MaypoleChatScreen({super.key, required this.threadId});
+  const MaypoleChatScreen(
+      {super.key, required this.threadId, required this.maypoleName});
 
   @override
   MaypoleChatScreenState createState() => MaypoleChatScreenState();
@@ -47,7 +50,7 @@ class MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
     final currentUser = AppSession().currentUser;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Maypole Chat')),
+      appBar: AppBar(title: Text(widget.maypoleName)),
       body: Column(
         children: [
           Expanded(
@@ -80,13 +83,13 @@ class MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
               error: (error, stack) => Center(child: Text('Error: $error')),
             ),
           ),
-          if (currentUser != null) _buildMessageInput(currentUser.username),
+          if (currentUser != null) _buildMessageInput(currentUser),
         ],
       ),
     );
   }
 
-  Widget _buildMessageInput(String sender) {
+  Widget _buildMessageInput(DomainUser sender) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
@@ -103,7 +106,8 @@ class MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
               if (_messageController.text.isNotEmpty) {
                 ref
                     .read(maypoleChatViewModelProvider(widget.threadId).notifier)
-                    .sendMessage(_messageController.text, sender);
+                    .sendMessage(
+                        widget.maypoleName, _messageController.text, sender);
                 _messageController.clear();
               }
             },

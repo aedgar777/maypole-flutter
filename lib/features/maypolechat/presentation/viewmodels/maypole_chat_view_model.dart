@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/domain/maypole_message.dart';
 import '../../data/maypole_chat_service.dart';
 
@@ -25,17 +26,18 @@ class MaypoleChatViewModel extends StateNotifier<AsyncValue<List<MaypoleMessage>
     });
   }
 
-  Future<void> sendMessage(String body, String sender) async {
+  Future<void> sendMessage(String maypoleName, String body, DomainUser sender) async {
     try {
-      await _threadService.sendMessage(_threadId, body, sender);
+      await _threadService.sendMessage(_threadId, maypoleName, body, sender);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
   }
 
-  Future<void> sendPlaceMessage(String body, String sender) async {
+  Future<void> sendPlaceMessage(
+      String maypoleName, String body, DomainUser sender) async {
     try {
-      await _threadService.sendPlaceMessage(_threadId, body, sender);
+      await _threadService.sendPlaceMessage(_threadId, maypoleName, body, sender);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
