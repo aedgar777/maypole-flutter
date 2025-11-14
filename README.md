@@ -34,6 +34,40 @@ meet there.
    flutter run --dart-define-from-file=.env.local --dart-define=ENVIRONMENT=dev
    ```
 
+## 🏗️ Build Configurations
+
+The app supports four build configurations across both iOS and Android platforms:
+
+| Configuration    | Purpose              | iOS (Xcode)  | Android (Gradle) |
+|------------------|----------------------|--------------|------------------|
+| **dev-debug**    | Daily development    | dev-debug    | devDebug         |
+| **dev-release**  | Test performance     | dev-release  | devRelease       |
+| **prod-debug**   | Production debugging | prod-debug   | prodDebug        |
+| **prod-release** | Store releases       | prod-release | prodRelease      |
+
+### Quick Selection
+
+**Android Studio:**
+
+- Open "Build Variants" panel → Select variant (e.g., `devDebug`)
+
+**Xcode:**
+
+- Edit Scheme → Run → Build Configuration (e.g., `dev-debug`)
+
+**Command Line:**
+
+```bash
+# Development
+flutter run --debug --flavor dev --dart-define=ENVIRONMENT=dev
+
+# Production
+flutter run --release --flavor prod --dart-define=ENVIRONMENT=production
+```
+
+📖 **[Quick Start Guide](./QUICK_START_BUILD_CONFIGS.md)** | *
+*[Full Documentation](./BUILD_CONFIGURATIONS_SUMMARY.md)**
+
 ## 🏗️ Project Structure
 
 - **Development Environment**: `maypole-flutter-dev` (shared by all team members)
@@ -46,7 +80,8 @@ This project uses a **private team approach** with shared Firebase projects:
 
 - ✅ **Shared development environment** for consistent testing
 - ✅ **Role-based access control** (Developer/Senior/Admin)
-- ✅ **Centralized secret management** via GitHub secrets
+- ✅ **Local development** uses `.env.local` file (not committed)
+- ✅ **CI/CD deployments** use GitHub Actions secrets (no .env files)
 - ✅ **Production environment protection** with restricted access
 - ✅ **Secure secret distribution** to team members
 
@@ -152,7 +187,8 @@ flutter build web --dart-define-from-file=.env.local --dart-define=ENVIRONMENT=p
 
 ### **For All Team Members**
 
-- 🔒 Keep your `.env.local` file secure and never commit it
+- 🔒 Keep your `.env.local` file secure and never commit it (local development only)
+- 🔒 CI/CD uses GitHub Actions secrets - no need to manage .env files there
 - 🔒 Don't share team secrets outside the organization
 - 🔒 Use development environment for all testing
 - 🔒 Report security issues immediately to team admin

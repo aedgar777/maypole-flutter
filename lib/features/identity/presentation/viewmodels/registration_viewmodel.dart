@@ -2,13 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/services/auth_service.dart';
 import '../../domain/states/auth_state.dart';
 
+class RegistrationViewModel extends Notifier<RegistrationState> {
+  late final AuthService _authService;
 
-class RegistrationViewModel extends StateNotifier<RegistrationState> {
-  final AuthService _authService;
-
-  RegistrationViewModel({required AuthService authService})
-      : _authService = authService,
-        super(const RegistrationState());
+  @override
+  RegistrationState build() {
+    _authService = ref.watch(authServiceProvider);
+    return const RegistrationState();
+  }
 
   Future<void> register({
     required String email,
@@ -42,3 +43,7 @@ class RegistrationViewModel extends StateNotifier<RegistrationState> {
     }
   }
 }
+
+final authServiceProvider = Provider<AuthService>((ref) {
+  return AuthService();
+});

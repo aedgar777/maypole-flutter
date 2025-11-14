@@ -32,10 +32,34 @@ android {
         versionName = flutter.versionName
     }
 
+    // Define build types first
+    buildTypes {
+        debug {
+            isDebuggable = true
+            isMinifyEnabled = false
+            // Removed applicationIdSuffix = ".debug" to avoid double suffixes
+            versionNameSuffix = "-debug"
+        }
+        release {
+            isDebuggable = false
+            isMinifyEnabled = true
+            // TODO: Add your own signing config for the release build.
+            // Signing with the debug keys for now, so `flutter run --release` works.
+            signingConfig = signingConfigs.getByName("debug")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+
+    // Define product flavors
     flavorDimensions += "environment"
     productFlavors {
         create("dev") {
             dimension = "environment"
+            // Set applicationId directly to match Firebase config
+            applicationId = "app.maypole.dev"
             versionNameSuffix = "-dev"
             manifestPlaceholders["appName"] = "Maypole Dev"
         }
@@ -45,13 +69,11 @@ android {
         }
     }
 
-    buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
-        }
-    }
+    // This generates the following build variants:
+    // - devDebug (dev-debug)
+    // - devRelease (dev-release)
+    // - prodDebug (prod-debug)
+    // - prodRelease (prod-release)
 }
 
 flutter {

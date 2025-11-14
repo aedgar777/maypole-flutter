@@ -40,6 +40,25 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
     }
     
+    // Maypoles (place-based chat threads) collection rules
+    match /maypoles/{maypoleId} {
+      // Allow authenticated users to read any maypole thread
+      allow read: if request.auth != null;
+      
+      // Allow authenticated users to create or update maypole threads
+      // This is needed when sending the first message to a new thread
+      allow create, update: if request.auth != null;
+      
+      // Messages subcollection within a maypole thread
+      match /messages/{messageId} {
+        // Allow authenticated users to read messages in any thread
+        allow read: if request.auth != null;
+        
+        // Allow authenticated users to create messages
+        allow create: if request.auth != null;
+      }
+    }
+    
     // Default deny for all other documents
     match /{document=**} {
       allow read, write: if false;

@@ -13,11 +13,9 @@ final darkTheme = ThemeData(
   colorScheme: const ColorScheme.dark(
     primary: violet,
     secondary: fluorescentTeal,
-    background: darkPurple,
     surface: darkPurple,
     onPrimary: Colors.white,
     onSecondary: Colors.black,
-    onBackground: Colors.white,
     onSurface: Colors.white,
     error: darkError,
   ),
