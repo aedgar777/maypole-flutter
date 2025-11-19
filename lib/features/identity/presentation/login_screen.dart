@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
+import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../domain/states/auth_state.dart';
 import '../auth_providers.dart';
 import './widgets/auth_form_field.dart';
@@ -26,7 +27,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  Widget _buildLoggedInView(DomainUser user) {
+  Widget _buildLoggedInView(DomainUser user, BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     // Automatically navigate to home list when user is logged in
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.go('/home');
@@ -36,12 +39,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text('Welcome ${user.email}'),
+          Text(l10n.welcome(user.email)),
           ElevatedButton(
             onPressed: () {
               ref.read(loginViewModelProvider.notifier).signOut();
             },
-            child: const Text('Sign Out'),
+            child: Text(l10n.signOut),
           ),
         ],
       ),
@@ -57,7 +60,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Widget _buildLoginForm(AuthState loginState) {
+  Widget _buildLoginForm(AuthState loginState, BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Column(
       children: [
         const Spacer(flex: 1),
@@ -78,14 +83,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   AuthFormField(
                     controller: _emailController,
-                    labelText: 'Email',
+                    labelText: l10n.email,
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
+                        return l10n.pleaseEnterEmail;
                       }
                       if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                        return 'Please enter a valid email';
+                        return l10n.pleaseEnterValidEmail;
                       }
                       return null;
                     },
@@ -93,14 +98,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 20),
                   AuthFormField(
                     controller: _passwordController,
-                    labelText: 'Password',
+                    labelText: l10n.password,
                     obscureText: true,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
+                        return l10n.pleaseEnterPassword;
                       }
                       if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
+                        return l10n.passwordMinLength;
                       }
                       return null;
                     },
@@ -113,12 +118,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       children: [
                         ElevatedButton(
                           onPressed: _handleSignIn,
-                          child: const Text('Sign In', style: TextStyle(fontSize: 18)),
+                          child: Text(l10n.signIn, style: const TextStyle(
+                              fontSize: 18)),
                         ),
                         const SizedBox(height: 10),
                         TextButton(
                           onPressed: () => context.go('/register'),
-                          child: const Text('Register'),
+                          child: Text(l10n.register),
                         ),
                         if (loginState.errorMessage != null)
                           Padding(
@@ -142,31 +148,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final loginState = ref.watch(loginViewModelProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: ref.watch(authStateProvider).when(
-        data: (user) => user != null
-            ? _buildLoggedInView(user)
+        data: (user) =>
+        user != null
+            ? _buildLoggedInView(user, context)
             : Stack(
-                children: [
-                  _buildLoginForm(loginState),
-                  if (!AppConfig.isProduction)
-                    const Positioned(
-                      bottom: 20,
-                      left: 16,
-                      child: Text(
-                        'DEV',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.normal,
-                        ),
-                      ),
-                    ),
-                ],
+          children: [
+            _buildLoginForm(loginState, context),
+            if (!AppConfig.isProduction)
+              Positioned(
+                bottom: 20,
+                left: 16,
+                child: Text(
+                  l10n.devEnvironment,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.normal,
+                  ),
+                ),
               ),
+          ],
+        ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        error: (err, stack) => Center(child: Text(l10n.error(err.toString()))),
       ),
     );
   }

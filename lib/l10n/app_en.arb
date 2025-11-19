@@ -1,0 +1,122 @@
+{
+  "@@locale": "en",
+  "appTitle": "Maypole",
+  "@appTitle": {
+    "description": "The title of the application"
+  },
+  "appTitleDev": "Maypole (Dev)",
+  "@appTitleDev": {
+    "description": "The title of the application in development mode"
+  },
+  "logout": "Logout",
+  "@logout": {
+    "description": "Logout button text"
+  },
+  "maypolesTab": "Maypoles",
+  "@maypolesTab": {
+    "description": "Tab label for Maypoles"
+  },
+  "directMessagesTab": "Direct Messages",
+  "@directMessagesTab": {
+    "description": "Tab label for Direct Messages"
+  },
+  "noPlaceChats": "No place chats yet.",
+  "@noPlaceChats": {
+    "description": "Message shown when there are no place chats"
+  },
+  "noDirectMessages": "No direct messages yet.",
+  "@noDirectMessages": {
+    "description": "Message shown when there are no direct messages"
+  },
+  "lastMessage": "Last message: {time}",
+  "@lastMessage": {
+    "description": "Last message timestamp",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "error": "Error: {message}",
+  "@error": {
+    "description": "Generic error message",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "welcome": "Welcome {email}",
+  "@welcome": {
+    "description": "Welcome message with user email",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "signOut": "Sign Out",
+  "@signOut": {
+    "description": "Sign out button text"
+  },
+  "signIn": "Sign In",
+  "@signIn": {
+    "description": "Sign in button text"
+  },
+  "email": "Email",
+  "@email": {
+    "description": "Email field label"
+  },
+  "password": "Password",
+  "@password": {
+    "description": "Password field label"
+  },
+  "username": "Username",
+  "@username": {
+    "description": "Username field label"
+  },
+  "register": "Register",
+  "@register": {
+    "description": "Register button text"
+  },
+  "alreadyHaveAccount": "Already have an account? Login",
+  "@alreadyHaveAccount": {
+    "description": "Text for users who already have an account"
+  },
+  "continueToApp": "Continue to App",
+  "@continueToApp": {
+    "description": "Button text to continue to the app after registration"
+  },
+  "pleaseEnterEmail": "Please enter your email",
+  "@pleaseEnterEmail": {
+    "description": "Validation message for empty email"
+  },
+  "pleaseEnterValidEmail": "Please enter a valid email",
+  "@pleaseEnterValidEmail": {
+    "description": "Validation message for invalid email format"
+  },
+  "pleaseEnterPassword": "Please enter your password",
+  "@pleaseEnterPassword": {
+    "description": "Validation message for empty password"
+  },
+  "passwordMinLength": "Password must be at least 6 characters",
+  "@passwordMinLength": {
+    "description": "Validation message for password minimum length"
+  },
+  "searchMaypoles": "Search Maypoles",
+  "@searchMaypoles": {
+    "description": "Title for the search screen"
+  },
+  "searchForMaypole": "Search for a maypole",
+  "@searchForMaypole": {
+    "description": "Hint text for search field"
+  },
+  "enterMessage": "Enter a message",
+  "@enterMessage": {
+    "description": "Hint text for message input field"
+  },
+  "devEnvironment": "DEV",
+  "@devEnvironment": {
+    "description": "Label indicating development environment"
+  }
+}
