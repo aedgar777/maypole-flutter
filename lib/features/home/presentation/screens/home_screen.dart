@@ -5,6 +5,7 @@ import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../../../identity/auth_providers.dart';
+import '../../../directmessages/presentation/dm_providers.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -60,7 +61,7 @@ class HomeScreen extends ConsumerWidget {
         body: TabBarView(
           children: [
             _buildMaypoleChatList(context, user),
-            _buildDmList(context, user),
+            _buildDmList(context, ref, user),
           ],
         ),
         floatingActionButton: FloatingActionButton(
@@ -104,7 +105,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDmList(BuildContext context, DomainUser user) {
+  Widget _buildDmList(BuildContext context, WidgetRef ref, DomainUser user) {
     final l10n = AppLocalizations.of(context)!;
 
     if (user.dmThreads.isEmpty) {
@@ -112,17 +113,27 @@ class HomeScreen extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(l10n.noDirectMessages),
-          )); // TODO: Make this look nice
+          ));
     }
     return ListView.builder(
       itemCount: user.dmThreads.length,
       itemBuilder: (context, index) {
-        final thread = user.dmThreads[index];
+        final threadMetadata = user.dmThreads[index];
         return ListTile(
-          title: Text(thread.partnerName),
-          subtitle: Text(l10n.lastMessage(thread.lastMessageTime.toString())),
-          onTap: () {
-            // TODO: Navigate to DM screen
+          leading: CircleAvatar(
+            backgroundImage: NetworkImage(threadMetadata.partnerProfpic),
+          ),
+          title: Text(threadMetadata.partnerName),
+          subtitle: Text(
+              l10n.lastMessage(threadMetadata.lastMessageTime.toString())),
+          onTap: () async {
+            // Navigate to DM screen with the thread metadata converted to DMThread
+            final dmThread = await ref
+                .read(dmThreadServiceProvider)
+                .getDMThreadById(threadMetadata.id);
+            if (dmThread != null && context.mounted) {
+              context.push('/dm/${threadMetadata.id}', extra: dmThread);
+            }
           },
         );
       },
