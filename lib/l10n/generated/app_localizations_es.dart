@@ -132,4 +132,26 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get cancel => 'Cancelar';
+
+  @override
+  String get today => 'Hoy';
+
+  @override
+  String get yesterday => 'Ayer';
+
+  @override
+  String get justNow => 'Justo ahora';
+
+  @override
+  String minutesAgo(int minutes) {
+    return 'Hace ${minutes}m';
+  }
+
+  @override
+  String hoursAgo(int hours) {
+    return 'Hace ${hours}h';
+  }
+
+  @override
+  String get at => 'a las';
 }

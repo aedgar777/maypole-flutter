@@ -170,5 +170,39 @@
   "cancel": "Cancel",
   "@cancel": {
     "description": "Cancel button text"
+  },
+  "today": "Today",
+  "@today": {
+    "description": "Label for today's date"
+  },
+  "yesterday": "Yesterday",
+  "@yesterday": {
+    "description": "Label for yesterday's date"
+  },
+  "justNow": "Just now",
+  "@justNow": {
+    "description": "Label for very recent activity"
+  },
+  "minutesAgo": "{minutes}m ago",
+  "@minutesAgo": {
+    "description": "Label for activity minutes ago",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "hoursAgo": "{hours}h ago",
+  "@hoursAgo": {
+    "description": "Label for activity hours ago",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "at": "at",
+  "@at": {
+    "description": "Separator between date and time"
   }
 }

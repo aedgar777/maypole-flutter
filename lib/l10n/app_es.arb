@@ -38,5 +38,11 @@
   "about": "Acerca de",
   "comingSoon": "¡Próximamente!",
   "logoutConfirmation": "¿Está seguro de que desea cerrar sesión?",
-  "cancel": "Cancelar"
+  "cancel": "Cancelar",
+  "today": "Hoy",
+  "yesterday": "Ayer",
+  "justNow": "Justo ahora",
+  "minutesAgo": "Hace {minutes}m",
+  "hoursAgo": "Hace {hours}h",
+  "at": "a las"
 }
