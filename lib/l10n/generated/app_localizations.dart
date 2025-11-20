@@ -253,6 +253,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'DEV'**
   String get devEnvironment;
+
+  /// Settings screen title
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settings;
+
+  /// Dialog title for selecting image source
+  ///
+  /// In en, this message translates to:
+  /// **'Select Image Source'**
+  String get selectImageSource;
+
+  /// Gallery option for image picker
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery'**
+  String get gallery;
+
+  /// Camera option for image picker
+  ///
+  /// In en, this message translates to:
+  /// **'Camera'**
+  String get camera;
+
+  /// Success message for profile picture update
+  ///
+  /// In en, this message translates to:
+  /// **'Profile picture updated successfully'**
+  String get profilePictureUpdated;
+
+  /// Account settings menu item
+  ///
+  /// In en, this message translates to:
+  /// **'Account Settings'**
+  String get accountSettings;
+
+  /// Notifications menu item
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notifications;
+
+  /// Privacy menu item
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy'**
+  String get privacy;
+
+  /// Help menu item
+  ///
+  /// In en, this message translates to:
+  /// **'Help'**
+  String get help;
+
+  /// About menu item
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get about;
+
+  /// Message for features not yet implemented
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon!'**
+  String get comingSoon;
+
+  /// Confirmation message for logout
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to logout?'**
+  String get logoutConfirmation;
+
+  /// Cancel button text
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
 }
 
 class _AppLocalizationsDelegate

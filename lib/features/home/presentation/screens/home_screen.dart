@@ -42,6 +42,13 @@ class HomeScreen extends ConsumerWidget {
         appBar: AppBar(
           actions: [
             IconButton(
+              icon: const Icon(Icons.settings),
+              tooltip: l10n.settings,
+              onPressed: () {
+                context.push('/settings');
+              },
+            ),
+            IconButton(
               icon: const Icon(Icons.logout),
               tooltip: l10n.logout,
               onPressed: () {

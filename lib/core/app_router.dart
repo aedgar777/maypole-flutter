@@ -7,6 +7,7 @@ import '../features/identity/presentation/registration_screen.dart';
 import '../features/home/presentation/screens/home_screen.dart';
 import '../features/directmessages/presentation/screens/dm_screen.dart';
 import '../features/directmessages/domain/dm_thread.dart';
+import '../features/settings/presentation/screens/settings_screen.dart';
 
 GoRouter createRouter() {
   return GoRouter(
@@ -46,6 +47,10 @@ GoRouter createRouter() {
           final thread = state.extra as DMThread;
           return DmScreen(thread: thread);
         },
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
       ),
     ],
   );

@@ -25,5 +25,18 @@
   "searchMaypoles": "Buscar Maypoles",
   "searchForMaypole": "Buscar un maypole",
   "enterMessage": "Ingrese un mensaje",
-  "devEnvironment": "DEV"
+  "devEnvironment": "DEV",
+  "settings": "Configuración",
+  "selectImageSource": "Seleccionar fuente de imagen",
+  "gallery": "Galería",
+  "camera": "Cámara",
+  "profilePictureUpdated": "Foto de perfil actualizada exitosamente",
+  "accountSettings": "Configuración de cuenta",
+  "notifications": "Notificaciones",
+  "privacy": "Privacidad",
+  "help": "Ayuda",
+  "about": "Acerca de",
+  "comingSoon": "¡Próximamente!",
+  "logoutConfirmation": "¿Está seguro de que desea cerrar sesión?",
+  "cancel": "Cancelar"
 }

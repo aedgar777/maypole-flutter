@@ -91,4 +91,43 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get devEnvironment => 'DEV';
+
+  @override
+  String get settings => 'Settings';
+
+  @override
+  String get selectImageSource => 'Select Image Source';
+
+  @override
+  String get gallery => 'Gallery';
+
+  @override
+  String get camera => 'Camera';
+
+  @override
+  String get profilePictureUpdated => 'Profile picture updated successfully';
+
+  @override
+  String get accountSettings => 'Account Settings';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get privacy => 'Privacy';
+
+  @override
+  String get help => 'Help';
+
+  @override
+  String get about => 'About';
+
+  @override
+  String get comingSoon => 'Coming soon!';
+
+  @override
+  String get logoutConfirmation => 'Are you sure you want to logout?';
+
+  @override
+  String get cancel => 'Cancel';
 }
