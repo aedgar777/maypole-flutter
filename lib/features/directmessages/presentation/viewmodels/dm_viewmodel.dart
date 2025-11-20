@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/features/directmessages/domain/direct_message.dart';
@@ -58,8 +59,8 @@ class DmViewModel extends AsyncNotifier<List<DirectMessage>> {
           await _threadService.getMoreDmMessages(_threadId, lastMessage);
       state = AsyncValue.data([...currentMessages, ...newMessages]);
     } catch (e) {
-      // Maybe show a snackbar or some other error indication
-      print('Error loading more messages: $e');
+      // Log error without using print in production
+      developer.log('Error loading more messages: $e', name: 'DmViewModel');
     } finally {
       _isLoadingMore = false;
     }

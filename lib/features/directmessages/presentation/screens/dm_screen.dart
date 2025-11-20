@@ -10,7 +10,7 @@ class DmScreen extends ConsumerStatefulWidget {
   const DmScreen({super.key, required this.thread});
 
   @override
-  _DmScreenState createState() => _DmScreenState();
+  ConsumerState<DmScreen> createState() => _DmScreenState();
 }
 
 class _DmScreenState extends ConsumerState<DmScreen> {

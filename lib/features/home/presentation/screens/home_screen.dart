@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
+import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../../../identity/auth_providers.dart';
+import '../../../directmessages/presentation/dm_providers.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -24,19 +26,24 @@ class HomeScreen extends ConsumerWidget {
         return _buildChatList(context, ref, user);
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err')),
+      error: (err, stack) {
+        final l10n = AppLocalizations.of(context)!;
+        return Center(child: Text(l10n.error(err.toString())));
+      },
     );
   }
 
   Widget _buildChatList(BuildContext context, WidgetRef ref, DomainUser user) {
+    final l10n = AppLocalizations.of(context)!;
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Chats'),
           actions: [
             IconButton(
               icon: const Icon(Icons.logout),
+              tooltip: l10n.logout,
               onPressed: () {
                 ref.read(loginViewModelProvider.notifier).signOut();
                 context.go('/login');
@@ -45,16 +52,16 @@ class HomeScreen extends ConsumerWidget {
           ],
           bottom: TabBar(
             dividerColor: Colors.white.withAlpha(26),
-            tabs: const [
-              Tab(text: 'Places'),
-              Tab(text: 'Direct Messages'),
+            tabs: [
+              Tab(text: l10n.maypolesTab),
+              Tab(text: l10n.directMessagesTab),
             ],
           ),
         ),
         body: TabBarView(
           children: [
             _buildMaypoleChatList(context, user),
-            _buildDmList(context, user),
+            _buildDmList(context, ref, user),
           ],
         ),
         floatingActionButton: FloatingActionButton(
@@ -74,12 +81,14 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildMaypoleChatList(BuildContext context, DomainUser user) {
+    final l10n = AppLocalizations.of(context)!;
+
     if (user.maypoleChatThreads.isEmpty) {
-      return const Center(
+      return Center(
           child: Padding(
-        padding: EdgeInsets.all(8.0),
-        child: Text('No place chats yet.'),
-      ));
+            padding: const EdgeInsets.all(8.0),
+            child: Text(l10n.noPlaceChats),
+          ));
     }
     return ListView.builder(
       itemCount: user.maypoleChatThreads.length,
@@ -87,7 +96,7 @@ class HomeScreen extends ConsumerWidget {
         final thread = user.maypoleChatThreads[index];
         return ListTile(
           title: Text(thread.name),
-          subtitle: Text('Last message: ${thread.lastMessageTime}'),
+          subtitle: Text(l10n.lastMessage(thread.lastMessageTime.toString())),
           onTap: () {
             context.push('/chat/${thread.id}', extra: thread.name);
           },
@@ -96,23 +105,35 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDmList(BuildContext context, DomainUser user) {
+  Widget _buildDmList(BuildContext context, WidgetRef ref, DomainUser user) {
+    final l10n = AppLocalizations.of(context)!;
+
     if (user.dmThreads.isEmpty) {
-      return const Center(
+      return Center(
           child: Padding(
-        padding: EdgeInsets.all(8.0),
-        child: Text('No direct messages yet.'),
-      )); // TODO: Make this look nice
+            padding: const EdgeInsets.all(8.0),
+            child: Text(l10n.noDirectMessages),
+          ));
     }
     return ListView.builder(
       itemCount: user.dmThreads.length,
       itemBuilder: (context, index) {
-        final thread = user.dmThreads[index];
+        final threadMetadata = user.dmThreads[index];
         return ListTile(
-          title: Text(thread.partnerName),
-          subtitle: Text('Last message: ${thread.lastMessageTime}'),
-          onTap: () {
-            // TODO: Navigate to DM screen
+          leading: CircleAvatar(
+            backgroundImage: NetworkImage(threadMetadata.partnerProfpic),
+          ),
+          title: Text(threadMetadata.partnerName),
+          subtitle: Text(
+              l10n.lastMessage(threadMetadata.lastMessageTime.toString())),
+          onTap: () async {
+            // Navigate to DM screen with the thread metadata converted to DMThread
+            final dmThread = await ref
+                .read(dmThreadServiceProvider)
+                .getDMThreadById(threadMetadata.id);
+            if (dmThread != null && context.mounted) {
+              context.push('/dm/${threadMetadata.id}', extra: dmThread);
+            }
           },
         );
       },

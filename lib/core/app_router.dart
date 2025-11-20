@@ -5,6 +5,8 @@ import '../features/maypolechat/presentation/screens/maypole_chat_screen.dart';
 import '../features/identity/presentation/login_screen.dart';
 import '../features/identity/presentation/registration_screen.dart';
 import '../features/home/presentation/screens/home_screen.dart';
+import '../features/directmessages/presentation/screens/dm_screen.dart';
+import '../features/directmessages/domain/dm_thread.dart';
 
 GoRouter createRouter() {
   return GoRouter(
@@ -36,6 +38,13 @@ GoRouter createRouter() {
             threadId: threadId,
             maypoleName: maypoleName,
           );
+        },
+      ),
+      GoRoute(
+        path: '/dm/:threadId',
+        builder: (context, state) {
+          final thread = state.extra as DMThread;
+          return DmScreen(thread: thread);
         },
       ),
     ],

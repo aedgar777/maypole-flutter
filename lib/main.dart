@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'l10n/generated/app_localizations.dart';
 import 'core/app_router.dart';
 import 'core/app_theme.dart';
 import 'core/firebase_options.dart';
@@ -81,6 +82,8 @@ class MyApp extends StatelessWidget {
       title: _getAppTitle(),
       theme: darkTheme,
       routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
     );
   }
 }

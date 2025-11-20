@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../../data/models/autocomplete_response.dart';
 import '../../maypole_search_providers.dart';
 
@@ -34,10 +35,11 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
   @override
   Widget build(BuildContext context) {
     final searchState = ref.watch(maypoleSearchViewModelProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Search Maypoles'),
+        title: Text(l10n.searchMaypoles),
       ),
       body: Column(
         children: [
@@ -45,8 +47,8 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
             padding: const EdgeInsets.all(8.0),
             child: TextField(
               controller: _searchController,
-              decoration: const InputDecoration(
-                hintText: "Search for a maypole",
+              decoration: InputDecoration(
+                hintText: l10n.searchForMaypole,
               ),
               autofocus: true,
             ),
@@ -55,8 +57,9 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
             child: searchState.when(
               data: (predictions) => _buildPredictionsList(predictions),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stackTrace) => Center(
-                child: Text('Error: $error'),
+              error: (error, stackTrace) =>
+                  Center(
+                    child: Text(l10n.error(error.toString())),
               ),
             ),
           ),

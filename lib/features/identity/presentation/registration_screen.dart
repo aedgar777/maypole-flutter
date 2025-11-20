@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/utils/string_utils.dart';
+import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../domain/domain_user.dart';
 import './widgets/auth_form_field.dart';
 import '../auth_providers.dart';
@@ -28,7 +29,9 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
     super.dispose();
   }
 
-  Widget _buildLoggedInView(DomainUser user) {
+  Widget _buildLoggedInView(DomainUser user, BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     // Automatically navigate to home list when user is registered and logged in
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.go('/home');
@@ -38,17 +41,20 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text('Welcome ${user.email}'),
+          Text(l10n.welcome(user.email)),
           ElevatedButton(
             onPressed: () => context.go('/'),
-            child: const Text('Continue to App'),
+            child: Text(l10n.continueToApp),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildRegistrationForm(RegistrationState registrationState) {
+  Widget _buildRegistrationForm(RegistrationState registrationState,
+      BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -58,23 +64,23 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               AuthFormField(
-                controller: _usernameController,
-                labelText: 'Username',
-                validator: StringUtils.validateUsername
+                  controller: _usernameController,
+                  labelText: l10n.username,
+                  validator: StringUtils.validateUsername
               ),
               const SizedBox(height: 20),
               AuthFormField(
-                controller: _emailController,
-                labelText: 'Email',
-                keyboardType: TextInputType.emailAddress,
-                validator: StringUtils.validateEmail
+                  controller: _emailController,
+                  labelText: l10n.email,
+                  keyboardType: TextInputType.emailAddress,
+                  validator: StringUtils.validateEmail
               ),
               const SizedBox(height: 20),
               AuthFormField(
-                controller: _passwordController,
-                labelText: 'Password',
-                obscureText: true,
-                validator: StringUtils.validatePassword
+                  controller: _passwordController,
+                  labelText: l10n.password,
+                  obscureText: true,
+                  validator: StringUtils.validatePassword
               ),
               const SizedBox(height: 30),
               if (registrationState.isLoading)
@@ -84,11 +90,11 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   children: [
                     ElevatedButton(
                       onPressed: _handleRegistration,
-                      child: const Text('Register'),
+                      child: Text(l10n.register),
                     ),
                     TextButton(
                       onPressed: () => context.go('/login'),
-                      child: const Text('Already have an account? Login'),
+                      child: Text(l10n.alreadyHaveAccount),
                     ),
                   ],
                 ),
@@ -120,17 +126,19 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   @override
   Widget build(BuildContext context) {
     final registrationState = ref.watch(registrationViewModelProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Register'),
+        title: Text(l10n.register),
       ),
       body: ref.watch(authStateProvider).when(
-        data: (user) => user != null
-            ? _buildLoggedInView(user)
-            : _buildRegistrationForm(registrationState),
+        data: (user) =>
+        user != null
+            ? _buildLoggedInView(user, context)
+            : _buildRegistrationForm(registrationState, context),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        error: (err, stack) => Center(child: Text(l10n.error(err.toString()))),
       ),
     );
   }
