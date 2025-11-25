@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 
 import '../../../../core/app_config.dart';
@@ -7,8 +8,18 @@ import '../models/autocomplete_response.dart';
 
 class MaypoleSearchService {
   final String _apiKey = AppConfig.googlePlacesApiKey;
-  final String _baseUrl =
-      'https://places.googleapis.com/v1/places:autocomplete';
+
+  // Use direct Google API for mobile (no CORS issues)
+  // Use Cloud Function proxy for web (to avoid CORS issues)
+  String get _baseUrl {
+    if (kIsWeb) {
+      // Web platform: use Cloud Function proxy to avoid CORS
+      return '${AppConfig.cloudFunctionsUrl}/places_autocomplete';
+    } else {
+      // Mobile/Desktop platforms: call Google API directly for better performance
+      return 'https://places.googleapis.com/v1/places:autocomplete';
+    }
+  }
 
   Future<AutocompleteResponse> autocomplete(AutocompleteRequest request) async {
     final headers = {
