@@ -22,25 +22,40 @@ class MaypoleSearchService {
   }
 
   Future<AutocompleteResponse> autocomplete(AutocompleteRequest request) async {
+    debugPrint('🔍 Places Autocomplete Request');
+    debugPrint('  URL: $_baseUrl');
+    debugPrint('  API Key: ${_apiKey.isNotEmpty ? "✓ Present" : "✗ Missing"}');
+    debugPrint('  Cloud Functions URL: ${AppConfig.cloudFunctionsUrl}');
+
     final headers = {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': _apiKey,
       'X-Goog-Field-Mask':
-          'suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat',
+      'suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat',
     };
 
-    final response = await http.post(
-      Uri.parse(_baseUrl),
-      headers: headers,
-      body: request.toJson(),
-    );
+    try {
+      final response = await http.post(
+        Uri.parse(_baseUrl),
+        headers: headers,
+        body: request.toJson(),
+      );
 
-    if (response.statusCode == 200) {
+      debugPrint('📡 Response Status: ${response.statusCode}');
 
-      debugPrint("Place Response: ${response.body}");
-      return AutocompleteResponse.fromJson(response.body);
-    } else {
-      throw Exception('Failed to load predictions: ${response.body}');
+      if (response.statusCode == 200) {
+        debugPrint("✅ Place Response: ${response.body.substring(
+            0, response.body.length > 200 ? 200 : response.body.length)}...");
+        return AutocompleteResponse.fromJson(response.body);
+      } else {
+        debugPrint('❌ Error Response: ${response.body}');
+        throw Exception(
+            'Failed to load predictions (${response.statusCode}): ${response
+                .body}');
+      }
+    } catch (e) {
+      debugPrint('💥 Exception during autocomplete: $e');
+      rethrow;
     }
   }
 }

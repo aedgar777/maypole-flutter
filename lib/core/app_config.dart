@@ -128,6 +128,13 @@ class AppConfig {
 
   /// Provides the correct Google Places API key based on the environment.
   static String get googlePlacesApiKey {
+    // First check dart-define (used in web builds)
+    const dartDefineKey = String.fromEnvironment('GOOGLE_PLACES_API_KEY');
+    if (dartDefineKey.isNotEmpty) {
+      return dartDefineKey;
+    }
+
+    // Fall back to dotenv
     if (isProduction) {
       return dotenv.env['GOOGLE_PLACES_PROD_API_KEY'] ?? '';
     } else {
@@ -137,6 +144,13 @@ class AppConfig {
 
   /// Provides the correct Cloud Functions URL based on the environment.
   static String get cloudFunctionsUrl {
+    // First check dart-define (used in web builds)
+    const dartDefineUrl = String.fromEnvironment('CLOUD_FUNCTIONS_URL');
+    if (dartDefineUrl.isNotEmpty) {
+      return dartDefineUrl;
+    }
+
+    // Fall back to dotenv
     if (isProduction) {
       return dotenv.env['CLOUD_FUNCTIONS_PROD_URL'] ?? '';
     } else {
