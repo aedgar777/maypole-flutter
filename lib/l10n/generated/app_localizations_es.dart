@@ -93,4 +93,65 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get devEnvironment => 'DEV';
+
+  @override
+  String get settings => 'Configuración';
+
+  @override
+  String get selectImageSource => 'Seleccionar fuente de imagen';
+
+  @override
+  String get gallery => 'Galería';
+
+  @override
+  String get camera => 'Cámara';
+
+  @override
+  String get profilePictureUpdated => 'Foto de perfil actualizada exitosamente';
+
+  @override
+  String get accountSettings => 'Configuración de cuenta';
+
+  @override
+  String get notifications => 'Notificaciones';
+
+  @override
+  String get privacy => 'Privacidad';
+
+  @override
+  String get help => 'Ayuda y comentarios';
+
+  @override
+  String get privacyPolicy => 'Política de privacidad';
+
+  @override
+  String get comingSoon => '¡Próximamente!';
+
+  @override
+  String get logoutConfirmation => '¿Está seguro de que desea cerrar sesión?';
+
+  @override
+  String get cancel => 'Cancelar';
+
+  @override
+  String get today => 'Hoy';
+
+  @override
+  String get yesterday => 'Ayer';
+
+  @override
+  String get justNow => 'Justo ahora';
+
+  @override
+  String minutesAgo(int minutes) {
+    return 'Hace ${minutes}m';
+  }
+
+  @override
+  String hoursAgo(int hours) {
+    return 'Hace ${hours}h';
+  }
+
+  @override
+  String get at => 'a las';
 }

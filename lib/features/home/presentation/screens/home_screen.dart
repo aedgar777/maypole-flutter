@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:maypole/core/utils/date_time_utils.dart';
+import 'package:maypole/core/widgets/cached_profile_avatar.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
@@ -42,11 +44,10 @@ class HomeScreen extends ConsumerWidget {
         appBar: AppBar(
           actions: [
             IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: l10n.logout,
+              icon: const Icon(Icons.settings),
+              tooltip: l10n.settings,
               onPressed: () {
-                ref.read(loginViewModelProvider.notifier).signOut();
-                context.go('/login');
+                context.push('/settings');
               },
             ),
           ],
@@ -96,7 +97,6 @@ class HomeScreen extends ConsumerWidget {
         final thread = user.maypoleChatThreads[index];
         return ListTile(
           title: Text(thread.name),
-          subtitle: Text(l10n.lastMessage(thread.lastMessageTime.toString())),
           onTap: () {
             context.push('/chat/${thread.id}', extra: thread.name);
           },
@@ -119,13 +119,16 @@ class HomeScreen extends ConsumerWidget {
       itemCount: user.dmThreads.length,
       itemBuilder: (context, index) {
         final threadMetadata = user.dmThreads[index];
+        final formattedDateTime = DateTimeUtils.formatRelativeDateTime(
+          threadMetadata.lastMessageTime,
+          context: context,
+        );
         return ListTile(
-          leading: CircleAvatar(
-            backgroundImage: NetworkImage(threadMetadata.partnerProfpic),
+          leading: CachedProfileAvatar(
+            imageUrl: threadMetadata.partnerProfpic,
           ),
           title: Text(threadMetadata.partnerName),
-          subtitle: Text(
-              l10n.lastMessage(threadMetadata.lastMessageTime.toString())),
+          subtitle: Text(l10n.lastMessage(formattedDateTime)),
           onTap: () async {
             // Navigate to DM screen with the thread metadata converted to DMThread
             final dmThread = await ref

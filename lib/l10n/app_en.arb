@@ -118,5 +118,91 @@
   "devEnvironment": "DEV",
   "@devEnvironment": {
     "description": "Label indicating development environment"
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "Settings screen title"
+  },
+  "selectImageSource": "Select Image Source",
+  "@selectImageSource": {
+    "description": "Dialog title for selecting image source"
+  },
+  "gallery": "Gallery",
+  "@gallery": {
+    "description": "Gallery option for image picker"
+  },
+  "camera": "Camera",
+  "@camera": {
+    "description": "Camera option for image picker"
+  },
+  "profilePictureUpdated": "Profile picture updated successfully",
+  "@profilePictureUpdated": {
+    "description": "Success message for profile picture update"
+  },
+  "accountSettings": "Account Settings",
+  "@accountSettings": {
+    "description": "Account settings menu item"
+  },
+  "notifications": "Notifications",
+  "@notifications": {
+    "description": "Notifications menu item"
+  },
+  "privacy": "Privacy",
+  "@privacy": {
+    "description": "Privacy menu item"
+  },
+  "help": "Help & Feedback",
+  "@help": {
+    "description": "Help menu item"
+  },
+  "privacyPolicy": "Privacy Policy",
+  "@privacyPolicy": {
+    "description": "Privacy Policy screen title"
+  },
+  "comingSoon": "Coming soon!",
+  "@comingSoon": {
+    "description": "Message for features not yet implemented"
+  },
+  "logoutConfirmation": "Are you sure you want to logout?",
+  "@logoutConfirmation": {
+    "description": "Confirmation message for logout"
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button text"
+  },
+  "today": "Today",
+  "@today": {
+    "description": "Label for today's date"
+  },
+  "yesterday": "Yesterday",
+  "@yesterday": {
+    "description": "Label for yesterday's date"
+  },
+  "justNow": "Just now",
+  "@justNow": {
+    "description": "Label for very recent activity"
+  },
+  "minutesAgo": "{minutes}m ago",
+  "@minutesAgo": {
+    "description": "Label for activity minutes ago",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "hoursAgo": "{hours}h ago",
+  "@hoursAgo": {
+    "description": "Label for activity hours ago",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "at": "at",
+  "@at": {
+    "description": "Separator between date and time"
   }
 }

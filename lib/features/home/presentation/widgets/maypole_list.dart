@@ -12,9 +12,9 @@ class MaypoleList extends StatelessWidget {
       itemCount: threads.length,
       itemBuilder: (context, index) {
         final thread = threads[index];
+
         return ListTile(
           title: Text(thread.name),
-          subtitle: Text(thread.lastMessageTime.toString()),
         );
       },
     );

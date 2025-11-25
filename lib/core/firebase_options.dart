@@ -88,7 +88,7 @@ class DefaultFirebaseOptions {
         'FIREBASE_DEV_STORAGE_BUCKET', defaultValue: '');
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
-      return dotenv.env['FIREBASE_DEV_STORAGE_Bucket'] ?? '';
+      return dotenv.env['FIREBASE_DEV_STORAGE_BUCKET'] ?? '';
     } catch (e) {
       return '';
     }
@@ -308,6 +308,13 @@ class DefaultFirebaseOptions {
     // Get environment from dart-define, fallback to dotenv, then default to dev
     final environment = _getEnvironment();
 
+    if (kIsWeb) {
+      // Debug logging for web to help diagnose configuration issues
+      print('🔧 Firebase Config Debug:');
+      print('  Environment: $environment');
+      print('  Platform: Web');
+    }
+
     if (environment == 'production' || environment == 'prod') {
       return _getProductionOptions();
     } else {
@@ -366,15 +373,33 @@ class DefaultFirebaseOptions {
   }
 
   // Development Environment (maypole-flutter-dev)
-  static FirebaseOptions get webDev => FirebaseOptions(
-    apiKey: _getFirebaseDevWebApiKey(),
-    appId: _getFirebaseDevWebAppId(),
-    messagingSenderId: _getFirebaseDevMessagingSenderId(),
-    projectId: _getFirebaseDevProjectId(),
-    authDomain: _getFirebaseDevAuthDomain(),
-    storageBucket: _getFirebaseDevStorageBucket(),
-    measurementId: _getFirebaseDevWebMeasurementId(),
-  );
+  static FirebaseOptions get webDev {
+    final apiKey = _getFirebaseDevWebApiKey();
+    final appId = _getFirebaseDevWebAppId();
+    final messagingSenderId = _getFirebaseDevMessagingSenderId();
+    final projectId = _getFirebaseDevProjectId();
+    final authDomain = _getFirebaseDevAuthDomain();
+    final storageBucket = _getFirebaseDevStorageBucket();
+    final measurementId = _getFirebaseDevWebMeasurementId();
+
+    if (kIsWeb) {
+      print('  API Key: ${apiKey.isEmpty ? "❌ MISSING" : "✅ Present (${apiKey
+          .substring(0, 10)}...)"}');
+      print('  App ID: ${appId.isEmpty ? "❌ MISSING" : "✅ Present"}');
+      print('  Project ID: ${projectId.isEmpty ? "❌ MISSING" : projectId}');
+      print('  Auth Domain: ${authDomain.isEmpty ? "❌ MISSING" : authDomain}');
+    }
+
+    return FirebaseOptions(
+      apiKey: apiKey,
+      appId: appId,
+      messagingSenderId: messagingSenderId,
+      projectId: projectId,
+      authDomain: authDomain,
+      storageBucket: storageBucket,
+      measurementId: measurementId,
+    );
+  }
 
   static FirebaseOptions get androidDev => FirebaseOptions(
     apiKey: _getFirebaseDevAndroidApiKey(),
@@ -413,15 +438,33 @@ class DefaultFirebaseOptions {
   );
 
   // Production Environment (maypole-flutter-ce6c3)
-  static FirebaseOptions get webProduction => FirebaseOptions(
-    apiKey: _getFirebaseProdWebApiKey(),
-    appId: _getFirebaseProdWebAppId(),
-    messagingSenderId: _getFirebaseProdMessagingSenderId(),
-    projectId: _getFirebaseProdProjectId(),
-    authDomain: _getFirebaseProdAuthDomain(),
-    storageBucket: _getFirebaseProdStorageBucket(),
-    measurementId: _getFirebaseProdWebMeasurementId(),
-  );
+  static FirebaseOptions get webProduction {
+    final apiKey = _getFirebaseProdWebApiKey();
+    final appId = _getFirebaseProdWebAppId();
+    final messagingSenderId = _getFirebaseProdMessagingSenderId();
+    final projectId = _getFirebaseProdProjectId();
+    final authDomain = _getFirebaseProdAuthDomain();
+    final storageBucket = _getFirebaseProdStorageBucket();
+    final measurementId = _getFirebaseProdWebMeasurementId();
+
+    if (kIsWeb) {
+      print('  API Key: ${apiKey.isEmpty ? "❌ MISSING" : "✅ Present (${apiKey
+          .substring(0, 10)}...)"}');
+      print('  App ID: ${appId.isEmpty ? "❌ MISSING" : "✅ Present"}');
+      print('  Project ID: ${projectId.isEmpty ? "❌ MISSING" : projectId}');
+      print('  Auth Domain: ${authDomain.isEmpty ? "❌ MISSING" : authDomain}');
+    }
+
+    return FirebaseOptions(
+      apiKey: apiKey,
+      appId: appId,
+      messagingSenderId: messagingSenderId,
+      projectId: projectId,
+      authDomain: authDomain,
+      storageBucket: storageBucket,
+      measurementId: measurementId,
+    );
+  }
 
   static FirebaseOptions get androidProduction => FirebaseOptions(
     apiKey: _getFirebaseProdAndroidApiKey(),

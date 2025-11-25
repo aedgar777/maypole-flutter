@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/app_session.dart';
+import 'package:maypole/core/widgets/cached_profile_avatar.dart';
 import '../../domain/dm_thread.dart';
 import '../dm_providers.dart';
 
@@ -48,8 +49,8 @@ class _DmScreenState extends ConsumerState<DmScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            CircleAvatar(
-              backgroundImage: NetworkImage(widget.thread.partnerProfpic),
+            CachedProfileAvatar(
+              imageUrl: widget.thread.partnerProfpic,
             ),
             const SizedBox(width: 8),
             Text(widget.thread.partnerName),
