@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:maypole/core/widgets/cached_profile_avatar.dart';
 import 'package:maypole/features/identity/auth_providers.dart';
 import 'package:maypole/features/settings/settings_providers.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
@@ -111,25 +112,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: Stack(
                     children: [
                       // Profile picture
-                      CircleAvatar(
+                      CachedProfileAvatar(
+                        imageUrl: user.profilePictureUrl,
                         radius: 80,
-                        backgroundColor: Theme
-                            .of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
-                        backgroundImage: user.profilePictureUrl.isNotEmpty
-                            ? NetworkImage(user.profilePictureUrl)
-                            : null,
-                        child: user.profilePictureUrl.isEmpty
-                            ? Icon(
-                          Icons.person,
-                          size: 80,
-                          color: Theme
-                              .of(context)
-                              .colorScheme
-                              .onSurfaceVariant,
-                        )
-                            : null,
                       ),
                       // Upload indicator overlay
                       if (settingsState.uploadInProgress)
@@ -222,30 +207,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   title: Text(l10n.privacy),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
-                    // TODO: Navigate to privacy settings
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.comingSoon)),
-                    );
+                    context.go('/privacy-policy');
                   },
                 ),
-                const Divider(),
                 ListTile(
                   leading: const Icon(Icons.help_outline),
                   title: Text(l10n.help),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     // TODO: Navigate to help
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.comingSoon)),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.info_outline),
-                  title: Text(l10n.about),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    // TODO: Navigate to about
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text(l10n.comingSoon)),
                     );

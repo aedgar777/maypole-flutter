@@ -151,13 +151,13 @@
   "@privacy": {
     "description": "Privacy menu item"
   },
-  "help": "Help",
+  "help": "Help & Feedback",
   "@help": {
     "description": "Help menu item"
   },
-  "about": "About",
-  "@about": {
-    "description": "About menu item"
+  "privacyPolicy": "Privacy Policy",
+  "@privacyPolicy": {
+    "description": "Privacy Policy screen title"
   },
   "comingSoon": "Coming soon!",
   "@comingSoon": {

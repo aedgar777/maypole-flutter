@@ -305,14 +305,14 @@ abstract class AppLocalizations {
   /// Help menu item
   ///
   /// In en, this message translates to:
-  /// **'Help'**
+  /// **'Help & Feedback'**
   String get help;
 
-  /// About menu item
+  /// Privacy Policy screen title
   ///
   /// In en, this message translates to:
-  /// **'About'**
-  String get about;
+  /// **'Privacy Policy'**
+  String get privacyPolicy;
 
   /// Message for features not yet implemented
   ///

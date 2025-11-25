@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:maypole/core/utils/date_time_utils.dart';
 import 'package:maypole/features/maypolechat/domain/maypole.dart';
 
 class MaypoleList extends StatelessWidget {
@@ -13,14 +12,9 @@ class MaypoleList extends StatelessWidget {
       itemCount: threads.length,
       itemBuilder: (context, index) {
         final thread = threads[index];
-        final formattedDateTime = DateTimeUtils.formatRelativeDateTime(
-          thread.lastMessageTime,
-          context: context,
-        );
 
         return ListTile(
           title: Text(thread.name),
-          subtitle: Text(formattedDateTime),
         );
       },
     );

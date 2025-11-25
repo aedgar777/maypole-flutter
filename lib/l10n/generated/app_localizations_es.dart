@@ -119,10 +119,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get privacy => 'Privacidad';
 
   @override
-  String get help => 'Ayuda';
+  String get help => 'Ayuda y comentarios';
 
   @override
-  String get about => 'Acerca de';
+  String get privacyPolicy => 'Política de privacidad';
 
   @override
   String get comingSoon => '¡Próximamente!';

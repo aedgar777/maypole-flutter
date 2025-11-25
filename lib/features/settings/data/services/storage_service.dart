@@ -9,7 +9,7 @@ class StorageService {
 
   /// Uploads a profile picture to Firebase Storage and returns the download URL.
   /// 
-  /// The file is stored at: `profile_pictures/{userId}/profile.{extension}`
+  /// The file is stored at: `ProfilePictures/{userId}/profile.{extension}`
   /// 
   /// [userId] - The Firebase user ID
   /// [filePath] - The local file path to upload
@@ -26,9 +26,9 @@ class StorageService {
           .last;
 
       // Create reference to storage location
-      // Path structure: profile_pictures/{userId}/profile.{extension}
+      // Path structure: ProfilePictures/{userId}/profile.{extension}
       final storageRef = _storage.ref().child(
-          'profile_pictures/$userId/profile.$extension');
+          'ProfilePictures/$userId/profile.$extension');
 
       // Upload file
       UploadTask uploadTask;
@@ -87,7 +87,7 @@ class StorageService {
       // List all files in the user's profile pictures folder
       final listResult = await _storage
           .ref()
-          .child('profile_pictures/$userId')
+          .child('ProfilePictures/$userId')
           .listAll();
 
       // Delete all files

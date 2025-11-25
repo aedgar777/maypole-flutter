@@ -117,10 +117,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get privacy => 'Privacy';
 
   @override
-  String get help => 'Help';
+  String get help => 'Help & Feedback';
 
   @override
-  String get about => 'About';
+  String get privacyPolicy => 'Privacy Policy';
 
   @override
   String get comingSoon => 'Coming soon!';

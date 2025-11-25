@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
+import 'package:maypole/core/widgets/cached_profile_avatar.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
@@ -94,13 +95,8 @@ class HomeScreen extends ConsumerWidget {
       itemCount: user.maypoleChatThreads.length,
       itemBuilder: (context, index) {
         final thread = user.maypoleChatThreads[index];
-        final formattedDateTime = DateTimeUtils.formatRelativeDateTime(
-          thread.lastMessageTime,
-          context: context,
-        );
         return ListTile(
           title: Text(thread.name),
-          subtitle: Text(l10n.lastMessage(formattedDateTime)),
           onTap: () {
             context.push('/chat/${thread.id}', extra: thread.name);
           },
@@ -128,8 +124,8 @@ class HomeScreen extends ConsumerWidget {
           context: context,
         );
         return ListTile(
-          leading: CircleAvatar(
-            backgroundImage: NetworkImage(threadMetadata.partnerProfpic),
+          leading: CachedProfileAvatar(
+            imageUrl: threadMetadata.partnerProfpic,
           ),
           title: Text(threadMetadata.partnerName),
           subtitle: Text(l10n.lastMessage(formattedDateTime)),
