@@ -134,4 +134,13 @@ class AppConfig {
       return dotenv.env['GOOGLE_PLACES_DEV_API_KEY'] ?? '';
     }
   }
+
+  /// Provides the correct Cloud Functions URL based on the environment.
+  static String get cloudFunctionsUrl {
+    if (isProduction) {
+      return dotenv.env['CLOUD_FUNCTIONS_PROD_URL'] ?? '';
+    } else {
+      return dotenv.env['CLOUD_FUNCTIONS_DEV_URL'] ?? '';
+    }
+  }
 }
