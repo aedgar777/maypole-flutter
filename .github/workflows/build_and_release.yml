@@ -2,12 +2,9 @@ name: Build and Release Cross-Platform
 
 on:
   push:
-    # To re-enable, comment out branches-ignore and uncomment the branches list.
-    branches-ignore:
-      - '**' # Ignore all pushes to all branches
-    # branches:
-    #   - develop
-    #   - master
+    branches:
+      - develop
+      - master
 
 jobs:
   build:
