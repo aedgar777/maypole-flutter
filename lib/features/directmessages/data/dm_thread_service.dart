@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:maypole/features/directmessages/domain/dm_thread.dart';
 
 import '../domain/direct_message.dart';
@@ -93,11 +94,14 @@ class DMThreadService {
     return snapshot.docs.map((doc) => DirectMessage.fromMap(doc.data())).toList();
   }
 
-  Future<void> sendDmMessage(String threadId, String body, String senderId,
-      String recipientId) async {
+  Future<void> sendDmMessage(String threadId,
+      String body,
+      String senderId,
+      String senderUsername,
+      String recipientId,) async {
     final now = DateTime.now();
     final message = DirectMessage(
-      sender: senderId,
+      sender: senderUsername,
       timestamp: now,
       body: body,
       recipient: recipientId,
@@ -118,5 +122,42 @@ class DMThreadService {
       'lastMessage': message.toMap(),
       'lastMessageTime': Timestamp.fromDate(now),
     });
+
+    // Send notification to recipient
+    await _sendDmNotification(
+      recipientId: recipientId,
+      senderUsername: senderUsername,
+      messageBody: body,
+      threadId: threadId,
+    );
+  }
+
+  /// Send DM notification to recipient
+  Future<void> _sendDmNotification({
+    required String recipientId,
+    required String senderUsername,
+    required String messageBody,
+    required String threadId,
+  }) async {
+    try {
+      // Create a notification document for the recipient
+      final notificationRef = _firestore
+          .collection('users')
+          .doc(recipientId)
+          .collection('notifications')
+          .doc();
+
+      await notificationRef.set({
+        'type': 'dm',
+        'senderName': senderUsername,
+        'messageBody': messageBody,
+        'threadId': threadId,
+        'timestamp': FieldValue.serverTimestamp(),
+        'read': false,
+      });
+    } catch (e) {
+      debugPrint('Error sending DM notification: $e');
+      // Don't throw - we don't want to fail message sending if notifications fail
+    }
   }
 }

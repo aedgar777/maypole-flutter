@@ -208,5 +208,69 @@
   "searchPlaces": "Search Places",
   "@searchPlaces": {
     "description": "Tooltip for search/add button"
+  },
+  "notificationSettings": "Notification Settings",
+  "@notificationSettings": {
+    "description": "Notification settings screen title"
+  },
+  "systemNotifications": "System Notifications",
+  "@systemNotifications": {
+    "description": "System notification permission section title"
+  },
+  "notificationPermissionGranted": "Notifications enabled",
+  "@notificationPermissionGranted": {
+    "description": "Message when notification permission is granted"
+  },
+  "notificationPermissionGrantedDescription": "You will receive notifications for your selected types",
+  "@notificationPermissionGrantedDescription": {
+    "description": "Description shown when permission is granted"
+  },
+  "notificationPermissionDenied": "Notifications Disabled",
+  "@notificationPermissionDenied": {
+    "description": "Dialog title when permission is denied"
+  },
+  "notificationPermissionDeniedDescription": "Enable notifications to receive updates",
+  "@notificationPermissionDeniedDescription": {
+    "description": "Description shown when permission is denied"
+  },
+  "notificationPermissionDeniedMessage": "Notification permission was denied. To enable notifications, please go to Settings and allow notifications for Maypole.",
+  "@notificationPermissionDeniedMessage": {
+    "description": "Message explaining how to enable notifications in settings"
+  },
+  "enableNotifications": "Enable Notifications",
+  "@enableNotifications": {
+    "description": "Button text to enable notifications"
+  },
+  "openSettings": "Open Settings",
+  "@openSettings": {
+    "description": "Button text to open system settings"
+  },
+  "notificationTypes": "Notification Types",
+  "@notificationTypes": {
+    "description": "Section header for notification types"
+  },
+  "taggingNotifications": "Tagging Notifications",
+  "@taggingNotifications": {
+    "description": "Toggle label for tagging notifications"
+  },
+  "taggingNotificationsDescription": "Get notified when someone tags you in a message",
+  "@taggingNotificationsDescription": {
+    "description": "Description for tagging notifications"
+  },
+  "directMessageNotifications": "Direct Message Notifications",
+  "@directMessageNotifications": {
+    "description": "Toggle label for direct message notifications"
+  },
+  "directMessageNotificationsDescription": "Get notified when you receive a direct message",
+  "@directMessageNotificationsDescription": {
+    "description": "Description for direct message notifications"
+  },
+  "enableSystemNotificationsFirst": "Enable system notifications first to configure notification types",
+  "@enableSystemNotificationsFirst": {
+    "description": "Message shown when system permission is needed"
+  },
+  "noUsersFound": "No users found",
+  "@noUsersFound": {
+    "description": "Message shown when no users match the search query"
   }
 }

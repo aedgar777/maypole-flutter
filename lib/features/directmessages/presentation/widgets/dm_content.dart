@@ -107,13 +107,21 @@ class _DmContentState extends ConsumerState<DmContent> {
     );
   }
 
-  Widget _buildMessageInput(String sender, String recipient) {
+  Widget _buildMessageInput(String senderUsername, String recipientId) {
     void sendMessage() {
       if (_messageController.text.isNotEmpty) {
-        ref
-            .read(dmViewModelProvider(widget.thread.id).notifier)
-            .sendDmMessage(_messageController.text, sender, recipient);
-        _messageController.clear();
+        final currentUser = AppSession().currentUser;
+        if (currentUser != null) {
+          ref
+              .read(dmViewModelProvider(widget.thread.id).notifier)
+              .sendDmMessage(
+                _messageController.text,
+                currentUser.firebaseID,
+                senderUsername,
+                recipientId,
+              );
+          _messageController.clear();
+        }
       }
     }
 

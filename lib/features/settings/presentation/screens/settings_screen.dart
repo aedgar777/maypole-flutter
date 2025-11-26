@@ -196,10 +196,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   title: Text(l10n.notifications),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
-                    // TODO: Navigate to notification settings
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.comingSoon)),
-                    );
+                    context.push('/settings/notifications');
                   },
                 ),
                 ListTile(

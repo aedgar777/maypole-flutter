@@ -45,5 +45,6 @@
   "minutesAgo": "Hace {minutes}m",
   "hoursAgo": "Hace {hours}h",
   "at": "a las",
-  "searchPlaces": "Buscar lugares"
+  "searchPlaces": "Buscar lugares",
+  "noUsersFound": "No se encontraron usuarios"
 }

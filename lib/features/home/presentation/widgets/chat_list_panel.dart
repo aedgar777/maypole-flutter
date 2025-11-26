@@ -71,6 +71,7 @@ class ChatListPanel extends ConsumerWidget {
               ],
             ),
             floatingActionButton: FloatingActionButton(
+              heroTag: 'chat_list_fab',
               onPressed: onAddPressed,
               child: const Icon(Icons.add),
             ),

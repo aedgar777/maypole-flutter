@@ -67,7 +67,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       children: [
         const Spacer(flex: 1),
         Image.asset(
-          'assets/icons/ic_logo_main.png',
+          'assets/icons/ic_logo_main.png.png',
           width: 300,
           height: 300,
         ),

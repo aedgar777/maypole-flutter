@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/domain/maypole_message.dart';
@@ -39,18 +40,37 @@ class MaypoleChatViewModel extends AsyncNotifier<List<MaypoleMessage>> {
     });
   }
 
-  Future<void> sendMessage(String maypoleName, String body, DomainUser sender) async {
+  Future<void> sendMessage(String maypoleName,
+      String body,
+      DomainUser sender, {
+        List<String> taggedUserIds = const [],
+      }) async {
     try {
-      await _threadService.sendMessage(_threadId, maypoleName, body, sender);
+      await _threadService.sendMessage(
+        _threadId,
+        maypoleName,
+        body,
+        sender,
+        taggedUserIds: taggedUserIds,
+      );
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
   }
 
-  Future<void> sendPlaceMessage(
-      String maypoleName, String body, DomainUser sender) async {
+  Future<void> sendPlaceMessage(String maypoleName,
+      String body,
+      DomainUser sender, {
+        List<String> taggedUserIds = const [],
+      }) async {
     try {
-      await _threadService.sendMaypoleMessage(_threadId, maypoleName, body, sender);
+      await _threadService.sendMaypoleMessage(
+        _threadId,
+        maypoleName,
+        body,
+        sender,
+        taggedUserIds: taggedUserIds,
+      );
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -68,7 +88,7 @@ class MaypoleChatViewModel extends AsyncNotifier<List<MaypoleMessage>> {
       state = AsyncValue.data([...currentMessages, ...newMessages]);
     } catch (e) {
       // Maybe show a snackbar or some other error indication
-      print('Error loading more messages: $e');
+      debugPrint('Error loading more messages: $e');
     } finally {
       _isLoadingMore = false;
     }

@@ -373,6 +373,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search Places'**
   String get searchPlaces;
+
+  /// Notification settings screen title
+  ///
+  /// In en, this message translates to:
+  /// **'Notification Settings'**
+  String get notificationSettings;
+
+  /// System notification permission section title
+  ///
+  /// In en, this message translates to:
+  /// **'System Notifications'**
+  String get systemNotifications;
+
+  /// Message when notification permission is granted
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications enabled'**
+  String get notificationPermissionGranted;
+
+  /// Description shown when permission is granted
+  ///
+  /// In en, this message translates to:
+  /// **'You will receive notifications for your selected types'**
+  String get notificationPermissionGrantedDescription;
+
+  /// Dialog title when permission is denied
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications Disabled'**
+  String get notificationPermissionDenied;
+
+  /// Description shown when permission is denied
+  ///
+  /// In en, this message translates to:
+  /// **'Enable notifications to receive updates'**
+  String get notificationPermissionDeniedDescription;
+
+  /// Message explaining how to enable notifications in settings
+  ///
+  /// In en, this message translates to:
+  /// **'Notification permission was denied. To enable notifications, please go to Settings and allow notifications for Maypole.'**
+  String get notificationPermissionDeniedMessage;
+
+  /// Button text to enable notifications
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Notifications'**
+  String get enableNotifications;
+
+  /// Button text to open system settings
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get openSettings;
+
+  /// Section header for notification types
+  ///
+  /// In en, this message translates to:
+  /// **'Notification Types'**
+  String get notificationTypes;
+
+  /// Toggle label for tagging notifications
+  ///
+  /// In en, this message translates to:
+  /// **'Tagging Notifications'**
+  String get taggingNotifications;
+
+  /// Description for tagging notifications
+  ///
+  /// In en, this message translates to:
+  /// **'Get notified when someone tags you in a message'**
+  String get taggingNotificationsDescription;
+
+  /// Toggle label for direct message notifications
+  ///
+  /// In en, this message translates to:
+  /// **'Direct Message Notifications'**
+  String get directMessageNotifications;
+
+  /// Description for direct message notifications
+  ///
+  /// In en, this message translates to:
+  /// **'Get notified when you receive a direct message'**
+  String get directMessageNotificationsDescription;
+
+  /// Message shown when system permission is needed
+  ///
+  /// In en, this message translates to:
+  /// **'Enable system notifications first to configure notification types'**
+  String get enableSystemNotificationsFirst;
+
+  /// Message shown when no users match the search query
+  ///
+  /// In en, this message translates to:
+  /// **'No users found'**
+  String get noUsersFound;
 }
 
 class _AppLocalizationsDelegate
