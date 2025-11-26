@@ -7,6 +7,7 @@ import 'package:maypole/features/directmessages/presentation/widgets/dm_content.
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/maypole_chat_content.dart';
 import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
+import 'package:maypole/features/settings/settings_providers.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../../../identity/auth_providers.dart';
 import '../../../directmessages/presentation/dm_providers.dart';
@@ -54,6 +55,38 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   _SelectedThreadState _selectedThread = const _SelectedThreadState();
+  bool _hasRequestedPermissions = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Request notification permissions and initialize FCM after the first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestNotificationPermissionsIfNeeded();
+      _initializeFcm();
+    });
+  }
+
+  Future<void> _requestNotificationPermissionsIfNeeded() async {
+    // Only request once per session
+    if (_hasRequestedPermissions) return;
+    _hasRequestedPermissions = true;
+
+    final handler = ref.read(firstTimeNotificationHandlerProvider);
+
+    if (!mounted) return;
+
+    await handler.requestPermissionIfNeeded(context);
+  }
+
+  Future<void> _initializeFcm() async {
+    try {
+      final fcmService = ref.read(fcmServiceProvider);
+      await fcmService.initialize();
+    } catch (e) {
+      // Error is already logged in FcmService
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -110,6 +143,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           floatingActionButton: isWideScreen
               ? null
               : FloatingActionButton(
+            heroTag: 'home_fab',
                   onPressed: () => _handleAddPressed(context),
                   child: const Icon(Icons.add),
                 ),

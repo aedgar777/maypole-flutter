@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import '../domain/maypole.dart';
 import '../domain/maypole_message.dart';
@@ -51,15 +52,16 @@ class MaypoleChatService {
     String threadId,
     String maypoleName,
     String body,
-    DomainUser sender,
-  ) async {
+    DomainUser sender, {
+        List<String> taggedUserIds = const [],
+      }) async {
     final now = DateTime.now();
     final message = MaypoleMessage(
       sender: sender.username,
       timestamp: now,
       body: body,
-      taggedUser:
-          '', // TODO This needs to be implemented based on your app's user tagging logic
+      taggedUser: '',
+      taggedUserIds: taggedUserIds,
     );
 
     final maypoleRef = _firestore.collection('maypoles').doc(threadId);
@@ -92,17 +94,32 @@ class MaypoleChatService {
     }
 
     await batch.commit();
+
+    // Send notifications to tagged users
+    if (taggedUserIds.isNotEmpty) {
+      await _sendTagNotifications(
+        taggedUserIds: taggedUserIds,
+        senderName: sender.username,
+        maypoleName: maypoleName,
+        messageBody: body,
+        threadId: threadId,
+      );
+    }
   }
 
-  Future<void> sendMaypoleMessage(String threadId, String maypoleName,
-      String body, DomainUser sender) async {
+  Future<void> sendMaypoleMessage(String threadId,
+      String maypoleName,
+      String body,
+      DomainUser sender, {
+        List<String> taggedUserIds = const [],
+      }) async {
     final now = DateTime.now();
     final message = MaypoleMessage(
       sender: sender.username,
       timestamp: now,
       body: body,
-      taggedUser:
-      '', // TODO This needs to be implemented based on your app's user tagging logic
+      taggedUser: '',
+      taggedUserIds: taggedUserIds,
     );
 
     final maypoleRef = _firestore.collection('maypoles').doc(threadId);
@@ -129,5 +146,49 @@ class MaypoleChatService {
     }
 
     await batch.commit();
+
+    // Send notifications to tagged users
+    if (taggedUserIds.isNotEmpty) {
+      await _sendTagNotifications(
+        taggedUserIds: taggedUserIds,
+        senderName: sender.username,
+        maypoleName: maypoleName,
+        messageBody: body,
+        threadId: threadId,
+      );
+    }
+  }
+
+  /// Send tag notifications to mentioned users
+  Future<void> _sendTagNotifications({
+    required List<String> taggedUserIds,
+    required String senderName,
+    required String maypoleName,
+    required String messageBody,
+    required String threadId,
+  }) async {
+    try {
+      // Create a notification document for each tagged user
+      for (final userId in taggedUserIds) {
+        final notificationRef = _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('notifications')
+            .doc();
+
+        await notificationRef.set({
+          'type': 'tag',
+          'senderName': senderName,
+          'maypoleName': maypoleName,
+          'messageBody': messageBody,
+          'threadId': threadId,
+          'timestamp': FieldValue.serverTimestamp(),
+          'read': false,
+        });
+      }
+    } catch (e) {
+      debugPrint('Error sending tag notifications: $e');
+      // Don't throw - we don't want to fail message sending if notifications fail
+    }
   }
 }

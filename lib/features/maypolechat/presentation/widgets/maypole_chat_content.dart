@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
+import 'package:maypole/features/maypolechat/presentation/viewmodels/mention_controller.dart';
+import 'package:maypole/features/maypolechat/presentation/widgets/mention_text_field.dart';
+import 'package:maypole/features/maypolechat/presentation/widgets/message_with_mentions.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../maypole_chat_providers.dart';
 
@@ -28,6 +31,7 @@ class MaypoleChatContent extends ConsumerStatefulWidget {
 class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _messageFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -39,6 +43,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _messageFocusNode.dispose();
     super.dispose();
   }
 
@@ -76,17 +81,9 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                     horizontal: 8.0,
                     vertical: 4.0,
                   ),
-                  child: RichText(
-                    text: TextSpan(
-                      style: DefaultTextStyle.of(context).style,
-                      children: <TextSpan>[
-                        TextSpan(
-                          text: '${message.sender}: ',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        TextSpan(text: message.body),
-                      ],
-                    ),
+                  child: MessageWithMentions(
+                    sender: message.sender,
+                    body: message.body,
                   ),
                 );
               },
@@ -114,10 +111,24 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
   Widget _buildMessageInput(DomainUser sender, AppLocalizations l10n) {
     void sendMessage() {
       if (_messageController.text.isNotEmpty) {
+        // Get the mentioned user IDs from the mention controller
+        final mentionedUserIds = ref
+            .read(mentionControllerProvider.notifier)
+            .getMentionedUserIds();
+
         ref
             .read(maypoleChatViewModelProvider(widget.threadId).notifier)
-            .sendMessage(widget.maypoleName, _messageController.text, sender);
+            .sendMessage(
+              widget.maypoleName,
+              _messageController.text,
+              sender,
+              taggedUserIds: mentionedUserIds,
+            );
+
         _messageController.clear();
+
+        // Clear mentions after sending
+        ref.read(mentionControllerProvider.notifier).clearMentions();
       }
     }
 
@@ -126,17 +137,11 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       child: Row(
         children: [
           Expanded(
-            child: TextField(
+            child: MentionTextField(
               controller: _messageController,
-              decoration: InputDecoration(
-                hintText: l10n.enterMessage,
-                hintStyle: TextStyle(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.3),
-                ),
-              ),
-              onSubmitted: AppConfig.isWideScreen ? (_) => sendMessage() : null,
+              threadId: widget.threadId,
+              focusNode: _messageFocusNode,
+              onSubmitted: AppConfig.isWideScreen ? sendMessage : null,
             ),
           ),
           IconButton(icon: const Icon(Icons.send), onPressed: sendMessage),

@@ -8,6 +8,7 @@ class DomainUser {
   String profilePictureUrl;
   List<MaypoleMetaData> maypoleChatThreads;
   List<DMThreadMetaData> dmThreads;
+  String? fcmToken;
 
   DomainUser({
     required this.username,
@@ -16,6 +17,7 @@ class DomainUser {
     this.profilePictureUrl = '',
     this.maypoleChatThreads = const [],
     this.dmThreads = const [],
+    this.fcmToken,
   });
 
   Map<String, dynamic> toMap() {
@@ -26,6 +28,7 @@ class DomainUser {
       'profilePictureUrl': profilePictureUrl,
       'maypoleChatThreads': maypoleChatThreads.map((e) => e.toMap()).toList(),
       'dmThreads': dmThreads.map((e) => e.toMap()).toList(),
+      'fcmToken': fcmToken,
     };
   }
 
@@ -35,8 +38,12 @@ class DomainUser {
       email: map['email'],
       firebaseID: map['firebaseID'],
       profilePictureUrl: map['profilePictureUrl'] ?? '',
-      maypoleChatThreads: List<MaypoleMetaData>.from(map['maypoleChatThreads']?.map((x) => MaypoleMetaData.fromMap(x)) ?? []),
-      dmThreads: List<DMThreadMetaData>.from(map['dmThreads']?.map((x) => DMThreadMetaData.fromMap(x)) ?? []),
+      maypoleChatThreads: List<MaypoleMetaData>.from(
+          map['maypoleChatThreads']?.map((x) => MaypoleMetaData.fromMap(x)) ??
+              []),
+      dmThreads: List<DMThreadMetaData>.from(
+          map['dmThreads']?.map((x) => DMThreadMetaData.fromMap(x)) ?? []),
+      fcmToken: map['fcmToken'] as String?,
     );
   }
 }

@@ -157,4 +157,58 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get searchPlaces => 'Buscar lugares';
+
+  @override
+  String get notificationSettings => 'Notification Settings';
+
+  @override
+  String get systemNotifications => 'System Notifications';
+
+  @override
+  String get notificationPermissionGranted => 'Notifications enabled';
+
+  @override
+  String get notificationPermissionGrantedDescription =>
+      'You will receive notifications for your selected types';
+
+  @override
+  String get notificationPermissionDenied => 'Notifications Disabled';
+
+  @override
+  String get notificationPermissionDeniedDescription =>
+      'Enable notifications to receive updates';
+
+  @override
+  String get notificationPermissionDeniedMessage =>
+      'Notification permission was denied. To enable notifications, please go to Settings and allow notifications for Maypole.';
+
+  @override
+  String get enableNotifications => 'Enable Notifications';
+
+  @override
+  String get openSettings => 'Open Settings';
+
+  @override
+  String get notificationTypes => 'Notification Types';
+
+  @override
+  String get taggingNotifications => 'Tagging Notifications';
+
+  @override
+  String get taggingNotificationsDescription =>
+      'Get notified when someone tags you in a message';
+
+  @override
+  String get directMessageNotifications => 'Direct Message Notifications';
+
+  @override
+  String get directMessageNotificationsDescription =>
+      'Get notified when you receive a direct message';
+
+  @override
+  String get enableSystemNotificationsFirst =>
+      'Enable system notifications first to configure notification types';
+
+  @override
+  String get noUsersFound => 'No se encontraron usuarios';
 }

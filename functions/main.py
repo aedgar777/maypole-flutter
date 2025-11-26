@@ -1,8 +1,8 @@
 # Cloud Functions for Firebase for Python
 # Deploy with `firebase deploy --only functions`
 
-from firebase_functions import https_fn, options
-from firebase_admin import initialize_app
+from firebase_functions import https_fn, options, firestore_fn
+from firebase_admin import initialize_app, firestore, messaging
 import requests
 import json
 import os
@@ -101,3 +101,84 @@ def places_autocomplete(req: https_fn.Request) -> https_fn.Response:
             status=500,
             headers={'Content-Type': 'application/json', **CORS_HEADERS}
         )
+
+
+@firestore_fn.on_document_created(document="users/{userId}/notifications/{notificationId}")
+def send_notification(event: firestore_fn.Event[firestore_fn.DocumentSnapshot]) -> None:
+    """
+    Triggered when a new notification document is created.
+    Sends a push notification to the user.
+    Handles both tag notifications and DM notifications.
+    """
+    try:
+        # Get the notification data
+        notification_data = event.data.to_dict()
+        if not notification_data:
+            print("No notification data found")
+            return
+
+        notification_type = notification_data.get('type')
+        if notification_type not in ['tag', 'dm']:
+            print(f"Skipping unknown notification type: {notification_type}")
+            return
+
+        # Get the user's FCM token
+        user_id = event.params['userId']
+        db = firestore.client()
+        user_ref = db.collection('users').document(user_id)
+        user_doc = user_ref.get()
+
+        if not user_doc.exists:
+            print(f"User {user_id} not found")
+            return
+
+        user_data = user_doc.to_dict()
+        fcm_token = user_data.get('fcmToken')
+
+        if not fcm_token:
+            print(f"User {user_id} has no FCM token")
+            return
+
+        # Prepare the notification based on type
+        sender_name = notification_data.get('senderName', 'Someone')
+        message_body = notification_data.get('messageBody', '')
+        thread_id = notification_data.get('threadId', '')
+
+        # Truncate message body for notification
+        display_body = message_body[:100] + '...' if len(message_body) > 100 else message_body
+
+        # Create notification title and data based on type
+        if notification_type == 'tag':
+            maypole_name = notification_data.get('maypoleName', 'a maypole')
+            title = f"{sender_name} tagged you in {maypole_name}"
+            data = {
+                'type': 'tag',
+                'threadId': thread_id,
+                'senderName': sender_name,
+                'maypoleName': maypole_name,
+            }
+        else:  # DM notification
+            title = f"New message from {sender_name}"
+            data = {
+                'type': 'dm',
+                'threadId': thread_id,
+                'senderName': sender_name,
+            }
+
+        # Create the FCM message
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title=title,
+                body=display_body,
+            ),
+            data=data,
+            token=fcm_token,
+        )
+
+        # Send the message
+        response = messaging.send(message)
+        print(f"Successfully sent {notification_type} notification to {user_id}: {response}")
+
+    except Exception as e:
+        print(f"Error sending notification: {str(e)}")
+        # Don't raise - we don't want to fail the function

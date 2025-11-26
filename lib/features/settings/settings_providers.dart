@@ -1,10 +1,27 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/features/settings/data/services/storage_service.dart';
+import 'package:maypole/features/settings/data/services/notification_service.dart';
+import 'package:maypole/features/settings/data/services/first_time_notification_handler.dart';
+import 'package:maypole/features/settings/data/services/fcm_service.dart';
 import 'package:maypole/features/settings/domain/settings_state.dart';
 import 'package:maypole/features/settings/presentation/viewmodels/settings_viewmodel.dart';
 
 final storageServiceProvider = Provider<StorageService>((ref) {
   return StorageService();
+});
+
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  return NotificationService();
+});
+
+final fcmServiceProvider = Provider<FcmService>((ref) {
+  return FcmService();
+});
+
+final firstTimeNotificationHandlerProvider = Provider<
+    FirstTimeNotificationHandler>((ref) {
+  final notificationService = ref.watch(notificationServiceProvider);
+  return FirstTimeNotificationHandler(notificationService);
 });
 
 final settingsViewModelProvider = NotifierProvider<
