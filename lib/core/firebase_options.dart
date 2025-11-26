@@ -282,28 +282,6 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static String _getFirebaseProdWindowsAppId() {
-    const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_PROD_WINDOWS_APP_ID', defaultValue: '');
-    if (dartDefineValue.isNotEmpty) return dartDefineValue;
-    try {
-      return dotenv.env['FIREBASE_PROD_WINDOWS_APP_ID'] ?? '';
-    } catch (e) {
-      return '';
-    }
-  }
-
-  static String _getFirebaseProdWindowsMeasurementId() {
-    const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_PROD_WINDOWS_MEASUREMENT_ID', defaultValue: '');
-    if (dartDefineValue.isNotEmpty) return dartDefineValue;
-    try {
-      return dotenv.env['FIREBASE_PROD_WINDOWS_MEASUREMENT_ID'] ?? '';
-    } catch (e) {
-      return '';
-    }
-  }
-
   static FirebaseOptions get currentPlatform {
     // Get environment from dart-define, fallback to dotenv, then default to dev
     final environment = _getEnvironment();
@@ -334,11 +312,14 @@ class DefaultFirebaseOptions {
       case TargetPlatform.macOS:
         return macosProduction;
       case TargetPlatform.windows:
-        return windowsProduction;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for windows - '
+              'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
+              'you can reconfigure this by running the FlutterFire CLI again.',
         );
       default:
         throw UnsupportedError(
@@ -359,7 +340,10 @@ class DefaultFirebaseOptions {
       case TargetPlatform.macOS:
         return macosDev;
       case TargetPlatform.windows:
-        return windowsDev;
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for windows - '
+              'you can reconfigure this by running the FlutterFire CLI again.',
+        );
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -427,16 +411,6 @@ class DefaultFirebaseOptions {
     iosBundleId: _getIosBundleId(),
   );
 
-  static FirebaseOptions get windowsDev => FirebaseOptions(
-    apiKey: _getFirebaseDevWebApiKey(),
-    appId: _getFirebaseDevWebAppId(),
-    messagingSenderId: _getFirebaseDevMessagingSenderId(),
-    projectId: _getFirebaseDevProjectId(),
-    authDomain: _getFirebaseDevAuthDomain(),
-    storageBucket: _getFirebaseDevStorageBucket(),
-    measurementId: _getFirebaseDevWebMeasurementId(),
-  );
-
   // Production Environment (maypole-flutter-ce6c3)
   static FirebaseOptions get webProduction {
     final apiKey = _getFirebaseProdWebApiKey();
@@ -490,15 +464,5 @@ class DefaultFirebaseOptions {
     projectId: _getFirebaseProdProjectId(),
     storageBucket: _getFirebaseProdStorageBucket(),
     iosBundleId: _getIosBundleId(),
-  );
-
-  static FirebaseOptions get windowsProduction => FirebaseOptions(
-    apiKey: _getFirebaseProdWebApiKey(),
-    appId: _getFirebaseProdWindowsAppId(),
-    messagingSenderId: _getFirebaseProdMessagingSenderId(),
-    projectId: _getFirebaseProdProjectId(),
-    authDomain: _getFirebaseProdAuthDomain(),
-    storageBucket: _getFirebaseProdStorageBucket(),
-    measurementId: _getFirebaseProdWindowsMeasurementId(),
   );
 }

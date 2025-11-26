@@ -72,7 +72,7 @@ flutter run --release --flavor prod --dart-define=ENVIRONMENT=production
 
 - **Development Environment**: `maypole-flutter-dev` (shared by all team members)
 - **Production Environment**: `maypole-flutter-ce6c3` (restricted access)
-- **Supported Platforms**: Web, Android, iOS (planned), macOS, Windows
+- **Supported Platforms**: Web, Android, iOS, macOS
 
 ## 🔒 Security & Access Control
 

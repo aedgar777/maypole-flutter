@@ -152,4 +152,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get at => 'at';
+
+  @override
+  String get searchPlaces => 'Search Places';
 }
