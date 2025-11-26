@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/widgets/cached_profile_avatar.dart';
 import '../../domain/dm_thread.dart';
@@ -94,6 +95,14 @@ class _DmScreenState extends ConsumerState<DmScreen> {
   }
 
   Widget _buildMessageInput(String sender, String recipient) {
+    void sendMessage() {
+      if (_messageController.text.isNotEmpty) {
+        ref.read(dmViewModelProvider(widget.thread.id).notifier)
+            .sendDmMessage(_messageController.text, sender, recipient);
+        _messageController.clear();
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
@@ -102,17 +111,12 @@ class _DmScreenState extends ConsumerState<DmScreen> {
             child: TextField(
               controller: _messageController,
               decoration: const InputDecoration(hintText: 'Enter a message'),
+              onSubmitted: AppConfig.isWideScreen ? (_) => sendMessage() : null,
             ),
           ),
           IconButton(
             icon: const Icon(Icons.send),
-            onPressed: () {
-              if (_messageController.text.isNotEmpty) {
-                ref.read(dmViewModelProvider(widget.thread.id).notifier)
-                    .sendDmMessage(_messageController.text, sender, recipient);
-                _messageController.clear();
-              }
-            },
+            onPressed: sendMessage,
           ),
         ],
       ),

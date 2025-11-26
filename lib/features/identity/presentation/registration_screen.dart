@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/utils/string_utils.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../domain/domain_user.dart';
@@ -66,6 +67,8 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
               AuthFormField(
                   controller: _usernameController,
                   labelText: l10n.username,
+                  onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
+                      _handleRegistration() : null,
                   validator: StringUtils.validateUsername
               ),
               const SizedBox(height: 20),
@@ -73,6 +76,8 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   controller: _emailController,
                   labelText: l10n.email,
                   keyboardType: TextInputType.emailAddress,
+                  onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
+                      _handleRegistration() : null,
                   validator: StringUtils.validateEmail
               ),
               const SizedBox(height: 20),
@@ -80,6 +85,8 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   controller: _passwordController,
                   labelText: l10n.password,
                   obscureText: true,
+                  onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
+                      _handleRegistration() : null,
                   validator: StringUtils.validatePassword
               ),
               const SizedBox(height: 30),

@@ -85,6 +85,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     controller: _emailController,
                     labelText: l10n.email,
                     keyboardType: TextInputType.emailAddress,
+                    onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
+                        _handleSignIn() : null,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return l10n.pleaseEnterEmail;
@@ -100,6 +102,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     controller: _passwordController,
                     labelText: l10n.password,
                     obscureText: true,
+                    onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
+                        _handleSignIn() : null,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return l10n.pleaseEnterPassword;

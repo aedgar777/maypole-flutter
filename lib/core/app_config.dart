@@ -1,4 +1,5 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'utils/platform_info.dart';
 
 /// A class to access environment-specific variables.
 ///
@@ -6,8 +7,17 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 /// and provides the correct keys based on whether the app is in
 /// 'prod' or 'dev' mode.
 class AppConfig {
-
   static String get _environment => dotenv.env['ENVIRONMENT'] ?? 'dev';
+
+  /// Returns true if the app is running on desktop platforms (Windows, Linux, macOS).
+  static bool get isDesktop {
+    return PlatformInfo.isDesktop;
+  }
+
+  /// Returns true if the app is running on desktop or web (typically wide screen devices).
+  static bool get isWideScreen {
+    return PlatformInfo.isWideScreen;
+  }
 
   /// Returns true if the current environment is production.
   static bool get isProduction => _environment.toLowerCase() == 'prod' || _environment.toLowerCase() == 'production';
