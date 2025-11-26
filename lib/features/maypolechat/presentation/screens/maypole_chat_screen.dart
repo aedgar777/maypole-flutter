@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/presentation/maypole_chat_providers.dart';
@@ -97,6 +98,16 @@ class MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
   }
 
   Widget _buildMessageInput(DomainUser sender, AppLocalizations l10n) {
+    void sendMessage() {
+      if (_messageController.text.isNotEmpty) {
+        ref
+            .read(maypoleChatViewModelProvider(widget.threadId).notifier)
+            .sendMessage(
+            widget.maypoleName, _messageController.text, sender);
+        _messageController.clear();
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
@@ -105,19 +116,12 @@ class MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
             child: TextField(
               controller: _messageController,
               decoration: InputDecoration(hintText: l10n.enterMessage),
+              onSubmitted: AppConfig.isWideScreen ? (_) => sendMessage() : null,
             ),
           ),
           IconButton(
             icon: const Icon(Icons.send),
-            onPressed: () {
-              if (_messageController.text.isNotEmpty) {
-                ref
-                    .read(maypoleChatViewModelProvider(widget.threadId).notifier)
-                    .sendMessage(
-                        widget.maypoleName, _messageController.text, sender);
-                _messageController.clear();
-              }
-            },
+            onPressed: sendMessage,
           ),
         ],
       ),
