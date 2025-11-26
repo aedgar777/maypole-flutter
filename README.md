@@ -111,7 +111,7 @@ This project uses a **private team approach** with shared Firebase projects:
 ## 📚 Documentation
 
 - [Team Setup Guide](docs/contributors/firebase-setup-guide.md) - **Start here!**
-- [SETUP.md](SETUP.md) - Detailed setup instructions and troubleshooting
+- [SETUP.md](docs/SETUP.md) - Detailed setup instructions and troubleshooting
 - [Development Workflow](#development-workflow) - Daily development practices
 
 ## 🛠️ Development Workflow

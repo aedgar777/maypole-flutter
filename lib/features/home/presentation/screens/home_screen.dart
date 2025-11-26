@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/widgets/adaptive_scaffold.dart';
+import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/directmessages/domain/dm_thread.dart';
 import 'package:maypole/features/directmessages/presentation/widgets/dm_content.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/maypole_chat_content.dart';
 import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
 import 'package:maypole/features/settings/settings_providers.dart';
-import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../../../identity/auth_providers.dart';
 import '../../../directmessages/presentation/dm_providers.dart';
 import '../widgets/chat_list_panel.dart';
@@ -107,8 +107,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, stack) {
-            final l10n = AppLocalizations.of(context)!;
-            return Center(child: Text(l10n.error(err.toString())));
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ErrorDialog.show(context, err);
+            });
+            return const Center(child: CircularProgressIndicator());
           },
         );
   }

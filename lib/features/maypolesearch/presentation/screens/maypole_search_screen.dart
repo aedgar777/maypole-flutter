@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../../data/models/autocomplete_response.dart';
 import '../../maypole_search_providers.dart';
@@ -57,10 +58,12 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
             child: searchState.when(
               data: (predictions) => _buildPredictionsList(predictions),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stackTrace) =>
-                  Center(
-                    child: Text(l10n.error(error.toString())),
-              ),
+              error: (error, stackTrace) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  ErrorDialog.show(context, error);
+                });
+                return const Center(child: CircularProgressIndicator());
+              },
             ),
           ),
         ],

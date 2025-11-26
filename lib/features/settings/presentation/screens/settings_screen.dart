@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:maypole/core/widgets/cached_profile_avatar.dart';
+import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/identity/auth_providers.dart';
 import 'package:maypole/features/settings/settings_providers.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
@@ -70,12 +71,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.error(e.toString())),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ErrorDialog.show(context, e);
       }
     }
   }
@@ -263,10 +259,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) =>
-            Center(
-              child: Text(l10n.error(error.toString())),
-            ),
+        error: (error, stack) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ErrorDialog.show(context, error);
+          });
+          return const Center(child: CircularProgressIndicator());
+        },
       ),
     );
   }

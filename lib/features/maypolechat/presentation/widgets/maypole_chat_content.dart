@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
+import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/presentation/viewmodels/mention_controller.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/mention_text_field.dart';
@@ -16,12 +17,14 @@ class MaypoleChatContent extends ConsumerStatefulWidget {
   final String threadId;
   final String maypoleName;
   final bool showAppBar;
+  final bool autoFocus;
 
   const MaypoleChatContent({
     super.key,
     required this.threadId,
     required this.maypoleName,
     this.showAppBar = true,
+    this.autoFocus = false,
   });
 
   @override
@@ -37,6 +40,13 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+
+    // Auto-focus if requested
+    if (widget.autoFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _messageFocusNode.requestFocus();
+      });
+    }
   }
 
   @override
@@ -89,8 +99,12 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
               },
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) =>
-                Center(child: Text(l10n.error(error.toString()))),
+            error: (error, stack) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                ErrorDialog.show(context, error);
+              });
+              return const Center(child: CircularProgressIndicator());
+            },
           ),
         ),
         if (currentUser != null) _buildMessageInput(currentUser, l10n),
@@ -144,7 +158,11 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
               onSubmitted: AppConfig.isWideScreen ? sendMessage : null,
             ),
           ),
-          IconButton(icon: const Icon(Icons.send), onPressed: sendMessage),
+          IconButton(
+            icon: const Icon(Icons.send),
+            color: Colors.white70,
+            onPressed: sendMessage,
+          ),
         ],
       ),
     );

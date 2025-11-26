@@ -21,7 +21,8 @@ final fcmServiceProvider = Provider<FcmService>((ref) {
 final firstTimeNotificationHandlerProvider = Provider<
     FirstTimeNotificationHandler>((ref) {
   final notificationService = ref.watch(notificationServiceProvider);
-  return FirstTimeNotificationHandler(notificationService);
+  final fcmService = ref.watch(fcmServiceProvider);
+  return FirstTimeNotificationHandler(notificationService, fcmService);
 });
 
 final settingsViewModelProvider = NotifierProvider<

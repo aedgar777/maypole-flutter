@@ -159,56 +159,63 @@ class AppLocalizationsEs extends AppLocalizations {
   String get searchPlaces => 'Buscar lugares';
 
   @override
-  String get notificationSettings => 'Notification Settings';
+  String get notificationSettings => 'Configuración de notificaciones';
 
   @override
-  String get systemNotifications => 'System Notifications';
+  String get systemNotifications => 'Notificaciones del sistema';
 
   @override
-  String get notificationPermissionGranted => 'Notifications enabled';
+  String get notificationPermissionGranted => 'Notificaciones habilitadas';
 
   @override
   String get notificationPermissionGrantedDescription =>
-      'You will receive notifications for your selected types';
+      'Recibirás notificaciones para los tipos seleccionados';
 
   @override
-  String get notificationPermissionDenied => 'Notifications Disabled';
+  String get notificationPermissionDenied => 'Notificaciones deshabilitadas';
 
   @override
   String get notificationPermissionDeniedDescription =>
-      'Enable notifications to receive updates';
+      'Habilita las notificaciones para recibir actualizaciones';
 
   @override
   String get notificationPermissionDeniedMessage =>
-      'Notification permission was denied. To enable notifications, please go to Settings and allow notifications for Maypole.';
+      'El permiso de notificación fue denegado. Para habilitar las notificaciones, ve a Configuración y permite las notificaciones para Maypole.';
 
   @override
-  String get enableNotifications => 'Enable Notifications';
+  String get enableNotifications => 'Habilitar notificaciones';
 
   @override
-  String get openSettings => 'Open Settings';
+  String get openSettings => 'Abrir configuración';
 
   @override
-  String get notificationTypes => 'Notification Types';
+  String get notificationTypes => 'Tipos de notificaciones';
 
   @override
-  String get taggingNotifications => 'Tagging Notifications';
+  String get taggingNotifications => 'Notificaciones de etiquetas';
 
   @override
   String get taggingNotificationsDescription =>
-      'Get notified when someone tags you in a message';
+      'Recibe notificaciones cuando alguien te etiquete en un mensaje';
 
   @override
-  String get directMessageNotifications => 'Direct Message Notifications';
+  String get directMessageNotifications =>
+      'Notificaciones de mensajes directos';
 
   @override
   String get directMessageNotificationsDescription =>
-      'Get notified when you receive a direct message';
+      'Recibe notificaciones cuando recibas un mensaje directo';
 
   @override
   String get enableSystemNotificationsFirst =>
-      'Enable system notifications first to configure notification types';
+      'Habilita las notificaciones del sistema primero para configurar los tipos de notificaciones';
 
   @override
   String get noUsersFound => 'No se encontraron usuarios';
+
+  @override
+  String get errorTitle => 'Error';
+
+  @override
+  String get dismiss => 'Descartar';
 }

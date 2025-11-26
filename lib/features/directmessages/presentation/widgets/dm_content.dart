@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/widgets/cached_profile_avatar.dart';
+import 'package:maypole/core/widgets/error_dialog.dart';
 import '../../domain/dm_thread.dart';
 import '../dm_providers.dart';
 
@@ -12,8 +13,14 @@ import '../dm_providers.dart';
 class DmContent extends ConsumerStatefulWidget {
   final DMThread thread;
   final bool showAppBar;
+  final bool autoFocus;
 
-  const DmContent({super.key, required this.thread, this.showAppBar = true});
+  const DmContent({
+    super.key,
+    required this.thread,
+    this.showAppBar = true,
+    this.autoFocus = false,
+  });
 
   @override
   ConsumerState<DmContent> createState() => _DmContentState();
@@ -22,17 +29,26 @@ class DmContent extends ConsumerStatefulWidget {
 class _DmContentState extends ConsumerState<DmContent> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _messageFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+
+    // Auto-focus if requested
+    if (widget.autoFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _messageFocusNode.requestFocus();
+      });
+    }
   }
 
   @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _messageFocusNode.dispose();
     super.dispose();
   }
 
@@ -80,7 +96,12 @@ class _DmContentState extends ConsumerState<DmContent> {
               },
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => Center(child: Text('Error: $error')),
+            error: (error, stack) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                ErrorDialog.show(context, error);
+              });
+              return const Center(child: CircularProgressIndicator());
+            },
           ),
         ),
         if (currentUser != null)
@@ -132,6 +153,7 @@ class _DmContentState extends ConsumerState<DmContent> {
           Expanded(
             child: TextField(
               controller: _messageController,
+              focusNode: _messageFocusNode,
               decoration: InputDecoration(
                 hintText: 'Enter a message',
                 hintStyle: TextStyle(
@@ -143,7 +165,11 @@ class _DmContentState extends ConsumerState<DmContent> {
               onSubmitted: AppConfig.isWideScreen ? (_) => sendMessage() : null,
             ),
           ),
-          IconButton(icon: const Icon(Icons.send), onPressed: sendMessage),
+          IconButton(
+            icon: const Icon(Icons.send),
+            color: Colors.white70,
+            onPressed: sendMessage,
+          ),
         ],
       ),
     );

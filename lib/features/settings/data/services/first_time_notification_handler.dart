@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:maypole/features/settings/data/services/notification_service.dart';
+import 'package:maypole/features/settings/data/services/fcm_service.dart';
 
 /// Handles requesting notification permissions on first app use (after login/registration)
 class FirstTimeNotificationHandler {
   final NotificationService _notificationService;
+  final FcmService _fcmService;
 
-  FirstTimeNotificationHandler(this._notificationService);
+  FirstTimeNotificationHandler(this._notificationService, this._fcmService);
 
   /// Request notification permission if this is the first time
   /// Shows a contextual dialog before asking for system permission
@@ -34,8 +36,15 @@ class FirstTimeNotificationHandler {
       }
     }
 
-    // Request the system permission
-    return await _notificationService.requestNotificationPermission();
+    // Request the system permission (permission_handler)
+    final granted = await _notificationService.requestNotificationPermission();
+
+    // If granted, also request FCM permission and get token
+    if (granted) {
+      await _fcmService.requestPermission();
+    }
+
+    return granted;
   }
 
   /// Show a dialog explaining why we need notification permission
@@ -94,7 +103,14 @@ class FirstTimeNotificationHandler {
   /// Request permission silently (without showing rationale dialog)
   /// Useful for testing or when you want to request immediately
   Future<bool> requestPermissionSilently() async {
-    return await _notificationService.requestPermissionOnFirstUse();
+    final granted = await _notificationService.requestPermissionOnFirstUse();
+
+    // If granted, also request FCM permission and get token
+    if (granted) {
+      await _fcmService.requestPermission();
+    }
+
+    return granted;
   }
 }
 
