@@ -46,5 +46,22 @@
   "hoursAgo": "Hace {hours}h",
   "at": "a las",
   "searchPlaces": "Buscar lugares",
-  "noUsersFound": "No se encontraron usuarios"
+  "noUsersFound": "No se encontraron usuarios",
+  "notificationSettings": "Configuración de notificaciones",
+  "systemNotifications": "Notificaciones del sistema",
+  "notificationPermissionGranted": "Notificaciones habilitadas",
+  "notificationPermissionGrantedDescription": "Recibirás notificaciones para los tipos seleccionados",
+  "notificationPermissionDenied": "Notificaciones deshabilitadas",
+  "notificationPermissionDeniedDescription": "Habilita las notificaciones para recibir actualizaciones",
+  "notificationPermissionDeniedMessage": "El permiso de notificación fue denegado. Para habilitar las notificaciones, ve a Configuración y permite las notificaciones para Maypole.",
+  "enableNotifications": "Habilitar notificaciones",
+  "openSettings": "Abrir configuración",
+  "notificationTypes": "Tipos de notificaciones",
+  "taggingNotifications": "Notificaciones de etiquetas",
+  "taggingNotificationsDescription": "Recibe notificaciones cuando alguien te etiquete en un mensaje",
+  "directMessageNotifications": "Notificaciones de mensajes directos",
+  "directMessageNotificationsDescription": "Recibe notificaciones cuando recibas un mensaje directo",
+  "enableSystemNotificationsFirst": "Habilita las notificaciones del sistema primero para configurar los tipos de notificaciones",
+  "errorTitle": "Error",
+  "dismiss": "Descartar"
 }

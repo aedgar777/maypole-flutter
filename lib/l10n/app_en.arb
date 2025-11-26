@@ -272,5 +272,13 @@
   "noUsersFound": "No users found",
   "@noUsersFound": {
     "description": "Message shown when no users match the search query"
+  },
+  "errorTitle": "Error",
+  "@errorTitle": {
+    "description": "Title for error dialogs"
+  },
+  "dismiss": "Dismiss",
+  "@dismiss": {
+    "description": "Button text to dismiss a dialog"
   }
 }

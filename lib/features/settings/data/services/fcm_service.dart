@@ -9,8 +9,42 @@ class FcmService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final AppSession _session = AppSession();
 
-  /// Initialize FCM and request permissions
+  /// Initialize FCM WITHOUT requesting permissions
+  /// Call this to set up message listeners without triggering permission prompt
   Future<void> initialize() async {
+    try {
+      // Check existing permission status without requesting
+      final settings = await _messaging.getNotificationSettings();
+      debugPrint('FCM permission status: ${settings.authorizationStatus}');
+
+      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional) {
+        // Permission already granted, get the token
+        final token = await _messaging.getToken();
+        debugPrint('FCM Token: $token');
+
+        if (token != null) {
+          await _updateUserFcmToken(token);
+        }
+
+        // Listen for token refresh
+        _messaging.onTokenRefresh.listen(_updateUserFcmToken);
+      }
+
+      // Set up foreground message handler (works regardless of permission status)
+      FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+
+      // Set up background message handler (already handled in main.dart)
+      // FirebaseMessaging.onBackgroundMessage is static and must be
+      // defined at the top level
+    } catch (e) {
+      debugPrint('Error initializing FCM: $e');
+    }
+  }
+
+  /// Request notification permissions and initialize token if granted
+  /// This should be called AFTER your custom permission UI
+  Future<bool> requestPermission() async {
     try {
       // Request permission for notifications
       final settings = await _messaging.requestPermission(
@@ -34,15 +68,13 @@ class FcmService {
         // Listen for token refresh
         _messaging.onTokenRefresh.listen(_updateUserFcmToken);
 
-        // Set up foreground message handler
-        FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-
-        // Set up background message handler (already handled in main.dart)
-        // FirebaseMessaging.onBackgroundMessage is static and must be
-        // defined at the top level
+        return true;
       }
+
+      return false;
     } catch (e) {
-      debugPrint('Error initializing FCM: $e');
+      debugPrint('Error requesting FCM permission: $e');
+      return false;
     }
   }
 

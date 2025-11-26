@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/domain/user_mention.dart';
 import 'package:maypole/features/maypolechat/presentation/viewmodels/mention_controller.dart';
@@ -201,17 +202,23 @@ class _MentionTextFieldState extends ConsumerState<MentionTextField> {
                               ),
                             ),
                           ),
-                      error: (error, stack) =>
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            child: Text(
-                              'Error: ${error.toString()}',
-                              style: Theme
-                                  .of(context)
-                                  .textTheme
-                                  .bodyMedium,
+                      error: (error, stack) {
+                        // Display error dialog after build phase
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          ErrorDialog.show(context, error);
+                        });
+                        // Show loading indicator while error dialog is being prepared
+                        return Container(
+                          padding: const EdgeInsets.all(16),
+                          child: const Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             ),
                           ),
+                        );
+                      },
                     );
                   },
                 ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/widgets/adaptive_scaffold.dart';
+import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/directmessages/domain/dm_thread.dart';
 import 'package:maypole/features/directmessages/presentation/widgets/dm_content.dart';
 import 'package:maypole/features/identity/auth_providers.dart';
@@ -90,10 +91,12 @@ class _MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Scaffold(
-            appBar: AppBar(title: const Text('Error')),
-            body: Center(child: Text('Error: $err')),
-          ),
+          error: (err, stack) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ErrorDialog.show(context, err);
+            });
+            return const Center(child: CircularProgressIndicator());
+          },
         );
   }
 
@@ -107,9 +110,14 @@ class _MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
         threadId: _currentThreadId,
         maypoleName: _currentMaypoleName,
         showAppBar: false,
+        autoFocus: true,
       );
     } else if (_currentDmThread != null) {
-      return DmContent(thread: _currentDmThread!, showAppBar: false);
+      return DmContent(
+        thread: _currentDmThread!,
+        showAppBar: false,
+        autoFocus: true,
+      );
     }
 
     return const SizedBox.shrink();

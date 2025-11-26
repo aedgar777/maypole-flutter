@@ -469,6 +469,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No users found'**
   String get noUsersFound;
+
+  /// Title for error dialogs
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get errorTitle;
+
+  /// Button text to dismiss a dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get dismiss;
 }
 
 class _AppLocalizationsDelegate

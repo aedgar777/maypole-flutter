@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_config.dart';
+import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../domain/states/auth_state.dart';
@@ -67,7 +68,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       children: [
         const Spacer(flex: 1),
         Image.asset(
-          'assets/icons/ic_logo_main.png.png',
+          'assets/icons/ic_logo_main.png',
           width: 300,
           height: 300,
         ),
@@ -178,7 +179,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ],
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text(l10n.error(err.toString()))),
+        error: (err, stack) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ErrorDialog.show(context, err);
+          });
+          return const Center(child: CircularProgressIndicator());
+        },
       ),
     );
   }

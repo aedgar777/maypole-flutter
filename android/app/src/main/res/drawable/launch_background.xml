@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?><!-- Splash screen background with dark purple color and centered logo -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Dark purple background (#1A1A2E) -->
+    <item android:drawable="@color/dark_purple" />
+
+    <!-- Centered logo -->
+    <item android:drawable="@drawable/splash_logo" />
+</layer-list>

@@ -14,16 +14,19 @@ class MessageWithMentions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mentions = _parseMentions(body);
+    final theme = Theme.of(context);
 
     return RichText(
       text: TextSpan(
-        style: DefaultTextStyle
-            .of(context)
-            .style,
+        style: theme.textTheme.bodyMedium,
         children: [
           TextSpan(
             text: '$sender: ',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontFamily: 'Lato',
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
+            ),
           ),
           ...mentions,
         ],

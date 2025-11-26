@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/features/settings/data/services/notification_service.dart';
+import 'package:maypole/features/settings/data/services/fcm_service.dart';
 import 'package:maypole/features/settings/domain/notification_preferences.dart';
 import 'package:maypole/features/settings/settings_providers.dart';
 
@@ -32,10 +33,12 @@ class NotificationSettingsState {
 class NotificationSettingsViewModel
     extends Notifier<NotificationSettingsState> {
   late final NotificationService _notificationService;
+  late final FcmService _fcmService;
 
   @override
   NotificationSettingsState build() {
     _notificationService = ref.read(notificationServiceProvider);
+    _fcmService = ref.read(fcmServiceProvider);
     _loadPreferences();
     return NotificationSettingsState(
       preferences: const NotificationPreferences(),
@@ -65,6 +68,11 @@ class NotificationSettingsViewModel
       state = state.copyWith(isLoading: true);
       final granted = await _notificationService
           .requestNotificationPermission();
+
+      // If granted, also request FCM permission and get token
+      if (granted) {
+        await _fcmService.requestPermission();
+      }
 
       // Reload preferences to update system permission status
       await _loadPreferences();

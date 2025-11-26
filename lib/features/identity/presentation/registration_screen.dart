@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/utils/string_utils.dart';
+import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../domain/domain_user.dart';
 import './widgets/auth_form_field.dart';
@@ -145,7 +146,12 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
             ? _buildLoggedInView(user, context)
             : _buildRegistrationForm(registrationState, context),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text(l10n.error(err.toString()))),
+        error: (err, stack) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ErrorDialog.show(context, err);
+          });
+          return const Center(child: CircularProgressIndicator());
+        },
       ),
     );
   }

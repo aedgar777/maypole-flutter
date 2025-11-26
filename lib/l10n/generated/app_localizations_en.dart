@@ -209,4 +209,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noUsersFound => 'No users found';
+
+  @override
+  String get errorTitle => 'Error';
+
+  @override
+  String get dismiss => 'Dismiss';
 }
