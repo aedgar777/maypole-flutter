@@ -1,145 +1,223 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:maypole/core/utils/date_time_utils.dart';
-import 'package:maypole/core/widgets/cached_profile_avatar.dart';
+import 'package:maypole/core/widgets/adaptive_scaffold.dart';
+import 'package:maypole/features/directmessages/domain/dm_thread.dart';
+import 'package:maypole/features/directmessages/presentation/widgets/dm_content.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
+import 'package:maypole/features/maypolechat/presentation/widgets/maypole_chat_content.dart';
 import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../../../identity/auth_providers.dart';
 import '../../../directmessages/presentation/dm_providers.dart';
+import '../widgets/chat_list_panel.dart';
 
-class HomeScreen extends ConsumerWidget {
+/// State for tracking the selected thread in the home screen
+class _SelectedThreadState {
+  final String? threadId;
+  final String? maypoleName;
+  final DMThread? dmThread;
+  final bool isMaypoleThread;
+
+  const _SelectedThreadState({
+    this.threadId,
+    this.maypoleName,
+    this.dmThread,
+    this.isMaypoleThread = true,
+  });
+
+  _SelectedThreadState copyWith({
+    String? threadId,
+    String? maypoleName,
+    DMThread? dmThread,
+    bool? isMaypoleThread,
+  }) {
+    return _SelectedThreadState(
+      threadId: threadId ?? this.threadId,
+      maypoleName: maypoleName ?? this.maypoleName,
+      dmThread: dmThread ?? this.dmThread,
+      isMaypoleThread: isMaypoleThread ?? this.isMaypoleThread,
+    );
+  }
+
+  _SelectedThreadState clear() {
+    return const _SelectedThreadState();
+  }
+}
+
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ref.watch(authStateProvider).when(
-      data: (user) {
-        if (user == null) {
-          // User is not authenticated, redirect to login
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go('/login');
-          });
-          return const Center(child: CircularProgressIndicator());
-        }
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
 
-        // User is authenticated, show home list
-        return _buildChatList(context, ref, user);
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) {
-        final l10n = AppLocalizations.of(context)!;
-        return Center(child: Text(l10n.error(err.toString())));
-      },
-    );
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  _SelectedThreadState _selectedThread = const _SelectedThreadState();
+
+  @override
+  Widget build(BuildContext context) {
+    return ref
+        .watch(authStateProvider)
+        .when(
+          data: (user) {
+            if (user == null) {
+              // User is not authenticated, redirect to login
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                context.go('/login');
+              });
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            // User is authenticated, show adaptive layout
+            return _buildAdaptiveLayout(context, user);
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) {
+            final l10n = AppLocalizations.of(context)!;
+            return Center(child: Text(l10n.error(err.toString())));
+          },
+        );
   }
 
-  Widget _buildChatList(BuildContext context, WidgetRef ref, DomainUser user) {
-    final l10n = AppLocalizations.of(context)!;
+  Widget _buildAdaptiveLayout(BuildContext context, DomainUser user) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWideScreen = constraints.maxWidth >= 600;
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.settings),
-              tooltip: l10n.settings,
-              onPressed: () {
-                context.push('/settings');
-              },
+        return Scaffold(
+          body: AdaptiveScaffold(
+            navigationPanel: ChatListPanel(
+              user: user,
+              selectedThreadId: _selectedThread.threadId,
+              isMaypoleThread: _selectedThread.isMaypoleThread,
+              onSettingsPressed: () => context.push('/settings'),
+              onAddPressed: () => _handleAddPressed(context),
+              onMaypoleThreadSelected: (threadId, maypoleName) =>
+                  _handleMaypoleThreadSelected(
+                    context,
+                    threadId,
+                    maypoleName,
+                    isWideScreen,
+                  ),
+              onDmThreadSelected: (threadId) =>
+                  _handleDmThreadSelected(context, threadId, isWideScreen),
+              onTabChanged: () => _handleTabChanged(isWideScreen),
             ),
-          ],
-          bottom: TabBar(
-            dividerColor: Colors.white.withAlpha(26),
-            tabs: [
-              Tab(text: l10n.maypolesTab),
-              Tab(text: l10n.directMessagesTab),
-            ],
+            contentPanel: _buildContentPanel(),
           ),
-        ),
-        body: TabBarView(
-          children: [
-            _buildMaypoleChatList(context, user),
-            _buildDmList(context, ref, user),
-          ],
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () async {
-            final result = await context.push<PlacePrediction>('/search');
-
-            if (result != null && context.mounted) {
-              // Navigate to the chat screen, passing the placeId as the threadId
-              // and the place name (business name only) as the maypoleName.
-              context.push('/chat/${result.placeId}', extra: result.placeName);
-            }
-          },
-          child: const Icon(Icons.add),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMaypoleChatList(BuildContext context, DomainUser user) {
-    final l10n = AppLocalizations.of(context)!;
-
-    if (user.maypoleChatThreads.isEmpty) {
-      return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(l10n.noPlaceChats),
-          ));
-    }
-    return ListView.builder(
-      itemCount: user.maypoleChatThreads.length,
-      itemBuilder: (context, index) {
-        final thread = user.maypoleChatThreads[index];
-        return ListTile(
-          title: Text(thread.name),
-          onTap: () {
-            context.push('/chat/${thread.id}', extra: thread.name);
-          },
+          // Only show FAB on mobile screens
+          floatingActionButton: isWideScreen
+              ? null
+              : FloatingActionButton(
+                  onPressed: () => _handleAddPressed(context),
+                  child: const Icon(Icons.add),
+                ),
         );
       },
     );
   }
 
-  Widget _buildDmList(BuildContext context, WidgetRef ref, DomainUser user) {
-    final l10n = AppLocalizations.of(context)!;
-
-    if (user.dmThreads.isEmpty) {
-      return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(l10n.noDirectMessages),
-          ));
+  void _handleTabChanged(bool isWideScreen) {
+    if (isWideScreen) {
+      // On wide screen, clear selection when switching tabs
+      setState(() {
+        _selectedThread = const _SelectedThreadState();
+      });
     }
-    return ListView.builder(
-      itemCount: user.dmThreads.length,
-      itemBuilder: (context, index) {
-        final threadMetadata = user.dmThreads[index];
-        final formattedDateTime = DateTimeUtils.formatRelativeDateTime(
-          threadMetadata.lastMessageTime,
-          context: context,
+  }
+
+  Widget? _buildContentPanel() {
+    if (_selectedThread.threadId == null) {
+      return null; // Shows empty state
+    }
+
+    if (_selectedThread.isMaypoleThread &&
+        _selectedThread.maypoleName != null) {
+      return MaypoleChatContent(
+        threadId: _selectedThread.threadId!,
+        maypoleName: _selectedThread.maypoleName!,
+        showAppBar: false,
+      );
+    } else if (!_selectedThread.isMaypoleThread &&
+        _selectedThread.dmThread != null) {
+      return DmContent(thread: _selectedThread.dmThread!, showAppBar: false);
+    }
+
+    return null;
+  }
+
+  Future<void> _handleAddPressed(BuildContext context) async {
+    final result = await context.push<PlacePrediction>('/search');
+
+    if (result != null && mounted) {
+      final isWideScreen = MediaQuery.of(context).size.width >= 600;
+
+      if (isWideScreen) {
+        // On wide screen, update the selected thread to show in the content panel
+        setState(() {
+          _selectedThread = _SelectedThreadState(
+            threadId: result.placeId,
+            maypoleName: result.placeName,
+            isMaypoleThread: true,
+          );
+        });
+      } else {
+        // On mobile, navigate to the chat screen
+        if (context.mounted) {
+          context.push('/chat/${result.placeId}', extra: result.placeName);
+        }
+      }
+    }
+  }
+
+  void _handleMaypoleThreadSelected(
+    BuildContext context,
+    String threadId,
+    String maypoleName,
+    bool isWideScreen,
+  ) {
+    if (isWideScreen) {
+      // On wide screen, update the selected thread to show in the content panel
+      setState(() {
+        _selectedThread = _SelectedThreadState(
+          threadId: threadId,
+          maypoleName: maypoleName,
+          isMaypoleThread: true,
         );
-        return ListTile(
-          leading: CachedProfileAvatar(
-            imageUrl: threadMetadata.partnerProfpic,
-          ),
-          title: Text(threadMetadata.partnerName),
-          subtitle: Text(l10n.lastMessage(formattedDateTime)),
-          onTap: () async {
-            // Navigate to DM screen with the thread metadata converted to DMThread
-            final dmThread = await ref
-                .read(dmThreadServiceProvider)
-                .getDMThreadById(threadMetadata.id);
-            if (dmThread != null && context.mounted) {
-              context.push('/dm/${threadMetadata.id}', extra: dmThread);
-            }
-          },
-        );
-      },
-    );
+      });
+    } else {
+      // On mobile, navigate to the chat screen
+      context.push('/chat/$threadId', extra: maypoleName);
+    }
+  }
+
+  Future<void> _handleDmThreadSelected(
+    BuildContext context,
+    String threadId,
+    bool isWideScreen,
+  ) async {
+    // Fetch the full DM thread
+    final dmThread = await ref
+        .read(dmThreadServiceProvider)
+        .getDMThreadById(threadId);
+
+    if (dmThread != null && mounted) {
+      if (isWideScreen) {
+        // On wide screen, update the selected thread to show in the content panel
+        setState(() {
+          _selectedThread = _SelectedThreadState(
+            threadId: threadId,
+            dmThread: dmThread,
+            isMaypoleThread: false,
+          );
+        });
+      } else {
+        // On mobile, navigate to the DM screen
+        if (context.mounted) {
+          context.push('/dm/$threadId', extra: dmThread);
+        }
+      }
+    }
   }
 }

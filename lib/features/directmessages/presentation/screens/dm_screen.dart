@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:maypole/core/app_config.dart';
-import 'package:maypole/core/app_session.dart';
-import 'package:maypole/core/widgets/cached_profile_avatar.dart';
+import 'package:go_router/go_router.dart';
+import 'package:maypole/core/widgets/adaptive_scaffold.dart';
+import 'package:maypole/features/identity/auth_providers.dart';
+import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
+import 'package:maypole/features/home/presentation/widgets/chat_list_panel.dart';
+import 'package:maypole/features/maypolechat/presentation/widgets/maypole_chat_content.dart';
 import '../../domain/dm_thread.dart';
+import '../widgets/dm_content.dart';
 import '../dm_providers.dart';
 
+/// Full-screen wrapper for DM content.
+/// Adapts to show split view when rotated to landscape.
 class DmScreen extends ConsumerStatefulWidget {
   final DMThread thread;
 
@@ -16,110 +22,120 @@ class DmScreen extends ConsumerStatefulWidget {
 }
 
 class _DmScreenState extends ConsumerState<DmScreen> {
-  final TextEditingController _messageController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
+  late String _currentThreadId;
+  late DMThread? _currentDmThread;
+  bool _isMaypoleThread = false;
+  String _currentMaypoleName = '';
 
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
-  }
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _onScroll() {
-    if (_scrollController.position.atEdge) {
-      if (_scrollController.position.pixels ==
-          _scrollController.position.maxScrollExtent) {
-        ref.read(dmViewModelProvider(widget.thread.id).notifier).loadMoreMessages();
-      }
-    }
+    _currentThreadId = widget.thread.id;
+    _currentDmThread = widget.thread;
   }
 
   @override
   Widget build(BuildContext context) {
-    final messagesAsyncValue = ref.watch(dmViewModelProvider(widget.thread.id));
-    final currentUser = AppSession().currentUser;
+    return ref
+        .watch(authStateProvider)
+        .when(
+          data: (user) {
+            if (user == null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                context.go('/login');
+              });
+              return const Center(child: CircularProgressIndicator());
+            }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            CachedProfileAvatar(
-              imageUrl: widget.thread.partnerProfpic,
-            ),
-            const SizedBox(width: 8),
-            Text(widget.thread.partnerName),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: messagesAsyncValue.when(
-              data: (messages) => ListView.builder(
-                controller: _scrollController,
-                reverse: true,
-                itemCount: messages.length,
-                itemBuilder: (context, index) {
-                  final message = messages[index];
-                  final bool isMe = message.sender == currentUser!.username;
-                  return Align(
-                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isMe ? Colors.blue[200] : Colors.grey[300],
-                        borderRadius: BorderRadius.circular(8),
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final isWideScreen = constraints.maxWidth >= 600;
+
+                if (isWideScreen) {
+                  // Wide screen: show adaptive layout with chat list
+                  return Scaffold(
+                    body: AdaptiveScaffold(
+                      navigationPanel: ChatListPanel(
+                        user: user,
+                        selectedThreadId: _currentThreadId,
+                        isMaypoleThread: _isMaypoleThread,
+                        onSettingsPressed: () => context.push('/settings'),
+                        onAddPressed: () => _handleAddPressed(context),
+                        onMaypoleThreadSelected: (threadId, maypoleName) =>
+                            _handleMaypoleThreadSelected(threadId, maypoleName),
+                        onDmThreadSelected: (threadId) =>
+                            _handleDmThreadSelected(threadId),
+                        onTabChanged: () => setState(() {
+                          // Clear selection when switching tabs
+                          _currentThreadId = '';
+                        }),
                       ),
-                      padding: const EdgeInsets.all(12),
-                      margin: const EdgeInsets.all(4),
-                      child: Text(message.body),
+                      contentPanel: _buildContentPanel(),
                     ),
                   );
-                },
-              ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(child: Text('Error: $error')),
-            ),
+                }
+
+                // Narrow screen: show just the DM content
+                return DmContent(thread: widget.thread, showAppBar: true);
+              },
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Scaffold(
+            appBar: AppBar(title: const Text('Error')),
+            body: Center(child: Text('Error: $err')),
           ),
-          if (currentUser != null)
-            _buildMessageInput(currentUser.username, widget.thread.partnerId),
-        ],
-      ),
-    );
+        );
   }
 
-  Widget _buildMessageInput(String sender, String recipient) {
-    void sendMessage() {
-      if (_messageController.text.isNotEmpty) {
-        ref.read(dmViewModelProvider(widget.thread.id).notifier)
-            .sendDmMessage(_messageController.text, sender, recipient);
-        _messageController.clear();
-      }
+  Widget _buildContentPanel() {
+    if (_currentThreadId.isEmpty) {
+      return const SizedBox.shrink();
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              decoration: const InputDecoration(hintText: 'Enter a message'),
-              onSubmitted: AppConfig.isWideScreen ? (_) => sendMessage() : null,
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.send),
-            onPressed: sendMessage,
-          ),
-        ],
-      ),
-    );
+    if (_isMaypoleThread && _currentMaypoleName.isNotEmpty) {
+      return MaypoleChatContent(
+        threadId: _currentThreadId,
+        maypoleName: _currentMaypoleName,
+        showAppBar: false,
+      );
+    } else if (!_isMaypoleThread && _currentDmThread != null) {
+      return DmContent(thread: _currentDmThread!, showAppBar: false);
+    }
+
+    return const SizedBox.shrink();
+  }
+
+  Future<void> _handleAddPressed(BuildContext context) async {
+    final result = await context.push<PlacePrediction>('/search');
+    if (result != null && mounted) {
+      // Navigate to the new chat
+      if (context.mounted) {
+        context.go('/chat/${result.placeId}', extra: result.placeName);
+      }
+    }
+  }
+
+  void _handleMaypoleThreadSelected(String threadId, String maypoleName) {
+    setState(() {
+      _currentThreadId = threadId;
+      _currentMaypoleName = maypoleName;
+      _isMaypoleThread = true;
+      _currentDmThread = null;
+    });
+  }
+
+  Future<void> _handleDmThreadSelected(String threadId) async {
+    final dmThread = await ref
+        .read(dmThreadServiceProvider)
+        .getDMThreadById(threadId);
+
+    if (dmThread != null && mounted) {
+      setState(() {
+        _currentThreadId = threadId;
+        _isMaypoleThread = false;
+        _currentDmThread = dmThread;
+      });
+    }
   }
 }

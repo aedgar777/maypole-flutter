@@ -367,6 +367,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'at'**
   String get at;
+
+  /// Tooltip for search/add button
+  ///
+  /// In en, this message translates to:
+  /// **'Search Places'**
+  String get searchPlaces;
 }
 
 class _AppLocalizationsDelegate

@@ -44,5 +44,6 @@
   "justNow": "Justo ahora",
   "minutesAgo": "Hace {minutes}m",
   "hoursAgo": "Hace {hours}h",
-  "at": "a las"
+  "at": "a las",
+  "searchPlaces": "Buscar lugares"
 }
