@@ -147,7 +147,7 @@ class _DmContentState extends ConsumerState<DmContent> {
     }
 
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 38.0),
       child: Row(
         children: [
           Expanded(

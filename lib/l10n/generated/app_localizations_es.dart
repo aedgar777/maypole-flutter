@@ -218,4 +218,20 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get dismiss => 'Descartar';
+
+  @override
+  String get deleteAccount => 'Eliminar cuenta';
+
+  @override
+  String get deleteAccountTitle => 'Eliminar cuenta';
+
+  @override
+  String get deleteAccountConfirmation =>
+      '¿Está seguro de que desea eliminar su cuenta? Esta acción no se puede deshacer. Todos sus datos serán eliminados permanentemente.';
+
+  @override
+  String get accountDeleted => 'Cuenta eliminada exitosamente';
+
+  @override
+  String get delete => 'Eliminar';
 }

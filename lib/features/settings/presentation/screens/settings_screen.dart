@@ -61,13 +61,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           image.path);
 
       if (mounted) {
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.profilePictureUpdated),
-            backgroundColor: Colors.green,
-          ),
-        );
+
       }
     } catch (e) {
       if (mounted) {
@@ -158,33 +152,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       .textTheme
                       .headlineSmall,
                 ),
-                const SizedBox(height: 8),
-                // Email
-                Text(
-                  user.email,
-                  style: Theme
-                      .of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(
-                    color: Theme
-                        .of(context)
-                        .colorScheme
-                        .onSurfaceVariant,
-                  ),
-                ),
                 const SizedBox(height: 32),
-                const Divider(),
+                Divider(color: Colors.white.withValues(alpha: 0.1)),
                 // Settings sections
                 ListTile(
                   leading: const Icon(Icons.person),
                   title: Text(l10n.accountSettings),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
-                    // TODO: Navigate to account settings
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.comingSoon)),
-                    );
+                    context.push('/settings/account');
                   },
                 ),
                 ListTile(
@@ -214,7 +190,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     );
                   },
                 ),
-                const Divider(),
+                Divider(color: Colors.white.withValues(alpha: 0.1)),
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.red),
                   title: Text(

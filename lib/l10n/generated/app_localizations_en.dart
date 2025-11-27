@@ -215,4 +215,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dismiss => 'Dismiss';
+
+  @override
+  String get deleteAccount => 'Delete Account';
+
+  @override
+  String get deleteAccountTitle => 'Delete Account';
+
+  @override
+  String get deleteAccountConfirmation =>
+      'Are you sure you want to delete your account? This action cannot be undone. All your data will be permanently deleted.';
+
+  @override
+  String get accountDeleted => 'Account deleted successfully';
+
+  @override
+  String get delete => 'Delete';
 }

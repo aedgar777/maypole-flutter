@@ -95,12 +95,18 @@ class NotificationSettingsViewModel
   /// Toggle tagging notifications
   Future<void> toggleTaggingNotifications(bool enabled) async {
     try {
-      state = state.copyWith(isLoading: true);
+      // Optimistic update - update UI immediately
+      final updatedPreferences = state.preferences.copyWith(
+        taggingNotificationsEnabled: enabled,
+      );
+      state = state.copyWith(preferences: updatedPreferences);
+
+      // Save in background
       await _notificationService.setTaggingNotificationsEnabled(enabled);
-      await _loadPreferences();
     } catch (e) {
+      // Revert on error
+      await _loadPreferences();
       state = state.copyWith(
-        isLoading: false,
         error: 'Failed to update tagging notifications: $e',
       );
     }
@@ -109,12 +115,18 @@ class NotificationSettingsViewModel
   /// Toggle direct message notifications
   Future<void> toggleDirectMessageNotifications(bool enabled) async {
     try {
-      state = state.copyWith(isLoading: true);
+      // Optimistic update - update UI immediately
+      final updatedPreferences = state.preferences.copyWith(
+        directMessageNotificationsEnabled: enabled,
+      );
+      state = state.copyWith(preferences: updatedPreferences);
+
+      // Save in background
       await _notificationService.setDirectMessageNotificationsEnabled(enabled);
-      await _loadPreferences();
     } catch (e) {
+      // Revert on error
+      await _loadPreferences();
       state = state.copyWith(
-        isLoading: false,
         error: 'Failed to update direct message notifications: $e',
       );
     }
@@ -123,6 +135,43 @@ class NotificationSettingsViewModel
   /// Refresh permission status
   Future<void> refreshPermissionStatus() async {
     await _loadPreferences();
+  }
+
+  /// Toggle all notifications (master switch)
+  Future<void> toggleAllNotifications(bool enabled) async {
+    try {
+      if (enabled) {
+        // When enabling, optimistically update to enable all types
+        final updatedPreferences = state.preferences.copyWith(
+          taggingNotificationsEnabled: true,
+          directMessageNotificationsEnabled: true,
+        );
+        state = state.copyWith(preferences: updatedPreferences);
+      } else {
+        // When disabling, optimistically update to disable all types
+        final updatedPreferences = state.preferences.copyWith(
+          taggingNotificationsEnabled: false,
+          directMessageNotificationsEnabled: false,
+        );
+        state = state.copyWith(preferences: updatedPreferences);
+      }
+
+      // Save in background
+      final success = await _notificationService.toggleAllNotifications(
+        enabled,
+      );
+
+      if (success && enabled) {
+        // If enabled, also request FCM permission
+        await _fcmService.requestPermission();
+      }
+    } catch (e) {
+      // Revert on error
+      await _loadPreferences();
+      state = state.copyWith(
+        error: 'Failed to toggle notifications: $e',
+      );
+    }
   }
 }
 

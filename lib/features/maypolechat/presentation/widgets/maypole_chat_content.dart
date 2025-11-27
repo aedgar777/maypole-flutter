@@ -94,6 +94,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                   child: MessageWithMentions(
                     sender: message.sender,
                     body: message.body,
+                    timestamp: message.timestamp,
                   ),
                 );
               },
@@ -147,7 +148,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     }
 
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 38.0),
       child: Row(
         children: [
           Expanded(

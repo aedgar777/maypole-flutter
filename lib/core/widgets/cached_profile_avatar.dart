@@ -48,8 +48,11 @@ class CachedProfileAvatar extends StatelessWidget {
     }
 
     // Show cached network image
+    // Add a cache key with timestamp to force refresh when URL changes
     return CachedNetworkImage(
       imageUrl: imageUrl!,
+      cacheKey: imageUrl,
+      // Use the URL itself as cache key
       imageBuilder: (context, imageProvider) =>
           CircleAvatar(
             radius: radius,

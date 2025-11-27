@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/features/settings/data/services/storage_service.dart';
 import 'package:maypole/features/settings/domain/settings_state.dart';
+import 'package:maypole/features/identity/auth_providers.dart';
 
 class SettingsViewModel extends Notifier<SettingsState> {
   @override
@@ -46,6 +47,9 @@ class SettingsViewModel extends Notifier<SettingsState> {
       // Update local user object
       user.profilePictureUrl = downloadUrl;
       session.currentUser = user;
+
+      // Invalidate auth state to refresh UI with new profile picture
+      ref.invalidate(authStateProvider);
 
       // Reset state
       state = state.copyWith(

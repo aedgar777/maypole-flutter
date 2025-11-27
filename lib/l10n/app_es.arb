@@ -63,5 +63,10 @@
   "directMessageNotificationsDescription": "Recibe notificaciones cuando recibas un mensaje directo",
   "enableSystemNotificationsFirst": "Habilita las notificaciones del sistema primero para configurar los tipos de notificaciones",
   "errorTitle": "Error",
-  "dismiss": "Descartar"
+  "dismiss": "Descartar",
+  "deleteAccount": "Eliminar cuenta",
+  "deleteAccountTitle": "Eliminar cuenta",
+  "deleteAccountConfirmation": "¿Está seguro de que desea eliminar su cuenta? Esta acción no se puede deshacer. Todos sus datos serán eliminados permanentemente.",
+  "accountDeleted": "Cuenta eliminada exitosamente",
+  "delete": "Eliminar"
 }

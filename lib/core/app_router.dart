@@ -10,6 +10,7 @@ import '../features/directmessages/domain/dm_thread.dart';
 import '../features/settings/presentation/screens/settings_screen.dart';
 import '../features/settings/presentation/screens/privacy_policy_screen.dart';
 import '../features/settings/presentation/screens/notification_settings_screen.dart';
+import '../features/settings/presentation/screens/account_settings_screen.dart';
 
 GoRouter createRouter() {
   return GoRouter(
@@ -57,6 +58,10 @@ GoRouter createRouter() {
       GoRoute(
         path: '/settings/notifications',
         builder: (context, state) => const NotificationSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/account',
+        builder: (context, state) => const AccountSettingsScreen(),
       ),
       GoRoute(
         path: '/privacy-policy',

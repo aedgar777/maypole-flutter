@@ -120,6 +120,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       builder: (context, constraints) {
         final isWideScreen = constraints.maxWidth >= 600;
 
+        // Handle transition from wide to narrow screen with a selected thread
+        if (!isWideScreen && _selectedThread.threadId != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _selectedThread.threadId != null) {
+              if (_selectedThread.isMaypoleThread &&
+                  _selectedThread.maypoleName != null) {
+                // Navigate to maypole chat screen
+                context.go(
+                  '/chat/${_selectedThread.threadId}',
+                  extra: _selectedThread.maypoleName,
+                );
+              } else if (!_selectedThread.isMaypoleThread &&
+                  _selectedThread.dmThread != null) {
+                // Navigate to DM screen
+                context.go('/dm/${_selectedThread.threadId}',
+                    extra: _selectedThread.dmThread);
+              }
+            }
+          });
+        }
+
         return Scaffold(
           body: AdaptiveScaffold(
             navigationPanel: ChatListPanel(
@@ -174,10 +195,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         threadId: _selectedThread.threadId!,
         maypoleName: _selectedThread.maypoleName!,
         showAppBar: false,
+        autoFocus: true,
       );
     } else if (!_selectedThread.isMaypoleThread &&
         _selectedThread.dmThread != null) {
-      return DmContent(thread: _selectedThread.dmThread!, showAppBar: false);
+      return DmContent(
+        thread: _selectedThread.dmThread!,
+        showAppBar: false,
+        autoFocus: true,
+      );
     }
 
     return null;

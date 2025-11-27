@@ -92,6 +92,11 @@ class _NotificationSettingsScreenState
     final state = ref.watch(notificationSettingsViewModelProvider);
     final preferences = state.preferences;
 
+    // Master switch is ON when system permission is granted AND at least one notification type is enabled
+    final isMasterSwitchOn = preferences.systemPermissionGranted &&
+        (preferences.taggingNotificationsEnabled ||
+            preferences.directMessageNotificationsEnabled);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.notificationSettings),
@@ -104,84 +109,39 @@ class _NotificationSettingsScreenState
           ? const Center(child: CircularProgressIndicator())
           : ListView(
         children: [
-          // System Permission Section
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          preferences.systemPermissionGranted
-                              ? Icons.check_circle
-                              : Icons.notifications_off,
-                          color: preferences.systemPermissionGranted
-                              ? Colors.green
-                              : Colors.orange,
-                          size: 32,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n.systemNotifications,
-                                style: Theme
-                                    .of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                preferences.systemPermissionGranted
-                                    ? l10n
-                                    .notificationPermissionGrantedDescription
-                                    : l10n
-                                    .notificationPermissionDeniedDescription,
-                                style: Theme
-                                    .of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                  color: Theme
-                                      .of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (!preferences.systemPermissionGranted) ...[
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _handlePermissionRequest,
-                          icon: const Icon(Icons.notifications_active),
-                          label: Text(l10n.enableNotifications),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+          // Master Notifications Switch
+          SwitchListTile(
+            secondary: Icon(
+              isMasterSwitchOn
+                  ? Icons.notifications_active
+                  : Icons.notifications_off,
             ),
+            title: Text(l10n.notifications),
+            subtitle: Text(
+              isMasterSwitchOn
+                  ? l10n.notificationPermissionGrantedDescription
+                  : l10n.notificationPermissionDeniedDescription,
+            ),
+            value: isMasterSwitchOn,
+            onChanged: (value) async {
+              if (value && !preferences.systemPermissionGranted) {
+                // Need to request permission first
+                await _handlePermissionRequest();
+              } else {
+                // Toggle all notifications
+                ref
+                    .read(notificationSettingsViewModelProvider.notifier)
+                    .toggleAllNotifications(value);
+              }
+            },
           ),
+
+          const Divider(),
 
           // Notification Types Section
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 16.0, vertical: 8.0),
             child: Text(
               l10n.notificationTypes,
               style: Theme
@@ -197,15 +157,21 @@ class _NotificationSettingsScreenState
               ),
             ),
           ),
-          const SizedBox(height: 8),
 
           // Tagging Notifications
           SwitchListTile(
-            secondary: const Icon(Icons.local_offer),
+            secondary: Icon(
+              Icons.local_offer,
+              color: isMasterSwitchOn
+                  ? null
+                  : Theme
+                  .of(context)
+                  .disabledColor,
+            ),
             title: Text(l10n.taggingNotifications),
             subtitle: Text(l10n.taggingNotificationsDescription),
             value: preferences.taggingNotificationsEnabled,
-            onChanged: preferences.systemPermissionGranted
+            onChanged: isMasterSwitchOn
                 ? (value) {
               ref
                   .read(notificationSettingsViewModelProvider
@@ -219,11 +185,18 @@ class _NotificationSettingsScreenState
 
           // Direct Message Notifications
           SwitchListTile(
-            secondary: const Icon(Icons.message),
+            secondary: Icon(
+              Icons.message,
+              color: isMasterSwitchOn
+                  ? null
+                  : Theme
+                  .of(context)
+                  .disabledColor,
+            ),
             title: Text(l10n.directMessageNotifications),
             subtitle: Text(l10n.directMessageNotificationsDescription),
             value: preferences.directMessageNotificationsEnabled,
-            onChanged: preferences.systemPermissionGranted
+            onChanged: isMasterSwitchOn
                 ? (value) {
               ref
                   .read(notificationSettingsViewModelProvider
@@ -233,8 +206,8 @@ class _NotificationSettingsScreenState
                 : null,
           ),
 
-          // Info message when system permission is disabled
-          if (!preferences.systemPermissionGranted)
+          // Info message when master switch is disabled
+          if (!isMasterSwitchOn)
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Card(

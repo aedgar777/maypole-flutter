@@ -280,5 +280,25 @@
   "dismiss": "Dismiss",
   "@dismiss": {
     "description": "Button text to dismiss a dialog"
+  },
+  "deleteAccount": "Delete Account",
+  "@deleteAccount": {
+    "description": "Button text to delete account"
+  },
+  "deleteAccountTitle": "Delete Account",
+  "@deleteAccountTitle": {
+    "description": "Title for delete account dialog"
+  },
+  "deleteAccountConfirmation": "Are you sure you want to delete your account? This action cannot be undone. All your data will be permanently deleted.",
+  "@deleteAccountConfirmation": {
+    "description": "Confirmation message for account deletion"
+  },
+  "accountDeleted": "Account deleted successfully",
+  "@accountDeleted": {
+    "description": "Success message after account deletion"
+  },
+  "delete": "Delete",
+  "@delete": {
+    "description": "Delete button text"
   }
 }
