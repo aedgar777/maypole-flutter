@@ -202,4 +202,39 @@ class NotificationService {
         (preferences.taggingNotificationsEnabled ||
             preferences.directMessageNotificationsEnabled);
   }
+
+  /// Toggle all notifications on/off (master switch)
+  /// When turning off, disables all notification types
+  /// When turning on, requests system permission if needed
+  Future<bool> toggleAllNotifications(bool enabled) async {
+    if (enabled) {
+      // Request system permission if needed
+      final hasPermission = await checkNotificationPermission();
+      if (!hasPermission) {
+        final granted = await requestNotificationPermission();
+        if (!granted) {
+          return false;
+        }
+      }
+
+      // Enable all notification types
+      final preferences = await loadPreferences();
+      final updated = preferences.copyWith(
+        taggingNotificationsEnabled: true,
+        directMessageNotificationsEnabled: true,
+        systemPermissionGranted: true,
+      );
+      await savePreferences(updated);
+      return true;
+    } else {
+      // Disable all notification types
+      final preferences = await loadPreferences();
+      final updated = preferences.copyWith(
+        taggingNotificationsEnabled: false,
+        directMessageNotificationsEnabled: false,
+      );
+      await savePreferences(updated);
+      return true;
+    }
+  }
 }

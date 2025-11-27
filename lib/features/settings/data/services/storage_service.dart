@@ -48,9 +48,15 @@ class StorageService {
       // Get download URL
       final downloadUrl = await snapshot.ref.getDownloadURL();
 
-      debugPrint('Profile picture uploaded successfully. URL: $downloadUrl');
+      // Add timestamp to URL to bust cache when profile picture is updated
+      final urlWithTimestamp = '$downloadUrl?t=${DateTime
+          .now()
+          .millisecondsSinceEpoch}';
 
-      return downloadUrl;
+      debugPrint(
+          'Profile picture uploaded successfully. URL: $urlWithTimestamp');
+
+      return urlWithTimestamp;
     } catch (e) {
       debugPrint('Failed to upload profile picture: $e');
       rethrow;

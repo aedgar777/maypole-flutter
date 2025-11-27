@@ -166,11 +166,15 @@ final darkTheme = ThemeData(
     fillColor: darkPurple.withValues(alpha: 0.5),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
-      borderSide: BorderSide.none,
+      borderSide: const BorderSide(color: Colors.white38, width: 1),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: Colors.white38, width: 1),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(color: skyBlue),
+      borderSide: const BorderSide(color: skyBlue, width: 2),
     ),
     labelStyle: const TextStyle(
       fontFamily: 'Roboto',

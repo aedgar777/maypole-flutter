@@ -82,6 +82,21 @@ class _MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
                 }
 
                 // Narrow screen: show just the chat content
+                // Stay on the current thread (don't navigate back to home)
+                if (_isMaypoleThread && _currentMaypoleName.isNotEmpty) {
+                  return MaypoleChatContent(
+                    threadId: _currentThreadId,
+                    maypoleName: _currentMaypoleName,
+                    showAppBar: true,
+                  );
+                } else if (!_isMaypoleThread && _currentDmThread != null) {
+                  return DmContent(
+                    thread: _currentDmThread!,
+                    showAppBar: true,
+                  );
+                }
+
+                // Fallback to the original thread
                 return MaypoleChatContent(
                   threadId: widget.threadId,
                   maypoleName: widget.maypoleName,

@@ -147,4 +147,48 @@ class AuthService {
       rethrow;
     }
   }
+
+  Future<void> deleteAccount() async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) {
+        throw Exception('No user is currently signed in');
+      }
+
+      final uid = user.uid;
+      final currentUser = _session.currentUser;
+
+      if (currentUser == null) {
+        throw Exception('User data not found');
+      }
+
+      final username = currentUser.username;
+
+      // Delete user document from Firestore
+      await _firestore.collection('users').doc(uid).delete();
+
+      // Delete username reservation
+      await _firestore
+          .collection('usernames')
+          .doc(username.toLowerCase())
+          .delete();
+
+      // Delete Firebase Auth account
+      await user.delete();
+
+      // Clear session
+      _session.currentUser = null;
+    } on FirebaseAuthException catch (e) {
+      // If re-authentication is required, throw a more specific error
+      if (e.code == 'requires-recent-login') {
+        throw FirebaseAuthException(
+          code: 'requires-recent-login',
+          message: 'Please log out and log back in before deleting your account',
+        );
+      }
+      rethrow;
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
