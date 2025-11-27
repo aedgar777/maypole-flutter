@@ -300,5 +300,73 @@
   "delete": "Delete",
   "@delete": {
     "description": "Delete button text"
+  },
+  "directMessage": "Direct Message",
+  "@directMessage": {
+    "description": "Direct message button text"
+  },
+  "block": "Block",
+  "@block": {
+    "description": "Block user button text"
+  },
+  "blocked": "Blocked",
+  "@blocked": {
+    "description": "Text shown when user is already blocked"
+  },
+  "blockUser": "Block User",
+  "@blockUser": {
+    "description": "Block user dialog title"
+  },
+  "blockUserConfirmation": "Are you sure you want to block {username}? You will no longer see their messages.",
+  "@blockUserConfirmation": {
+    "description": "Confirmation message for blocking a user",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "userBlocked": "{username} has been blocked",
+  "@userBlocked": {
+    "description": "Success message after blocking a user",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "blockedUsers": "Blocked Users",
+  "@blockedUsers": {
+    "description": "Blocked users screen title"
+  },
+  "noBlockedUsers": "You haven't blocked any users",
+  "@noBlockedUsers": {
+    "description": "Message shown when user has no blocked users"
+  },
+  "unblock": "Unblock",
+  "@unblock": {
+    "description": "Unblock button text"
+  },
+  "unblockUser": "Unblock User",
+  "@unblockUser": {
+    "description": "Unblock user dialog title"
+  },
+  "unblockUserConfirmation": "Are you sure you want to unblock {username}?",
+  "@unblockUserConfirmation": {
+    "description": "Confirmation message for unblocking a user",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "userUnblocked": "{username} has been unblocked",
+  "@userUnblocked": {
+    "description": "Success message after unblocking a user",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
   }
 }

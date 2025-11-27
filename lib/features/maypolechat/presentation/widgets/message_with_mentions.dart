@@ -1,15 +1,21 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_theme.dart';
 
 /// A widget that displays a message with @ mentions highlighted
 class MessageWithMentions extends StatelessWidget {
-  final String sender;
+  final String senderName;
+  final String senderId;
+  final String senderProfilePictureUrl;
   final String body;
   final DateTime timestamp;
 
   const MessageWithMentions({
     super.key,
-    required this.sender,
+    required this.senderName,
+    required this.senderId,
+    this.senderProfilePictureUrl = '',
     required this.body,
     required this.timestamp,
   });
@@ -34,6 +40,17 @@ class MessageWithMentions extends StatelessWidget {
     }
   }
 
+  void _handleUsernameTap(BuildContext context) {
+    // Navigate directly to user profile using the senderId
+    context.push(
+      '/user-profile/$senderId',
+      extra: {
+        'username': senderName,
+        'profilePictureUrl': senderProfilePictureUrl,
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final mentions = _parseMentions(body);
@@ -47,12 +64,14 @@ class MessageWithMentions extends StatelessWidget {
           style: theme.textTheme.bodyMedium,
           children: [
             TextSpan(
-              text: '$sender: ',
+              text: '$senderName: ',
               style: const TextStyle(
                 fontFamily: 'Lato',
                 fontWeight: FontWeight.bold,
                 color: violet,
               ),
+              recognizer: TapGestureRecognizer()
+                ..onTap = () => _handleUsernameTap(context),
             ),
             ...mentions,
           ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/widgets/cached_profile_avatar.dart';
@@ -116,12 +117,23 @@ class _DmContentState extends ConsumerState<DmContent> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            CachedProfileAvatar(imageUrl: widget.thread.partnerProfpic),
-            const SizedBox(width: 8),
-            Text(widget.thread.partnerName),
-          ],
+        title: GestureDetector(
+          onTap: () {
+            context.push(
+              '/user-profile/${widget.thread.partnerId}',
+              extra: {
+                'username': widget.thread.partnerName,
+                'profilePictureUrl': widget.thread.partnerProfpic,
+              },
+            );
+          },
+          child: Row(
+            children: [
+              CachedProfileAvatar(imageUrl: widget.thread.partnerProfpic),
+              const SizedBox(width: 8),
+              Text(widget.thread.partnerName),
+            ],
+          ),
         ),
       ),
       body: body,

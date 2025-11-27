@@ -4,6 +4,7 @@ import '../features/maypolesearch/presentation/screens/maypole_search_screen.dar
 import '../features/maypolechat/presentation/screens/maypole_chat_screen.dart';
 import '../features/identity/presentation/login_screen.dart';
 import '../features/identity/presentation/registration_screen.dart';
+import '../features/identity/presentation/screens/user_profile_screen.dart';
 import '../features/home/presentation/screens/home_screen.dart';
 import '../features/directmessages/presentation/screens/dm_screen.dart';
 import '../features/directmessages/domain/dm_thread.dart';
@@ -11,6 +12,7 @@ import '../features/settings/presentation/screens/settings_screen.dart';
 import '../features/settings/presentation/screens/privacy_policy_screen.dart';
 import '../features/settings/presentation/screens/notification_settings_screen.dart';
 import '../features/settings/presentation/screens/account_settings_screen.dart';
+import '../features/settings/presentation/screens/blocked_users_screen.dart';
 
 GoRouter createRouter() {
   return GoRouter(
@@ -64,8 +66,24 @@ GoRouter createRouter() {
         builder: (context, state) => const AccountSettingsScreen(),
       ),
       GoRoute(
+        path: '/settings/blocked-users',
+        builder: (context, state) => const BlockedUsersScreen(),
+      ),
+      GoRoute(
         path: '/privacy-policy',
         builder: (context, state) => const PrivacyPolicyScreen(),
+      ),
+      GoRoute(
+        path: '/user-profile/:firebaseId',
+        builder: (context, state) {
+          final firebaseId = state.pathParameters['firebaseId']!;
+          final extra = state.extra as Map<String, String>;
+          return UserProfileScreen(
+            username: extra['username']!,
+            firebaseId: firebaseId,
+            profilePictureUrl: extra['profilePictureUrl'] ?? '',
+          );
+        },
       ),
     ],
   );

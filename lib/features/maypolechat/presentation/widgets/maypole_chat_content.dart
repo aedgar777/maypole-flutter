@@ -92,7 +92,9 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                     vertical: 4.0,
                   ),
                   child: MessageWithMentions(
-                    sender: message.sender,
+                    senderName: message.senderName,
+                    senderId: message.senderId,
+                    senderProfilePictureUrl: message.senderProfilePictureUrl,
                     body: message.body,
                     timestamp: message.timestamp,
                   ),

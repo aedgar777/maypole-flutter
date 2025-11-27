@@ -231,4 +231,48 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get delete => 'Delete';
+
+  @override
+  String get directMessage => 'Direct Message';
+
+  @override
+  String get block => 'Block';
+
+  @override
+  String get blocked => 'Blocked';
+
+  @override
+  String get blockUser => 'Block User';
+
+  @override
+  String blockUserConfirmation(String username) {
+    return 'Are you sure you want to block $username? You will no longer see their messages.';
+  }
+
+  @override
+  String userBlocked(String username) {
+    return '$username has been blocked';
+  }
+
+  @override
+  String get blockedUsers => 'Blocked Users';
+
+  @override
+  String get noBlockedUsers => 'You haven\'t blocked any users';
+
+  @override
+  String get unblock => 'Unblock';
+
+  @override
+  String get unblockUser => 'Unblock User';
+
+  @override
+  String unblockUserConfirmation(String username) {
+    return 'Are you sure you want to unblock $username?';
+  }
+
+  @override
+  String userUnblocked(String username) {
+    return '$username has been unblocked';
+  }
 }

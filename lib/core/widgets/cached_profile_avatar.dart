@@ -47,40 +47,57 @@ class CachedProfileAvatar extends StatelessWidget {
       );
     }
 
-    // Show cached network image
-    // Add a cache key with timestamp to force refresh when URL changes
-    return CachedNetworkImage(
-      imageUrl: imageUrl!,
-      cacheKey: imageUrl,
-      // Use the URL itself as cache key
-      imageBuilder: (context, imageProvider) =>
-          CircleAvatar(
-            radius: radius,
-            backgroundImage: imageProvider,
+    // Use Image widget with CachedNetworkImageProvider for better control
+    // This approach loads from cache immediately without showing placeholder
+    return ClipOval(
+      child: Container(
+        width: radius * 2,
+        height: radius * 2,
+        decoration: BoxDecoration(
+          color: bgColor,
+          shape: BoxShape.circle,
+        ),
+        child: Image(
+          image: CachedNetworkImageProvider(
+            imageUrl!,
+            cacheKey: imageUrl,
+            maxWidth: (radius * 2 * MediaQuery
+                .of(context)
+                .devicePixelRatio).round(),
+            maxHeight: (radius * 2 * MediaQuery
+                .of(context)
+                .devicePixelRatio).round(),
           ),
-      placeholder: (context, url) =>
-          CircleAvatar(
-            radius: radius,
-            backgroundColor: bgColor,
-            child: SizedBox(
-              width: radius * 0.8,
-              height: radius * 0.8,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
+          fit: BoxFit.cover,
+          // Use frameBuilder to handle loading states smoothly
+          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+            // If image loaded synchronously (from cache), show it immediately
+            if (wasSynchronouslyLoaded == true) {
+              return child;
+            }
+            // If still loading, show child with fade or loading indicator
+            if (frame == null) {
+              return Center(
+                child: Icon(
+                  fallbackIcon,
+                  size: radius * 0.8,
+                  color: icColor.withOpacity(0.3),
+                ),
+              );
+            }
+            return child;
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return Center(
+              child: Icon(
+                fallbackIcon,
+                size: radius * 0.8,
                 color: icColor,
               ),
-            ),
-          ),
-      errorWidget: (context, url, error) =>
-          CircleAvatar(
-            radius: radius,
-            backgroundColor: bgColor,
-            child: Icon(
-              fallbackIcon,
-              size: radius * 0.8,
-              color: icColor,
-            ),
-          ),
+            );
+          },
+        ),
+      ),
     );
   }
 }

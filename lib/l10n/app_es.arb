@@ -68,5 +68,17 @@
   "deleteAccountTitle": "Eliminar cuenta",
   "deleteAccountConfirmation": "¿Está seguro de que desea eliminar su cuenta? Esta acción no se puede deshacer. Todos sus datos serán eliminados permanentemente.",
   "accountDeleted": "Cuenta eliminada exitosamente",
-  "delete": "Eliminar"
+  "delete": "Eliminar",
+  "directMessage": "Mensaje directo",
+  "block": "Bloquear",
+  "blocked": "Bloqueado",
+  "blockUser": "Bloquear usuario",
+  "blockUserConfirmation": "¿Está seguro de que desea bloquear a {username}? Ya no verá sus mensajes.",
+  "userBlocked": "{username} ha sido bloqueado",
+  "blockedUsers": "Usuarios bloqueados",
+  "noBlockedUsers": "No has bloqueado a ningún usuario",
+  "unblock": "Desbloquear",
+  "unblockUser": "Desbloquear usuario",
+  "unblockUserConfirmation": "¿Está seguro de que desea desbloquear a {username}?",
+  "userUnblocked": "{username} ha sido desbloqueado"
 }
