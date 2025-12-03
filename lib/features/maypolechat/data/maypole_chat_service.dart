@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:maypole/core/app_session.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import '../domain/maypole.dart';
 import '../domain/maypole_message.dart';
@@ -9,6 +10,19 @@ import '../domain/maypole_message.dart';
 class MaypoleChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final _messageLimit = 100;
+
+  /// Filter out messages from blocked users
+  List<MaypoleMessage> _filterBlockedMessages(List<MaypoleMessage> messages) {
+    final currentUser = AppSession().currentUser;
+    if (currentUser == null) return messages;
+
+    final blockedUserIds =
+    currentUser.blockedUsers.map((user) => user.firebaseId).toSet();
+
+    return messages
+        .where((message) => !blockedUserIds.contains(message.senderId))
+        .toList();
+  }
 
   Future<Maypole?> getMaypoleById(String threadId) async {
     final maypoleDoc =
@@ -27,9 +41,12 @@ class MaypoleChatService {
         .orderBy('timestamp', descending: true)
         .limit(_messageLimit)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => MaypoleMessage.fromMap(doc.data()))
-            .toList());
+        .map((snapshot) {
+      final messages = snapshot.docs
+          .map((doc) => MaypoleMessage.fromMap(doc.data()))
+          .toList();
+      return _filterBlockedMessages(messages);
+    });
   }
 
   Future<List<MaypoleMessage>> getMoreMessages(
@@ -43,9 +60,10 @@ class MaypoleChatService {
         .limit(_messageLimit)
         .get();
 
-    return snapshot.docs
+    final messages = snapshot.docs
         .map((doc) => MaypoleMessage.fromMap(doc.data()))
         .toList();
+    return _filterBlockedMessages(messages);
   }
 
   Future<void> sendMessage(
@@ -57,7 +75,9 @@ class MaypoleChatService {
       }) async {
     final now = DateTime.now();
     final message = MaypoleMessage(
-      sender: sender.username,
+      senderName: sender.username,
+      senderId: sender.firebaseID,
+      senderProfilePictureUrl: sender.profilePictureUrl,
       timestamp: now,
       body: body,
       taggedUser: '',
@@ -115,7 +135,9 @@ class MaypoleChatService {
       }) async {
     final now = DateTime.now();
     final message = MaypoleMessage(
-      sender: sender.username,
+      senderName: sender.username,
+      senderId: sender.firebaseID,
+      senderProfilePictureUrl: sender.profilePictureUrl,
       timestamp: now,
       body: body,
       taggedUser: '',

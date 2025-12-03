@@ -511,6 +511,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete'**
   String get delete;
+
+  /// Direct message button text
+  ///
+  /// In en, this message translates to:
+  /// **'Direct Message'**
+  String get directMessage;
+
+  /// Block user button text
+  ///
+  /// In en, this message translates to:
+  /// **'Block'**
+  String get block;
+
+  /// Text shown when user is already blocked
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked'**
+  String get blocked;
+
+  /// Block user dialog title
+  ///
+  /// In en, this message translates to:
+  /// **'Block User'**
+  String get blockUser;
+
+  /// Confirmation message for blocking a user
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to block {username}? You will no longer see their messages.'**
+  String blockUserConfirmation(String username);
+
+  /// Success message after blocking a user
+  ///
+  /// In en, this message translates to:
+  /// **'{username} has been blocked'**
+  String userBlocked(String username);
+
+  /// Blocked users screen title
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked Users'**
+  String get blockedUsers;
+
+  /// Message shown when user has no blocked users
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t blocked any users'**
+  String get noBlockedUsers;
+
+  /// Unblock button text
+  ///
+  /// In en, this message translates to:
+  /// **'Unblock'**
+  String get unblock;
+
+  /// Unblock user dialog title
+  ///
+  /// In en, this message translates to:
+  /// **'Unblock User'**
+  String get unblockUser;
+
+  /// Confirmation message for unblocking a user
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to unblock {username}?'**
+  String unblockUserConfirmation(String username);
+
+  /// Success message after unblocking a user
+  ///
+  /// In en, this message translates to:
+  /// **'{username} has been unblocked'**
+  String userUnblocked(String username);
 }
 
 class _AppLocalizationsDelegate

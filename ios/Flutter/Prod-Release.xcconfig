@@ -1,0 +1,5 @@
+// Configuration settings for Prod Release builds
+#include "Release.xcconfig"
+
+// Use production bundle identifier
+PRODUCT_BUNDLE_IDENTIFIER = app.maypole.maypole

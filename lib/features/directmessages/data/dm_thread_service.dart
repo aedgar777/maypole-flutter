@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:maypole/core/app_session.dart';
 import 'package:maypole/features/directmessages/domain/dm_thread.dart';
 
 import '../domain/direct_message.dart';
@@ -30,6 +31,7 @@ class DMThreadService {
 
   /// Gets or creates a DM thread between two users.
   /// Uses the deterministic thread ID generation to ensure consistency.
+  /// Throws an exception if either user has blocked the other.
   Future<DMThread> getOrCreateDMThread({
     required String currentUserId,
     required String currentUsername,
@@ -38,6 +40,30 @@ class DMThreadService {
     required String partnerName,
     required String partnerProfpic,
   }) async {
+    // Check if current user has blocked the partner
+    final currentUser = AppSession().currentUser;
+    if (currentUser != null) {
+      final isBlocked = currentUser.blockedUsers
+          .any((user) => user.firebaseId == partnerId);
+      if (isBlocked) {
+        throw Exception('Cannot create DM thread with blocked user');
+      }
+    }
+
+    // Check if partner has blocked current user
+    final partnerDoc =
+    await _firestore.collection('users').doc(partnerId).get();
+    if (partnerDoc.exists) {
+      final partnerData = partnerDoc.data()!;
+      final partnerBlockedUsers = (partnerData['blockedUsers'] as List?)
+          ?.map((e) => e['firebaseId'] as String)
+          .toList() ??
+          [];
+      if (partnerBlockedUsers.contains(currentUserId)) {
+        throw Exception('Cannot create DM thread with user who blocked you');
+      }
+    }
+
     final threadId = generateThreadId(currentUserId, partnerId);
 
     // Try to get existing thread

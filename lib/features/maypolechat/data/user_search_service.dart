@@ -105,4 +105,23 @@ class UserSearchService {
       return null;
     }
   }
+
+  /// Get a user by their username
+  Future<DomainUser?> getUserByUsername(String username) async {
+    try {
+      final userQuery = await _firestore
+          .collection('users')
+          .where('username', isEqualTo: username)
+          .limit(1)
+          .get();
+
+      if (userQuery.docs.isNotEmpty) {
+        return DomainUser.fromMap(userQuery.docs.first.data());
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error getting user by username: $e');
+      return null;
+    }
+  }
 }

@@ -1,5 +1,6 @@
 import 'package:maypole/features/directmessages/domain/dm_thread.dart';
 import 'package:maypole/features/maypolechat/domain/maypole.dart';
+import 'package:maypole/features/identity/domain/blocked_user.dart';
 
 class DomainUser {
   String username;
@@ -8,6 +9,7 @@ class DomainUser {
   String profilePictureUrl;
   List<MaypoleMetaData> maypoleChatThreads;
   List<DMThreadMetaData> dmThreads;
+  List<BlockedUser> blockedUsers;
   String? fcmToken;
 
   DomainUser({
@@ -17,6 +19,7 @@ class DomainUser {
     this.profilePictureUrl = '',
     this.maypoleChatThreads = const [],
     this.dmThreads = const [],
+    this.blockedUsers = const [],
     this.fcmToken,
   });
 
@@ -28,6 +31,7 @@ class DomainUser {
       'profilePictureUrl': profilePictureUrl,
       'maypoleChatThreads': maypoleChatThreads.map((e) => e.toMap()).toList(),
       'dmThreads': dmThreads.map((e) => e.toMap()).toList(),
+      'blockedUsers': blockedUsers.map((e) => e.toMap()).toList(),
       'fcmToken': fcmToken,
     };
   }
@@ -43,6 +47,8 @@ class DomainUser {
               []),
       dmThreads: List<DMThreadMetaData>.from(
           map['dmThreads']?.map((x) => DMThreadMetaData.fromMap(x)) ?? []),
+      blockedUsers: List<BlockedUser>.from(
+          map['blockedUsers']?.map((x) => BlockedUser.fromMap(x)) ?? []),
       fcmToken: map['fcmToken'] as String?,
     );
   }

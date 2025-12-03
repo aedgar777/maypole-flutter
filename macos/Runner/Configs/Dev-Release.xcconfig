@@ -1,0 +1,10 @@
+// Configuration settings for Dev Release builds
+#include "Release.xcconfig"
+#include "AppInfo.xcconfig"
+
+// Override bundle identifier for dev
+PRODUCT_BUNDLE_IDENTIFIER = app.maypole.maypole.dev
+PRODUCT_NAME = maypole-dev
+
+// App name shown to users
+APP_DISPLAY_NAME = Maypole Dev

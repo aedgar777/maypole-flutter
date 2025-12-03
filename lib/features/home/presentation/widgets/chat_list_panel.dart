@@ -113,7 +113,15 @@ class ChatListPanel extends ConsumerWidget {
     WidgetRef ref,
     AppLocalizations l10n,
   ) {
-    if (user.dmThreads.isEmpty) {
+    // Filter out DM threads with blocked users
+    final blockedUserIds = user.blockedUsers
+        .map((user) => user.firebaseId)
+        .toSet();
+    final filteredDmThreads = user.dmThreads
+        .where((thread) => !blockedUserIds.contains(thread.partnerId))
+        .toList();
+
+    if (filteredDmThreads.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -123,9 +131,9 @@ class ChatListPanel extends ConsumerWidget {
     }
 
     return ListView.builder(
-      itemCount: user.dmThreads.length,
+      itemCount: filteredDmThreads.length,
       itemBuilder: (context, index) {
-        final threadMetadata = user.dmThreads[index];
+        final threadMetadata = filteredDmThreads[index];
         final isSelected =
             selectedThreadId == threadMetadata.id && !isMaypoleThread;
         final formattedDateTime = DateTimeUtils.formatRelativeDateTime(

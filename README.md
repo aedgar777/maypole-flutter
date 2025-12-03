@@ -74,6 +74,34 @@ flutter run --release --flavor prod --dart-define=ENVIRONMENT=production
 - **Production Environment**: `maypole-flutter-ce6c3` (restricted access)
 - **Supported Platforms**: Web, Android, iOS, macOS
 
+## 🍎 iOS & macOS Development
+
+You can build and test iOS/macOS apps **directly from Android Studio** without opening Xcode!
+
+### Quick Start
+
+1. **From Android Studio**: Select iOS/macOS from device dropdown → Click Run ▶️
+2. **From Terminal**: `flutter run -d ios --dart-define=ENVIRONMENT=dev`
+3. **Using Scripts**: `./scripts/build-all-platforms.sh`
+
+### Build Scripts Available
+
+- `./scripts/build-ios-dev-release.sh` - iOS development build
+- `./scripts/build-ios-prod-release.sh` - iOS production build
+- `./scripts/build-ios-ipa-prod.sh` - iOS App Store package
+- `./scripts/build-macos-dev-release.sh` - macOS development build
+- `./scripts/build-macos-prod-release.sh` - macOS production build
+- `./scripts/build-macos-dmg-prod.sh` - macOS installer
+
+### Documentation
+
+- 📖 [Quick Reference](QUICK_REFERENCE.md) - One-page command reference
+- 🎓 [Android Studio Guide](docs/ANDROID_STUDIO_GUIDE.md) - Visual step-by-step guide
+- 📚 [Complete iOS/macOS Guide](docs/BUILDING_IOS_MACOS.md) - Detailed documentation
+- 🚀 [Build Scripts Reference](scripts/README.md) - All available build scripts
+
+**Note**: Xcode must be installed but doesn't need to be open. Hot reload works perfectly!
+
 ## 🔒 Security & Access Control
 
 This project uses a **private team approach** with shared Firebase projects:

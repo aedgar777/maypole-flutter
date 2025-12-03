@@ -148,6 +148,21 @@ class AuthService {
     }
   }
 
+  Future<void> updateUserData(DomainUser user) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(user.firebaseID)
+          .update(user.toMap());
+
+      // Update session
+      _session.currentUser = user;
+    } catch (e) {
+      debugPrint('Error updating user data: $e');
+      rethrow;
+    }
+  }
+
   Future<void> deleteAccount() async {
     try {
       final user = _firebaseAuth.currentUser;

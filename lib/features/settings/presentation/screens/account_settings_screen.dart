@@ -116,6 +116,13 @@ class AccountSettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 32),
           ListTile(
+            leading: const Icon(Icons.block),
+            title: Text(l10n.blockedUsers),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/blocked-users'),
+          ),
+          Divider(color: Colors.white.withValues(alpha: 0.1)),
+          ListTile(
             leading: const Icon(Icons.delete_forever, color: Colors.red),
             title: Text(
               l10n.deleteAccount,
