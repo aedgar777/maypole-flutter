@@ -1,0 +1,10 @@
+// Configuration settings for Prod Debug builds
+#include "Debug.xcconfig"
+#include "AppInfo.xcconfig"
+
+// Use production bundle identifier
+PRODUCT_BUNDLE_IDENTIFIER = app.maypole.maypole
+PRODUCT_NAME = maypole
+
+// App name shown to users
+APP_DISPLAY_NAME = Maypole
