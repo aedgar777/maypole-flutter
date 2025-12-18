@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/services/fcm_service.dart';
-import 'package:maypole/features/identity/auth_providers.dart';
 
 /// Widget that handles Firebase Cloud Messaging notifications
 /// Place this at the root of your app to handle notification taps and foreground messages
