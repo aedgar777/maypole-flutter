@@ -101,7 +101,7 @@ jobs:
         run: ditto -c -k --sequesterRsrc --keepParent "${{ matrix.artifact_path }}" "${{ matrix.zip_name }}"
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
           path: |
@@ -115,7 +115,7 @@ jobs:
     if: github.ref == 'refs/heads/master'
     steps:
       - name: Download all build artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
 
