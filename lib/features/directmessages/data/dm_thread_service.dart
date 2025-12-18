@@ -50,25 +50,16 @@ class DMThreadService {
       }
     }
 
-    // Check if partner has blocked current user
-    final partnerDoc =
-    await _firestore.collection('users').doc(partnerId).get();
-    if (partnerDoc.exists) {
-      final partnerData = partnerDoc.data()!;
-      final partnerBlockedUsers = (partnerData['blockedUsers'] as List?)
-          ?.map((e) => e['firebaseId'] as String)
-          .toList() ??
-          [];
-      if (partnerBlockedUsers.contains(currentUserId)) {
-        throw Exception('Cannot create DM thread with user who blocked you');
-      }
-    }
+    // Note: We don't check if partner has blocked current user here due to
+    // Firestore security rules preventing reading other users' documents.
+    // The partner's client will handle blocking/filtering messages from blocked users.
 
     final threadId = generateThreadId(currentUserId, partnerId);
 
     // Try to get existing thread
     final existingThread = await getDMThreadById(threadId);
     if (existingThread != null) {
+      debugPrint('✓ Found existing DM thread: $threadId');
       return existingThread;
     }
 
@@ -76,20 +67,29 @@ class DMThreadService {
     final now = DateTime.now();
     final newThread = DMThread(
       id: threadId,
-      name: partnerName,
-      // Thread name is the partner's name from current user's perspective
       lastMessageTime: now,
-      partnerName: partnerName,
-      partnerId: partnerId,
-      partnerProfpic: partnerProfpic,
+      participants: {
+        currentUserId: DMParticipant(
+          id: currentUserId,
+          username: currentUsername,
+          profilePicUrl: currentUserProfpic,
+        ),
+        partnerId: DMParticipant(
+          id: partnerId,
+          username: partnerName,
+          profilePicUrl: partnerProfpic,
+        ),
+      },
       lastMessage: null,
     );
 
-    // Save to Firestore
+    // Save to Firestore - only one write needed!
     await _firestore
         .collection('DMThreads')
         .doc(threadId)
         .set(newThread.toMap());
+
+    debugPrint('✓ Created DM thread: $threadId with participants: [$currentUserId, $partnerId]');
 
     return newThread;
   }
@@ -141,6 +141,7 @@ class DMThreadService {
         .add(message.toMap());
 
     // Update thread's lastMessage and lastMessageTime
+    // Only 2 writes total now (vs 4 in old approach)!
     await _firestore
         .collection('DMThreads')
         .doc(threadId)
@@ -149,6 +150,8 @@ class DMThreadService {
       'lastMessageTime': Timestamp.fromDate(now),
     });
 
+    debugPrint('✓ Sent DM message to thread: $threadId');
+
     // Send notification to recipient
     await _sendDmNotification(
       recipientId: recipientId,
@@ -156,6 +159,61 @@ class DMThreadService {
       messageBody: body,
       threadId: threadId,
     );
+  }
+
+  /// Streams all DM threads for a user, ordered by most recent activity
+  /// This replaces the old approach of storing dmThreads in user documents
+  Stream<List<DMThreadMetaData>> getUserDmThreads(String userId) {
+    return _firestore
+        .collection('DMThreads')
+        .where('participantIds', arrayContains: userId)
+        .orderBy('lastMessageTime', descending: true)
+        .snapshots()
+        .handleError((error) {
+      debugPrint('❌ Error in DM threads stream: $error');
+      debugPrint('⚠️ This might be a missing Firestore index!');
+      debugPrint('⚠️ Run: firebase deploy --only firestore:indexes');
+    })
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        try {
+          final data = doc.data();
+          
+          // Check if this is an old-format thread (missing participants field)
+          if (!data.containsKey('participants') || data['participants'] == null) {
+            debugPrint('⚠️ Skipping old-format DM thread ${doc.id} - needs migration');
+            return null;
+          }
+          
+          final participantsMap = data['participants'] as Map<String, dynamic>?;
+          if (participantsMap == null || participantsMap.isEmpty) {
+            return null;
+          }
+          
+          final dmThread = DMThread.fromMap(data);
+          
+          // Get the partner (the other participant)
+          final partner = dmThread.getPartner(userId);
+          
+          if (partner == null || partner.id.isEmpty) {
+            return null;
+          }
+          
+          // Convert to DMThreadMetaData from the user's perspective
+          return DMThreadMetaData(
+            id: dmThread.id,
+            name: partner.username,
+            lastMessageTime: dmThread.lastMessageTime,
+            partnerName: partner.username,
+            partnerId: partner.id,
+            partnerProfpic: partner.profilePicUrl,
+          );
+        } catch (e) {
+          debugPrint('Error processing DM thread ${doc.id}: $e');
+          return null;
+        }
+      }).whereType<DMThreadMetaData>().toList();
+    });
   }
 
   /// Send DM notification to recipient

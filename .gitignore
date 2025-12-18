@@ -76,3 +76,9 @@ firebase_options.dart.backup
 
 # Team secrets management
 .secrets-project
+
+# Firebase project configuration
+# Note: .firebaserc should be gitignored if it contains sensitive project IDs
+# For open source or when project IDs are not sensitive, you can commit it
+# See .firebaserc for template
+.firebaserc

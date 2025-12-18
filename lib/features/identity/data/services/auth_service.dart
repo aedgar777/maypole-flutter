@@ -23,8 +23,8 @@ class AuthService {
           .snapshots()
           .map((docSnapshot) {
         if (docSnapshot.exists) {
-          final user = DomainUser.fromMap(
-              docSnapshot.data() as Map<String, dynamic>);
+          final userData = docSnapshot.data() as Map<String, dynamic>;
+          final user = DomainUser.fromMap(userData);
           _session.currentUser = user;
           return user;
         } else {

@@ -59,6 +59,37 @@ service cloud.firestore {
       }
     }
     
+    // Direct Message threads collection rules
+    match /DMThreads/{threadId} {
+      // Helper function to check if user is a participant in the thread
+      // Thread ID format is "userId1_userId2" (sorted alphabetically)
+      function isParticipant() {
+        return request.auth != null && (
+          threadId.matches(request.auth.uid + '_.*') ||
+          threadId.matches('.*_' + request.auth.uid)
+        );
+      }
+      
+      // Allow users to read threads they are part of
+      allow read: if isParticipant();
+      
+      // Allow users to create threads they are part of
+      allow create: if isParticipant();
+      
+      // Allow users to update threads they are part of
+      // This is needed for updating lastMessage and lastMessageTime
+      allow update: if isParticipant();
+      
+      // Messages subcollection within a DM thread
+      match /messages/{messageId} {
+        // Allow participants to read messages in their DM thread
+        allow read: if isParticipant();
+        
+        // Allow participants to create messages in their DM thread
+        allow create: if isParticipant();
+      }
+    }
+    
     // Default deny for all other documents
     match /{document=**} {
       allow read, write: if false;

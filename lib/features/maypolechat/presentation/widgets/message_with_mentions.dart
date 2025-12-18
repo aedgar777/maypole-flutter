@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_theme.dart';
+import 'package:maypole/core/widgets/error_dialog.dart';
+import 'package:maypole/features/maypolechat/data/user_search_service.dart';
 
 /// A widget that displays a message with @ mentions highlighted
 class MessageWithMentions extends StatelessWidget {
@@ -40,17 +43,6 @@ class MessageWithMentions extends StatelessWidget {
     }
   }
 
-  void _handleUsernameTap(BuildContext context) {
-    // Navigate directly to user profile using the senderId
-    context.push(
-      '/user-profile/$senderId',
-      extra: {
-        'username': senderName,
-        'profilePictureUrl': senderProfilePictureUrl,
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final mentions = _parseMentions(body);
@@ -71,7 +63,68 @@ class MessageWithMentions extends StatelessWidget {
                 color: violet,
               ),
               recognizer: TapGestureRecognizer()
-                ..onTap = () => _handleUsernameTap(context),
+                ..onTap = () async {
+                  // If senderId is present, navigate directly
+                  if (senderId.isNotEmpty) {
+                    final path = '/user-profile/$senderId';
+                    debugPrint('Navigating to: $path with senderId');
+                    try {
+                      GoRouter.of(context).push(
+                        path,
+                        extra: {
+                          'username': senderName,
+                          'profilePictureUrl': senderProfilePictureUrl,
+                        },
+                      );
+                    } catch (e) {
+                      debugPrint('Navigation error: $e');
+                    }
+                    return;
+                  }
+
+                  // Fallback: Look up user by username for old messages
+                  debugPrint('senderId is empty, looking up user by username: $senderName');
+                  try {
+                    // Show loading indicator
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (context) => const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+
+                    // Fetch user information
+                    final userSearchService = UserSearchService();
+                    final user = await userSearchService.getUserByUsername(senderName);
+
+                    if (!context.mounted) return;
+
+                    // Close loading dialog
+                    Navigator.pop(context);
+
+                    if (user != null) {
+                      // Navigate to user profile
+                      GoRouter.of(context).push(
+                        '/user-profile/${user.firebaseID}',
+                        extra: {
+                          'username': user.username,
+                          'profilePictureUrl': user.profilePictureUrl,
+                        },
+                      );
+                    } else {
+                      // Show error if user not found
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('User not found')),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      Navigator.pop(context); // Close loading dialog
+                      ErrorDialog.show(context, e);
+                    }
+                  }
+                },
             ),
             ...mentions,
           ],

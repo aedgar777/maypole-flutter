@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
 import 'package:maypole/core/widgets/cached_profile_avatar.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
+import 'package:maypole/features/directmessages/presentation/dm_providers.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 
 /// A panel showing the list of maypole chats and DM threads.
 /// This widget is used in both mobile and desktop layouts.
-class ChatListPanel extends ConsumerWidget {
+class MaypoleListPanel extends ConsumerWidget {
   final DomainUser user;
   final VoidCallback onSettingsPressed;
   final VoidCallback onAddPressed;
@@ -17,7 +18,7 @@ class ChatListPanel extends ConsumerWidget {
   final String? selectedThreadId;
   final bool isMaypoleThread;
 
-  const ChatListPanel({
+  const MaypoleListPanel({
     super.key,
     required this.user,
     required this.onSettingsPressed,
@@ -32,6 +33,9 @@ class ChatListPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    
+    // Cache the userId to prevent provider recreation on every rebuild
+    final userId = user.firebaseID;
 
     return DefaultTabController(
       length: 2,
@@ -66,12 +70,12 @@ class ChatListPanel extends ConsumerWidget {
             ),
             body: TabBarView(
               children: [
-                _buildMaypoleChatList(context, l10n),
-                _buildDmList(context, ref, l10n),
+                _buildMaypoleList(context, l10n),
+                _buildDmList(context, ref, l10n, userId),
               ],
             ),
             floatingActionButton: FloatingActionButton(
-              heroTag: 'chat_list_fab',
+              heroTag: 'maypole_list_fab',
               onPressed: onAddPressed,
               child: const Icon(Icons.add),
             ),
@@ -81,7 +85,7 @@ class ChatListPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildMaypoleChatList(BuildContext context, AppLocalizations l10n) {
+  Widget _buildMaypoleList(BuildContext context, AppLocalizations l10n) {
     if (user.maypoleChatThreads.isEmpty) {
       return Center(
         child: Padding(
@@ -102,7 +106,10 @@ class ChatListPanel extends ConsumerWidget {
           selectedTileColor: Colors.grey.withValues(alpha: 0.15),
           leading: const Icon(Icons.location_on),
           title: Text(thread.name),
-          onTap: () => onMaypoleThreadSelected(thread.id, thread.name),
+          onTap: () {
+            // Allow the ripple animation to complete before navigating
+            Future.microtask(() => onMaypoleThreadSelected(thread.id, thread.name));
+          },
         );
       },
     );
@@ -112,42 +119,62 @@ class ChatListPanel extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     AppLocalizations l10n,
+    String userId,
   ) {
-    // Filter out DM threads with blocked users
-    final blockedUserIds = user.blockedUsers
-        .map((user) => user.firebaseId)
-        .toSet();
-    final filteredDmThreads = user.dmThreads
-        .where((thread) => !blockedUserIds.contains(thread.partnerId))
-        .toList();
+    // Watch the DM threads stream for this specific user
+    final dmThreadsAsync = ref.watch(dmThreadsByUserProvider(userId));
 
-    if (filteredDmThreads.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(l10n.noDirectMessages, textAlign: TextAlign.center),
-        ),
-      );
-    }
+    return dmThreadsAsync.when(
+      data: (dmThreads) {
+        // Filter out DM threads with blocked users
+        final blockedUserIds = user.blockedUsers
+            .map((user) => user.firebaseId)
+            .toSet();
+        final filteredDmThreads = dmThreads
+            .where((thread) => !blockedUserIds.contains(thread.partnerId))
+            .toList();
 
-    return ListView.builder(
-      itemCount: filteredDmThreads.length,
-      itemBuilder: (context, index) {
-        final threadMetadata = filteredDmThreads[index];
-        final isSelected =
-            selectedThreadId == threadMetadata.id && !isMaypoleThread;
-        final formattedDateTime = DateTimeUtils.formatRelativeDateTime(
-          threadMetadata.lastMessageTime,
-          context: context,
+        if (filteredDmThreads.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(l10n.noDirectMessages, textAlign: TextAlign.center),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          itemCount: filteredDmThreads.length,
+          itemBuilder: (context, index) {
+            final threadMetadata = filteredDmThreads[index];
+            final isSelected =
+                selectedThreadId == threadMetadata.id && !isMaypoleThread;
+            final formattedDateTime = DateTimeUtils.formatRelativeDateTime(
+              threadMetadata.lastMessageTime,
+              context: context,
+            );
+
+            return ListTile(
+              selected: isSelected,
+              selectedTileColor: Colors.grey.withValues(alpha: 0.15),
+              leading: CachedProfileAvatar(imageUrl: threadMetadata.partnerProfpic),
+              title: Text(threadMetadata.partnerName),
+              subtitle: Text(l10n.lastMessage(formattedDateTime)),
+              onTap: () {
+                // Allow the ripple animation to complete before navigating
+                Future.microtask(() => onDmThreadSelected(threadMetadata.id));
+              },
+            );
+          },
         );
-
-        return ListTile(
-          selected: isSelected,
-          selectedTileColor: Colors.grey.withValues(alpha: 0.15),
-          leading: CachedProfileAvatar(imageUrl: threadMetadata.partnerProfpic),
-          title: Text(threadMetadata.partnerName),
-          subtitle: Text(l10n.lastMessage(formattedDateTime)),
-          onTap: () => onDmThreadSelected(threadMetadata.id),
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text('Error loading DMs: $error', textAlign: TextAlign.center),
+          ),
         );
       },
     );
