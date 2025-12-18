@@ -37,16 +37,21 @@ class DMThread {
   final DateTime lastMessageTime;
   final DirectMessage? lastMessage;
   final Map<String, DMParticipant> participants;  // Map of userId -> participant info
+  final List<String> hiddenFor;  // List of userIds who have hidden this thread
 
   const DMThread({
     required this.id,
     required this.lastMessageTime,
     required this.participants,
     this.lastMessage,
+    this.hiddenFor = const [],
   });
 
   // Helper to get participantIds as a list (for Firestore queries)
   List<String> get participantIds => participants.keys.toList();
+  
+  // Check if thread is hidden for a specific user
+  bool isHiddenFor(String userId) => hiddenFor.contains(userId);
 
   factory DMThread.fromMap(Map<String, dynamic> map) {
     final participantsMap = (map['participants'] as Map<String, dynamic>?) ?? {};
@@ -61,6 +66,7 @@ class DMThread {
       lastMessage: map['lastMessage'] != null
           ? DirectMessage.fromMap(map['lastMessage'] as Map<String, dynamic>)
           : null,
+      hiddenFor: List<String>.from(map['hiddenFor'] ?? []),
     );
   }
 
@@ -71,6 +77,7 @@ class DMThread {
       'participants': participants.map((key, value) => MapEntry(key, value.toMap())),
       'participantIds': participantIds,  // Denormalized for queries
       'lastMessage': lastMessage?.toMap(),
+      'hiddenFor': hiddenFor,
     };
   }
 

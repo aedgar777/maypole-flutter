@@ -6,7 +6,7 @@
 set -e
 
 echo "🚀 Deploying Firestore and Storage rules to DEV..."
-firebase deploy --only firestore:rules,storage --project maypole-dev
+firebase deploy --only firestore:rules,storage --project maypole-flutter-dev
 
 echo ""
 echo "✅ Deployment complete!"

@@ -17,7 +17,7 @@ fi
 
 echo ""
 echo "🚀 Deploying Firestore and Storage rules to PROD..."
-firebase deploy --only firestore:rules,storage --project maypole-prod
+firebase deploy --only firestore:rules,storage --project maypole-flutter-ce6c3
 
 echo ""
 echo "✅ Deployment complete!"
