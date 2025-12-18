@@ -149,9 +149,8 @@ class MaypoleListPanel extends ConsumerWidget {
             final threadMetadata = filteredDmThreads[index];
             final isSelected =
                 selectedThreadId == threadMetadata.id && !isMaypoleThread;
-            final formattedDateTime = DateTimeUtils.formatRelativeDateTime(
+            final formattedTimestamp = DateTimeUtils.formatThreadTimestamp(
               threadMetadata.lastMessageTime,
-              context: context,
             );
 
             return ListTile(
@@ -159,7 +158,12 @@ class MaypoleListPanel extends ConsumerWidget {
               selectedTileColor: Colors.grey.withValues(alpha: 0.15),
               leading: CachedProfileAvatar(imageUrl: threadMetadata.partnerProfpic),
               title: Text(threadMetadata.partnerName),
-              subtitle: Text(l10n.lastMessage(formattedDateTime)),
+              subtitle: Text(
+                formattedTimestamp,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.5),
+                ),
+              ),
               onTap: () {
                 // Allow the ripple animation to complete before navigating
                 Future.microtask(() => onDmThreadSelected(threadMetadata.id));

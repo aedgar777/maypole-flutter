@@ -90,4 +90,26 @@ class DateTimeUtils {
       return formatRelativeDate(dateTime, locale: locale, context: context);
     }
   }
+
+  /// Formats a timestamp for message thread lists.
+  /// Returns time (e.g., "2:30 PM") for today, "Yesterday" for yesterday,
+  /// day name (e.g., "Monday") for this week, or date (e.g., "Dec 15") for older.
+  static String formatThreadTimestamp(DateTime dateTime, {String? locale}) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays == 0) {
+      // Today - show time
+      return DateFormat.jm(locale).format(dateTime);
+    } else if (difference.inDays == 1) {
+      // Yesterday
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      // This week - show day name
+      return DateFormat.EEEE(locale).format(dateTime);
+    } else {
+      // Older - show date
+      return DateFormat.MMMd(locale).format(dateTime);
+    }
+  }
 }
