@@ -68,6 +68,11 @@ class _DmContentState extends ConsumerState<DmContent> {
   Widget build(BuildContext context) {
     final messagesAsyncValue = ref.watch(dmViewModelProvider(widget.thread.id));
     final currentUser = AppSession().currentUser;
+    
+    // Get the partner (the other participant)
+    final partner = currentUser != null 
+        ? widget.thread.getPartner(currentUser.firebaseID)
+        : null;
 
     final body = Column(
       children: [
@@ -105,8 +110,8 @@ class _DmContentState extends ConsumerState<DmContent> {
             },
           ),
         ),
-        if (currentUser != null)
-          _buildMessageInput(currentUser.username, widget.thread.partnerId),
+        if (currentUser != null && partner != null)
+          _buildMessageInput(currentUser.username, partner.id),
       ],
     );
 
@@ -117,24 +122,26 @@ class _DmContentState extends ConsumerState<DmContent> {
 
     return Scaffold(
       appBar: AppBar(
-        title: GestureDetector(
-          onTap: () {
-            context.push(
-              '/user-profile/${widget.thread.partnerId}',
-              extra: {
-                'username': widget.thread.partnerName,
-                'profilePictureUrl': widget.thread.partnerProfpic,
-              },
-            );
-          },
-          child: Row(
-            children: [
-              CachedProfileAvatar(imageUrl: widget.thread.partnerProfpic),
-              const SizedBox(width: 8),
-              Text(widget.thread.partnerName),
-            ],
-          ),
-        ),
+        title: partner != null
+            ? GestureDetector(
+                onTap: () {
+                  context.push(
+                    '/user-profile/${partner.id}',
+                    extra: <String, dynamic>{
+                      'username': partner.username,
+                      'profilePictureUrl': partner.profilePicUrl,
+                    },
+                  );
+                },
+                child: Row(
+                  children: [
+                    CachedProfileAvatar(imageUrl: partner.profilePicUrl),
+                    const SizedBox(width: 8),
+                    Text(partner.username),
+                  ],
+                ),
+              )
+            : const Text('Direct Message'),
       ),
       body: body,
     );

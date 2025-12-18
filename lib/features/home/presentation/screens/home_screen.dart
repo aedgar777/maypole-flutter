@@ -11,7 +11,7 @@ import 'package:maypole/features/maypolesearch/data/models/autocomplete_response
 import 'package:maypole/features/settings/settings_providers.dart';
 import '../../../identity/auth_providers.dart';
 import '../../../directmessages/presentation/dm_providers.dart';
-import '../widgets/chat_list_panel.dart';
+import '../widgets/maypole_list_panel.dart';
 
 /// State for tracking the selected thread in the home screen
 class _SelectedThreadState {
@@ -143,7 +143,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
         return Scaffold(
           body: AdaptiveScaffold(
-            navigationPanel: ChatListPanel(
+            navigationPanel: MaypoleListPanel(
               user: user,
               selectedThreadId: _selectedThread.threadId,
               isMaypoleThread: _selectedThread.isMaypoleThread,

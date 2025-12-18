@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:maypole/core/utils/date_time_utils.dart';
 import 'package:maypole/features/directmessages/domain/dm_thread.dart';
 
 
@@ -15,7 +16,12 @@ class DMThreadList extends StatelessWidget {
         final thread = threads[index];
         return ListTile(
           title: Text(thread.partnerName),
-          subtitle: Text(thread.lastMessageTime.toString()),
+          subtitle: Text(
+            DateTimeUtils.formatThreadTimestamp(thread.lastMessageTime),
+            style: TextStyle(
+              color: Colors.black.withOpacity(0.5),
+            ),
+          ),
         );
       },
     );

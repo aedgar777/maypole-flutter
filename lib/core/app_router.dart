@@ -77,11 +77,11 @@ GoRouter createRouter() {
         path: '/user-profile/:firebaseId',
         builder: (context, state) {
           final firebaseId = state.pathParameters['firebaseId']!;
-          final extra = state.extra as Map<String, String>;
+          final extra = state.extra as Map<String, dynamic>?;
           return UserProfileScreen(
-            username: extra['username']!,
+            username: extra?['username'] as String? ?? '',
             firebaseId: firebaseId,
-            profilePictureUrl: extra['profilePictureUrl'] ?? '',
+            profilePictureUrl: extra?['profilePictureUrl'] as String? ?? '',
           );
         },
       ),

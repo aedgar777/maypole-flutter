@@ -5,7 +5,7 @@ import 'package:maypole/core/widgets/adaptive_scaffold.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/identity/auth_providers.dart';
 import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
-import 'package:maypole/features/home/presentation/widgets/chat_list_panel.dart';
+import 'package:maypole/features/home/presentation/widgets/maypole_list_panel.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/maypole_chat_content.dart';
 import '../../domain/dm_thread.dart';
 import '../widgets/dm_content.dart';
@@ -56,7 +56,7 @@ class _DmScreenState extends ConsumerState<DmScreen> {
                   // Wide screen: show adaptive layout with chat list
                   return Scaffold(
                     body: AdaptiveScaffold(
-                      navigationPanel: ChatListPanel(
+                      navigationPanel: MaypoleListPanel(
                         user: user,
                         selectedThreadId: _currentThreadId,
                         isMaypoleThread: _isMaypoleThread,
