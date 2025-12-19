@@ -93,6 +93,14 @@ class MaypoleChatViewModel extends AsyncNotifier<List<MaypoleMessage>> {
       _isLoadingMore = false;
     }
   }
+
+  Future<void> deleteMessage(MaypoleMessage message) async {
+    try {
+      await _threadService.deleteMessage(_threadId, message);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
 }
 
 // Provider to hold the threadId parameter

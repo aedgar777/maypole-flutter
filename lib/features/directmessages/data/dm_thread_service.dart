@@ -179,6 +179,12 @@ class DMThreadService {
         try {
           final data = doc.data();
           
+          // Check if this thread is hidden for the current user
+          final hiddenFor = List<String>.from(data['hiddenFor'] ?? []);
+          if (hiddenFor.contains(userId)) {
+            return null;
+          }
+          
           // Check if this is an old-format thread (missing participants field)
           if (!data.containsKey('participants') || data['participants'] == null) {
             debugPrint('⚠️ Skipping old-format DM thread ${doc.id} - needs migration');
@@ -214,6 +220,63 @@ class DMThreadService {
         }
       }).whereType<DMThreadMetaData>().toList();
     });
+  }
+
+  /// Delete a DM message
+  Future<void> deleteDmMessage(
+    String threadId,
+    DirectMessage message,
+  ) async {
+    try {
+      // Query for the message document by matching timestamp, sender, and body
+      final querySnapshot = await _firestore
+          .collection('DMThreads')
+          .doc(threadId)
+          .collection('messages')
+          .where('timestamp', isEqualTo: Timestamp.fromDate(message.timestamp))
+          .where('sender', isEqualTo: message.sender)
+          .where('body', isEqualTo: message.body)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        await querySnapshot.docs.first.reference.delete();
+        debugPrint('✓ Deleted DM message from thread: $threadId');
+      }
+    } catch (e) {
+      debugPrint('Error deleting DM message: $e');
+      rethrow;
+    }
+  }
+
+  /// Hides a DM thread for a specific user by adding them to the hiddenFor list
+  /// The thread will no longer appear in the user's thread list
+  Future<void> deleteDMThreadForUser(String threadId, String userId) async {
+    try {
+      final threadDoc = await _firestore.collection('DMThreads').doc(threadId).get();
+      
+      if (!threadDoc.exists) {
+        debugPrint('Thread $threadId does not exist');
+        return;
+      }
+      
+      final data = threadDoc.data()!;
+      final hiddenFor = List<String>.from(data['hiddenFor'] ?? []);
+      
+      // Add user to hiddenFor list if not already there
+      if (!hiddenFor.contains(userId)) {
+        hiddenFor.add(userId);
+        
+        await _firestore.collection('DMThreads').doc(threadId).update({
+          'hiddenFor': hiddenFor,
+        });
+        
+        debugPrint('✓ Hidden DM thread $threadId for user $userId');
+      }
+    } catch (e) {
+      debugPrint('❌ Error hiding DM thread for user: $e');
+      rethrow;
+    }
   }
 
   /// Send DM notification to recipient

@@ -13,6 +13,9 @@ class MessageWithMentions extends StatelessWidget {
   final String senderProfilePictureUrl;
   final String body;
   final DateTime timestamp;
+  final bool isOwnMessage;
+  final VoidCallback? onTagUser;
+  final VoidCallback? onDelete;
 
   const MessageWithMentions({
     super.key,
@@ -21,6 +24,9 @@ class MessageWithMentions extends StatelessWidget {
     this.senderProfilePictureUrl = '',
     required this.body,
     required this.timestamp,
+    this.isOwnMessage = false,
+    this.onTagUser,
+    this.onDelete,
   });
 
   /// Calculate opacity based on message age
@@ -51,86 +57,168 @@ class MessageWithMentions extends StatelessWidget {
 
     return Opacity(
       opacity: opacity,
-      child: RichText(
-        text: TextSpan(
-          style: theme.textTheme.bodyMedium,
-          children: [
-            TextSpan(
-              text: '$senderName: ',
-              style: const TextStyle(
-                fontFamily: 'Lato',
-                fontWeight: FontWeight.bold,
-                color: violet,
+      child: GestureDetector(
+        onLongPress: () => _showContextMenu(context),
+        child: RichText(
+          text: TextSpan(
+            style: theme.textTheme.bodyMedium,
+            children: [
+              TextSpan(
+                text: '$senderName: ',
+                style: const TextStyle(
+                  fontFamily: 'Lato',
+                  fontWeight: FontWeight.bold,
+                  color: violet,
+                ),
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () => _navigateToProfile(context),
               ),
-              recognizer: TapGestureRecognizer()
-                ..onTap = () async {
-                  // If senderId is present, navigate directly
-                  if (senderId.isNotEmpty) {
-                    final path = '/user-profile/$senderId';
-                    debugPrint('Navigating to: $path with senderId');
-                    try {
-                      GoRouter.of(context).push(
-                        path,
-                        extra: {
-                          'username': senderName,
-                          'profilePictureUrl': senderProfilePictureUrl,
-                        },
-                      );
-                    } catch (e) {
-                      debugPrint('Navigation error: $e');
-                    }
-                    return;
-                  }
+              ...mentions,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-                  // Fallback: Look up user by username for old messages
-                  debugPrint('senderId is empty, looking up user by username: $senderName');
-                  try {
-                    // Show loading indicator
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) => const Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-
-                    // Fetch user information
-                    final userSearchService = UserSearchService();
-                    final user = await userSearchService.getUserByUsername(senderName);
-
-                    if (!context.mounted) return;
-
-                    // Close loading dialog
-                    Navigator.pop(context);
-
-                    if (user != null) {
-                      // Navigate to user profile
-                      GoRouter.of(context).push(
-                        '/user-profile/${user.firebaseID}',
-                        extra: {
-                          'username': user.username,
-                          'profilePictureUrl': user.profilePictureUrl,
-                        },
-                      );
-                    } else {
-                      // Show error if user not found
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('User not found')),
-                      );
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      Navigator.pop(context); // Close loading dialog
-                      ErrorDialog.show(context, e);
-                    }
-                  }
-                },
+  void _showContextMenu(BuildContext context) {
+    final timeString = _formatTimestamp(timestamp);
+    
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Timestamp - always show
+            ListTile(
+              leading: const Icon(Icons.access_time),
+              title: Text(timeString),
+              enabled: false,
             ),
-            ...mentions,
+            Divider(height: 1, color: Colors.grey.withValues(alpha: 0.2)),
+            
+            // Options based on message ownership
+            if (isOwnMessage) ...[
+              // Own message: Delete option
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Delete', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  onDelete?.call();
+                },
+              ),
+            ] else ...[
+              // Other user's message: Tag and View Profile options
+              if (onTagUser != null)
+                ListTile(
+                  leading: const Icon(Icons.alternate_email),
+                  title: Text('Tag $senderName'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onTagUser?.call();
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.person),
+                title: const Text('View Profile'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await _navigateToProfile(context);
+                },
+              ),
+            ],
+            
+            // Cancel option
+            Divider(height: 1, color: Colors.grey.withValues(alpha: 0.2)),
+            ListTile(
+              leading: const Icon(Icons.cancel),
+              title: const Text('Cancel'),
+              onTap: () => Navigator.pop(context),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  String _formatTimestamp(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+    
+    if (difference.inDays > 0) {
+      return '${timestamp.month}/${timestamp.day}/${timestamp.year} ${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
+  }
+
+  Future<void> _navigateToProfile(BuildContext context) async {
+    // If senderId is present, navigate directly
+    if (senderId.isNotEmpty) {
+      final path = '/user-profile/$senderId';
+      debugPrint('Navigating to: $path with senderId');
+      try {
+        GoRouter.of(context).push(
+          path,
+          extra: {
+            'username': senderName,
+            'profilePictureUrl': senderProfilePictureUrl,
+          },
+        );
+      } catch (e) {
+        debugPrint('Navigation error: $e');
+      }
+      return;
+    }
+
+    // Fallback: Look up user by username for old messages
+    debugPrint('senderId is empty, looking up user by username: $senderName');
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Fetch user information
+      final userSearchService = UserSearchService();
+      final user = await userSearchService.getUserByUsername(senderName);
+
+      if (!context.mounted) return;
+
+      // Close loading dialog
+      Navigator.pop(context);
+
+      if (user != null) {
+        // Navigate to user profile
+        GoRouter.of(context).push(
+          '/user-profile/${user.firebaseID}',
+          extra: {
+            'username': user.username,
+            'profilePictureUrl': user.profilePictureUrl,
+          },
+        );
+      } else {
+        // Show error if user not found
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User not found')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ErrorDialog.show(context, e);
+      }
+    }
   }
 
   /// Parse the message body and create TextSpans with highlighted mentions

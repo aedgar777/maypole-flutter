@@ -131,10 +131,17 @@ class UserProfileScreen extends ConsumerWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // If the user is viewing their own profile, redirect to settings
+          // If the user is viewing their own profile, go back and optionally navigate to settings
           if (currentUser.firebaseID == firebaseId) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              context.go('/settings');
+              if (context.mounted && context.canPop()) {
+                context.pop();
+                // Optionally navigate to settings after popping
+                context.push('/settings');
+              } else {
+                // Fallback if we can't pop (shouldn't normally happen)
+                context.go('/settings');
+              }
             });
             return const Center(child: CircularProgressIndicator());
           }

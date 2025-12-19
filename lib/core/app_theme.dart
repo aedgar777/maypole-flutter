@@ -5,6 +5,7 @@ const Color darkPurple = Color(0xFF1A1A2E);
 const Color violet = Color(0xFF9370DB);
 const Color skyBlue = Color(0xFF6CB4E8);
 const Color darkError = Color(0xFFCF6679);
+const Color lightPurple = Color(0xFF2D2D44); // Lighter purple for message input backgrounds
 
 final darkTheme = ThemeData(
   brightness: Brightness.dark,

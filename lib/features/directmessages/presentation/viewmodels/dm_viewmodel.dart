@@ -74,6 +74,14 @@ class DmViewModel extends AsyncNotifier<List<DirectMessage>> {
       _isLoadingMore = false;
     }
   }
+
+  Future<void> deleteDmMessage(DirectMessage message) async {
+    try {
+      await _threadService.deleteDmMessage(_threadId, message);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
 }
 
 // Provider to hold the threadId parameter
