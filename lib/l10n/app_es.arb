@@ -80,5 +80,6 @@
   "unblock": "Desbloquear",
   "unblockUser": "Desbloquear usuario",
   "unblockUserConfirmation": "¿Está seguro de que desea desbloquear a {username}?",
-  "userUnblocked": "{username} ha sido desbloqueado"
+  "userUnblocked": "{username} ha sido desbloqueado",
+  "errorOpeningEmail": "No se pudo abrir el cliente de correo electrónico"
 }

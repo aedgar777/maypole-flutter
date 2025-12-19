@@ -278,4 +278,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String userUnblocked(String username) {
     return '$username ha sido desbloqueado';
   }
+
+  @override
+  String get errorOpeningEmail =>
+      'No se pudo abrir el cliente de correo electrónico';
 }
