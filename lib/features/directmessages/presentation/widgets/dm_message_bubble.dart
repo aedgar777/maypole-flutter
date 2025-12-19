@@ -57,9 +57,9 @@ class DmMessageBubble extends StatelessWidget {
     }
 
     // Dynamic vertical margin based on grouping
-    // Grouped messages: 1px apart, Non-grouped messages: 8px apart
-    final double topMargin = isGroupedWithPrevious ? 1.0 : 8.0;
-    final double bottomMargin = isGroupedWithNext ? 1.0 : 8.0;
+    // Grouped messages: 1px apart, Non-grouped messages: 4px apart
+    final double topMargin = isGroupedWithPrevious ? 1.0 : 4.0;
+    final double bottomMargin = isGroupedWithNext ? 1.0 : 4.0;
 
     return GestureDetector(
       onLongPress: !isDeleted ? () {
