@@ -112,4 +112,12 @@ class DateTimeUtils {
       return DateFormat.MMMd(locale).format(dateTime);
     }
   }
+
+  /// Formats a full date and time for display in context menus.
+  /// Returns strings like "Monday, January 15, 2024 at 3:45 PM"
+  static String formatFullDateTime(DateTime dateTime, {String? locale}) {
+    final dateFormat = DateFormat.yMMMMEEEEd(locale);
+    final timeFormat = DateFormat.jm(locale);
+    return '${dateFormat.format(dateTime)} at ${timeFormat.format(dateTime)}';
+  }
 }

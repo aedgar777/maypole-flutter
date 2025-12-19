@@ -7,6 +7,8 @@ import 'package:maypole/core/widgets/cached_profile_avatar.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/directmessages/presentation/dm_providers.dart';
 import 'package:maypole/features/directmessages/domain/dm_thread.dart';
+import 'package:maypole/features/maypolechat/domain/maypole.dart';
+import 'package:maypole/features/maypolechat/presentation/maypole_chat_providers.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 
 /// A panel showing the list of maypole chats and DM threads.
@@ -38,9 +40,11 @@ class MaypoleListPanel extends ConsumerStatefulWidget {
 }
 
 class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> {
-  // Track threads that are pending deletion
+  // Track threads that are pending deletion (for both maypole and DM threads)
   final Set<String> _pendingDeletions = {};
   final Map<String, Timer> _deletionTimers = {};
+  // Track maypole threads pending deletion separately for filtering
+  final Set<String> _pendingMaypoleDeletions = {};
 
   @override
   void dispose() {
@@ -108,7 +112,12 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> {
   }
 
   Widget _buildMaypoleList(BuildContext context, AppLocalizations l10n) {
-    if (widget.user.maypoleChatThreads.isEmpty) {
+    // Filter out maypole threads that are pending deletion
+    final filteredMaypoleThreads = widget.user.maypoleChatThreads
+        .where((thread) => !_pendingMaypoleDeletions.contains(thread.id))
+        .toList();
+
+    if (filteredMaypoleThreads.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -118,9 +127,9 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> {
     }
 
     return ListView.builder(
-      itemCount: widget.user.maypoleChatThreads.length,
+      itemCount: filteredMaypoleThreads.length,
       itemBuilder: (context, index) {
-        final thread = widget.user.maypoleChatThreads[index];
+        final thread = filteredMaypoleThreads[index];
         final isSelected = widget.selectedThreadId == thread.id && widget.isMaypoleThread;
 
         return Material(
@@ -131,6 +140,13 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> {
             leading: const Icon(Icons.location_on),
             title: Text(thread.name),
             onTap: () => widget.onMaypoleThreadSelected(thread.id, thread.name),
+            onLongPress: () {
+              _showMaypoleThreadContextMenu(
+                context,
+                thread,
+                widget.user.firebaseID,
+              );
+            },
           ),
         );
       },
@@ -297,8 +313,8 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> {
 
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     
-    // Schedule deletion after 4 seconds
-    final timer = Timer(const Duration(seconds: 4), () async {
+    // Schedule deletion after 3 seconds
+    final timer = Timer(const Duration(seconds: 3), () async {
       _deletionTimers.remove(threadMetadata.id);
       
       try {
@@ -341,7 +357,7 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> {
     scaffoldMessenger.showSnackBar(
       SnackBar(
         content: const Text('Message deleted'),
-        duration: const Duration(seconds: 4),
+        duration: const Duration(seconds: 3),
         action: SnackBarAction(
           label: 'UNDO',
           onPressed: () {
@@ -352,6 +368,129 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> {
             // Remove from pending deletions to restore in list
             setState(() {
               _pendingDeletions.remove(threadMetadata.id);
+            });
+            
+            // Show confirmation
+            scaffoldMessenger.showSnackBar(
+              const SnackBar(
+                content: Text('Deletion cancelled'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showMaypoleThreadContextMenu(
+    BuildContext context,
+    MaypoleMetaData threadMetadata,
+    String userId,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text(
+                  'Delete Conversation',
+                  style: TextStyle(color: Colors.red),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showMaypoleDeleteSnackbar(
+                    context,
+                    threadMetadata,
+                    userId,
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.cancel),
+                title: const Text('Cancel'),
+                onTap: () {
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showMaypoleDeleteSnackbar(
+    BuildContext context,
+    MaypoleMetaData threadMetadata,
+    String userId,
+  ) {
+    // Mark thread as pending deletion
+    setState(() {
+      _pendingMaypoleDeletions.add(threadMetadata.id);
+    });
+
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
+    // Schedule deletion after 3 seconds
+    final timer = Timer(const Duration(seconds: 3), () async {
+      _deletionTimers.remove(threadMetadata.id);
+      
+      try {
+        await ref.read(maypoleChatThreadServiceProvider).deleteMaypoleThreadForUser(
+          threadMetadata.id,
+          userId,
+        );
+        
+        // Dismiss the snackbar after successful deletion
+        scaffoldMessenger.hideCurrentSnackBar();
+      } catch (e) {
+        // If deletion fails, show error message and restore the thread
+        setState(() {
+          _pendingMaypoleDeletions.remove(threadMetadata.id);
+        });
+        
+        // Hide the original snackbar before showing error
+        scaffoldMessenger.hideCurrentSnackBar();
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting conversation: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        // Clean up pending deletion state after actual deletion
+        if (mounted) {
+          setState(() {
+            _pendingMaypoleDeletions.remove(threadMetadata.id);
+          });
+        }
+      }
+    });
+    
+    _deletionTimers[threadMetadata.id] = timer;
+
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: const Text('Conversation deleted'),
+        duration: const Duration(seconds: 3),
+        action: SnackBarAction(
+          label: 'UNDO',
+          onPressed: () {
+            // Cancel the deletion timer
+            _deletionTimers[threadMetadata.id]?.cancel();
+            _deletionTimers.remove(threadMetadata.id);
+            
+            // Remove from pending deletions to restore in list
+            setState(() {
+              _pendingMaypoleDeletions.remove(threadMetadata.id);
             });
             
             // Show confirmation
