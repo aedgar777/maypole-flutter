@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:maypole/core/app_session.dart';
+import 'package:maypole/core/services/fcm_service.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 
 
@@ -9,6 +10,7 @@ class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final AppSession _session = AppSession();
+  final FCMService _fcmService = FCMService();
 
   Stream<DomainUser?> get user {
     return _firebaseAuth.authStateChanges().asyncExpand((firebaseUser) {
@@ -100,6 +102,14 @@ class AuthService {
         'owner': result.user!.uid,
       });
 
+      // Setup FCM for new user
+      try {
+        await _fcmService.setupForUser(result.user!.uid);
+        debugPrint('✓ FCM initialized for new user');
+      } catch (e) {
+        debugPrint('⚠️ FCM setup failed (non-critical): $e');
+      }
+
       return result.user?.uid;
     } on FirebaseAuthException {
       rethrow;
@@ -118,6 +128,14 @@ class AuthService {
       // Fetch and set domain user
       if (result.user != null) {
         await _fetchAndSetDomainUser(result.user!.uid);
+        
+        // Setup FCM for returning user
+        try {
+          await _fcmService.setupForUser(result.user!.uid);
+          debugPrint('✓ FCM initialized for returning user');
+        } catch (e) {
+          debugPrint('⚠️ FCM setup failed (non-critical): $e');
+        }
       }
 
       return result.user?.uid;
@@ -141,6 +159,17 @@ class AuthService {
 
   Future<void> signOut() async {
     try {
+      // Cleanup FCM token before signing out
+      final userId = _firebaseAuth.currentUser?.uid;
+      if (userId != null) {
+        try {
+          await _fcmService.cleanupForUser(userId);
+          debugPrint('✓ FCM cleaned up for user');
+        } catch (e) {
+          debugPrint('⚠️ FCM cleanup failed (non-critical): $e');
+        }
+      }
+      
       await _firebaseAuth.signOut();
       _session.currentUser = null;
     } catch (e) {
@@ -187,6 +216,14 @@ class AuthService {
           .collection('usernames')
           .doc(username.toLowerCase())
           .delete();
+
+      // Cleanup FCM tokens before deleting account
+      try {
+        await _fcmService.cleanupForUser(uid);
+        debugPrint('✓ FCM cleaned up before account deletion');
+      } catch (e) {
+        debugPrint('⚠️ FCM cleanup failed (non-critical): $e');
+      }
 
       // Delete Firebase Auth account
       await user.delete();

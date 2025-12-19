@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/app_theme.dart';
+import 'package:maypole/core/utils/date_time_utils.dart';
 import 'package:maypole/core/widgets/cached_profile_avatar.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import '../../domain/direct_message.dart';
@@ -94,40 +96,6 @@ class _DmContentState extends ConsumerState<DmContent> {
     return timeDiff.inMinutes <= 2;
   }
 
-  Future<void> _deleteMessage(DirectMessage message) async {
-    // Show confirmation dialog
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Message'),
-        content: const Text('Are you sure you want to delete this message?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && mounted) {
-      try {
-        await ref
-            .read(dmViewModelProvider(widget.thread.id).notifier)
-            .deleteDmMessage(message);
-      } catch (e) {
-        if (mounted) {
-          ErrorDialog.show(context, e);
-        }
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final messagesAsyncValue = ref.watch(dmViewModelProvider(widget.thread.id));
@@ -149,6 +117,7 @@ class _DmContentState extends ConsumerState<DmContent> {
               itemBuilder: (context, index) {
                 final message = messages[index];
                 final bool isMe = message.sender == currentUser!.username;
+                final bool isDeleted = message.isDeletedFor(currentUser.firebaseID);
                 
                 // Determine if this message is grouped with adjacent messages
                 // Note: ListView is reversed, so visual "above" is index - 1, "below" is index + 1
@@ -165,9 +134,10 @@ class _DmContentState extends ConsumerState<DmContent> {
                   partnerId: partner?.id ?? '',
                   partnerUsername: partner?.username ?? '',
                   partnerProfilePicUrl: partner?.profilePicUrl ?? '',
-                  onDelete: isMe ? () => _deleteMessage(message) : null,
+                  onDelete: isMe && !isDeleted ? () => _showMessageContextMenu(context, message) : null,
                   isGroupedWithNext: isGroupedWithNext,
                   isGroupedWithPrevious: isGroupedWithPrevious,
+                  isDeleted: isDeleted,
                 );
               },
             ),
@@ -280,5 +250,81 @@ class _DmContentState extends ConsumerState<DmContent> {
         ],
       ),
     );
+  }
+
+  void _showMessageContextMenu(BuildContext context, DirectMessage message) {
+    final currentUser = AppSession().currentUser;
+    if (currentUser == null || message.id == null) return;
+
+    final formattedDateTime = DateTimeUtils.formatFullDateTime(message.timestamp);
+    final bool isMyMessage = message.sender == currentUser.username;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Display the timestamp at the top
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  formattedDateTime,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
+              // Only show delete option if it's the user's own message
+              if (isMyMessage)
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text(
+                    'Delete Message',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _deleteMessage(message);
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.cancel),
+                title: const Text('Cancel'),
+                onTap: () {
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteMessage(DirectMessage message) async {
+    final currentUser = AppSession().currentUser;
+    if (currentUser == null || message.id == null) return;
+
+    try {
+      await ref.read(dmThreadServiceProvider).deleteDmMessage(
+        widget.thread.id,
+        message.id!,
+        currentUser.firebaseID,
+        currentUser.username,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting message: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

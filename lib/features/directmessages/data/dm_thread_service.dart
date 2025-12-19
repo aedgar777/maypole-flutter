@@ -103,7 +103,7 @@ class DMThreadService {
         .limit(_messageLimit)
         .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => DirectMessage.fromMap(doc.data()))
+            .map((doc) => DirectMessage.fromMap(doc.data(), documentId: doc.id))
             .toList());
   }
 
@@ -117,7 +117,7 @@ class DMThreadService {
         .limit(_messageLimit)
         .get();
 
-    return snapshot.docs.map((doc) => DirectMessage.fromMap(doc.data())).toList();
+    return snapshot.docs.map((doc) => DirectMessage.fromMap(doc.data(), documentId: doc.id)).toList();
   }
 
   Future<void> sendDmMessage(String threadId,
@@ -140,14 +140,22 @@ class DMThreadService {
         .collection('messages')
         .add(message.toMap());
 
-    // Update thread's lastMessage and lastMessageTime
-    // Only 2 writes total now (vs 4 in old approach)!
+    // Get current hiddenFor list
+    final threadDoc = await _firestore.collection('DMThreads').doc(threadId).get();
+    final data = threadDoc.data();
+    final hiddenFor = List<String>.from(data?['hiddenFor'] ?? []);
+    
+    // Remove both users from hiddenFor list (unhide for both when message is sent)
+    hiddenFor.removeWhere((id) => id == senderId || id == recipientId);
+
+    // Update thread's lastMessage, lastMessageTime, and unhide for both users
     await _firestore
         .collection('DMThreads')
         .doc(threadId)
         .update({
       'lastMessage': message.toMap(),
       'lastMessageTime': Timestamp.fromDate(now),
+      'hiddenFor': hiddenFor,
     });
 
     debugPrint('✓ Sent DM message to thread: $threadId');
@@ -172,7 +180,10 @@ class DMThreadService {
         .handleError((error) {
       debugPrint('❌ Error in DM threads stream: $error');
       debugPrint('⚠️ This might be a missing Firestore index!');
-      debugPrint('⚠️ Run: firebase deploy --only firestore:indexes');
+      debugPrint('⚠️ Check the error message for a link to create the index');
+      debugPrint('⚠️ Or run: firebase deploy --only firestore:indexes');
+      // Re-throw to propagate to UI
+      throw error;
     })
         .map((snapshot) {
       return snapshot.docs.map((doc) {
@@ -198,6 +209,11 @@ class DMThreadService {
           
           final dmThread = DMThread.fromMap(data);
           
+          // Filter out threads that are hidden for this user
+          if (dmThread.isHiddenFor(userId)) {
+            return null;
+          }
+          
           // Get the partner (the other participant)
           final partner = dmThread.getPartner(userId);
           
@@ -222,35 +238,8 @@ class DMThreadService {
     });
   }
 
-  /// Delete a DM message
-  Future<void> deleteDmMessage(
-    String threadId,
-    DirectMessage message,
-  ) async {
-    try {
-      // Query for the message document by matching timestamp, sender, and body
-      final querySnapshot = await _firestore
-          .collection('DMThreads')
-          .doc(threadId)
-          .collection('messages')
-          .where('timestamp', isEqualTo: Timestamp.fromDate(message.timestamp))
-          .where('sender', isEqualTo: message.sender)
-          .where('body', isEqualTo: message.body)
-          .limit(1)
-          .get();
-
-      if (querySnapshot.docs.isNotEmpty) {
-        await querySnapshot.docs.first.reference.delete();
-        debugPrint('✓ Deleted DM message from thread: $threadId');
-      }
-    } catch (e) {
-      debugPrint('Error deleting DM message: $e');
-      rethrow;
-    }
-  }
-
   /// Hides a DM thread for a specific user by adding them to the hiddenFor list
-  /// The thread will no longer appear in the user's thread list
+  /// The thread will reappear when a new message is sent
   Future<void> deleteDMThreadForUser(String threadId, String userId) async {
     try {
       final threadDoc = await _firestore.collection('DMThreads').doc(threadId).get();
@@ -305,6 +294,55 @@ class DMThreadService {
     } catch (e) {
       debugPrint('Error sending DM notification: $e');
       // Don't throw - we don't want to fail message sending if notifications fail
+    }
+  }
+
+  /// Deletes a DM message for a specific user by adding them to deletedFor list
+  /// Only the sender can delete their own messages
+  /// The message will be displayed as "message deleted" instead of disappearing
+  Future<void> deleteDmMessage(
+    String threadId,
+    String messageId,
+    String userId,
+    String username,
+  ) async {
+    try {
+      final messageRef = _firestore
+          .collection('DMThreads')
+          .doc(threadId)
+          .collection('messages')
+          .doc(messageId);
+
+      final messageDoc = await messageRef.get();
+
+      if (!messageDoc.exists) {
+        debugPrint('Message $messageId does not exist');
+        return;
+      }
+
+      final data = messageDoc.data()!;
+      final sender = data['sender'] as String?;
+
+      // Only allow the sender to delete their own message
+      if (sender != username) {
+        throw Exception('You can only delete your own messages');
+      }
+
+      final deletedFor = List<String>.from(data['deletedFor'] ?? []);
+
+      // Add user to deletedFor list if not already there
+      if (!deletedFor.contains(userId)) {
+        deletedFor.add(userId);
+
+        await messageRef.update({
+          'deletedFor': deletedFor,
+        });
+
+        debugPrint('✓ Deleted DM message $messageId for user $userId');
+      }
+    } catch (e) {
+      debugPrint('❌ Error deleting DM message: $e');
+      rethrow;
     }
   }
 }

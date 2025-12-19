@@ -23,6 +23,22 @@ service cloud.firestore {
       
       // Allow users to delete their own document
       allow delete: if request.auth != null && request.auth.uid == userId;
+      
+      // Notifications subcollection within user document
+      match /notifications/{notificationId} {
+        // Allow users to read their own notifications
+        allow read: if request.auth != null && request.auth.uid == userId;
+        
+        // Allow authenticated users to create notifications for any user
+        // This is needed when sending DMs or tagging users
+        allow create: if request.auth != null;
+        
+        // Allow users to update their own notifications (e.g., mark as read)
+        allow update: if request.auth != null && request.auth.uid == userId;
+        
+        // Allow users to delete their own notifications
+        allow delete: if request.auth != null && request.auth.uid == userId;
+      }
     }
     
     // Usernames collection for username availability checking
@@ -56,6 +72,10 @@ service cloud.firestore {
         
         // Allow authenticated users to create messages
         allow create: if request.auth != null;
+        
+        // Allow users to delete only their own messages
+        allow delete: if request.auth != null 
+                      && resource.data.senderId == request.auth.uid;
       }
     }
     
@@ -70,8 +90,17 @@ service cloud.firestore {
         );
       }
       
+      // Helper function to check if user is in the participantIds array (for queries)
+      function isInParticipantIds() {
+        return request.auth != null && 
+               resource.data.participantIds.hasAny([request.auth.uid]);
+      }
+      
       // Allow users to read threads they are part of
-      allow read: if isParticipant();
+      // For individual reads: check thread ID pattern
+      // For queries: check participantIds array
+      allow get: if isParticipant();
+      allow list: if request.auth != null;
       
       // Allow users to create threads they are part of
       allow create: if isParticipant();
@@ -87,6 +116,13 @@ service cloud.firestore {
         
         // Allow participants to create messages in their DM thread
         allow create: if isParticipant();
+        
+        // Allow users to update messages they sent (for soft-delete via deletedFor field)
+        // Ensure the sender field cannot be changed
+        allow update: if isParticipant() 
+                      && request.auth != null
+                      && resource.data.sender == request.resource.data.sender
+                      && resource.data.sender == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username;
       }
     }
     

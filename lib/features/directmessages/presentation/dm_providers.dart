@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/features/directmessages/data/dm_thread_service.dart';
 import 'package:maypole/features/directmessages/presentation/viewmodels/dm_viewmodel.dart';
-import 'package:maypole/features/identity/auth_providers.dart';
 
 import '../domain/direct_message.dart';
 import '../domain/dm_thread.dart';

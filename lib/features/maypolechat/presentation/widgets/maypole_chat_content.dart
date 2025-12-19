@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
+import 'package:maypole/core/utils/date_time_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/domain/maypole_message.dart';
@@ -111,39 +113,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     _messageFocusNode.requestFocus();
   }
 
-  Future<void> _deleteMessage(MaypoleMessage message) async {
-    // Show confirmation dialog
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Message'),
-        content: const Text('Are you sure you want to delete this message?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
 
-    if (confirmed == true && mounted) {
-      try {
-        await ref
-            .read(maypoleChatViewModelProvider(widget.threadId).notifier)
-            .deleteMessage(message);
-      } catch (e) {
-        if (mounted) {
-          ErrorDialog.show(context, e);
-        }
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -166,24 +136,30 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                 final isOwnMessage = currentUser != null && 
                     message.senderId == currentUser.firebaseID;
                 
-                return Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8.0,
-                    vertical: 4.0,
-                  ),
-                  child: MessageWithMentions(
-                    senderName: message.senderName,
-                    senderId: message.senderId,
-                    senderProfilePictureUrl: message.senderProfilePictureUrl,
-                    body: message.body,
-                    timestamp: message.timestamp,
-                    isOwnMessage: isOwnMessage,
-                    onTagUser: !isOwnMessage 
-                        ? () => _tagUser(message.senderName, message.senderId)
-                        : null,
-                    onDelete: isOwnMessage
-                        ? () => _deleteMessage(message)
-                        : null,
+                return GestureDetector(
+                  onLongPress: () {
+                    HapticFeedback.mediumImpact();
+                    _showMessageContextMenu(context, message);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0,
+                      vertical: 4.0,
+                    ),
+                    child: MessageWithMentions(
+                      senderName: message.senderName,
+                      senderId: message.senderId,
+                      senderProfilePictureUrl: message.senderProfilePictureUrl,
+                      body: message.body,
+                      timestamp: message.timestamp,
+                      isOwnMessage: isOwnMessage,
+                      onTagUser: !isOwnMessage 
+                          ? () => _tagUser(message.senderName, message.senderId)
+                          : null,
+                      onDelete: isOwnMessage
+                          ? () => _deleteMessage(message)
+                          : null,
+                    ),
                   ),
                 );
               },
@@ -256,5 +232,80 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
         ],
       ),
     );
+  }
+
+  void _showMessageContextMenu(BuildContext context, MaypoleMessage message) {
+    final currentUser = AppSession().currentUser;
+    if (currentUser == null || message.id == null) return;
+
+    final formattedDateTime = DateTimeUtils.formatFullDateTime(message.timestamp);
+    final bool isMyMessage = message.senderId == currentUser.firebaseID;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Display the timestamp at the top
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  formattedDateTime,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
+              // Only show delete option if it's the user's own message
+              if (isMyMessage)
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text(
+                    'Delete Message',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _deleteMessage(message);
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.cancel),
+                title: const Text('Cancel'),
+                onTap: () {
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteMessage(MaypoleMessage message) async {
+    final currentUser = AppSession().currentUser;
+    if (currentUser == null || message.id == null) return;
+
+    try {
+      await ref.read(maypoleChatThreadServiceProvider).deleteMaypoleMessage(
+        widget.threadId,
+        message.id!,
+        currentUser.firebaseID,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting message: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

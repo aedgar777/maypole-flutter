@@ -132,22 +132,25 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> {
         final thread = filteredMaypoleThreads[index];
         final isSelected = widget.selectedThreadId == thread.id && widget.isMaypoleThread;
 
-        return ListTile(
-          selected: isSelected,
-          selectedTileColor: Colors.grey.withValues(alpha: 0.15),
-          leading: const Icon(Icons.location_on),
-          title: Text(thread.name),
-          onTap: () {
-            // Allow the ripple animation to complete before navigating
-            Future.microtask(() => widget.onMaypoleThreadSelected(thread.id, thread.name));
-          },
-          onLongPress: () {
-            _showMaypoleThreadContextMenu(
-              context,
-              thread,
-              widget.user.firebaseID,
-            );
-          },
+        return Material(
+          color: Colors.transparent,
+          child: ListTile(
+            selected: isSelected,
+            selectedTileColor: Colors.grey.withValues(alpha: 0.15),
+            leading: const Icon(Icons.location_on),
+            title: Text(thread.name),
+            onTap: () {
+              // Allow the ripple animation to complete before navigating
+              Future.microtask(() => widget.onMaypoleThreadSelected(thread.id, thread.name));
+            },
+            onLongPress: () {
+              _showMaypoleThreadContextMenu(
+                context,
+                thread,
+                widget.user.firebaseID,
+              );
+            },
+          ),
         );
       },
     );
@@ -192,38 +195,71 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> {
               threadMetadata.lastMessageTime,
             );
 
-            return ListTile(
-              selected: isSelected,
-              selectedTileColor: Colors.grey.withValues(alpha: 0.15),
-              leading: CachedProfileAvatar(imageUrl: threadMetadata.partnerProfpic),
-              title: Text(threadMetadata.partnerName),
-              subtitle: Text(
-                formattedTimestamp,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.5),
+            return Material(
+              color: Colors.transparent,
+              child: ListTile(
+                selected: isSelected,
+                selectedTileColor: Colors.grey.withValues(alpha: 0.15),
+                leading: CachedProfileAvatar(imageUrl: threadMetadata.partnerProfpic),
+                title: Text(threadMetadata.partnerName),
+                subtitle: Text(
+                  formattedTimestamp,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.5),
+                  ),
                 ),
+                onTap: () {
+                  // Allow the ripple animation to complete before navigating
+                  Future.microtask(() => widget.onDmThreadSelected(threadMetadata.id));
+                },
+                onLongPress: () {
+                  _showThreadContextMenu(
+                    context,
+                    threadMetadata,
+                    userId,
+                  );
+                },
               ),
-              onTap: () {
-                // Allow the ripple animation to complete before navigating
-                Future.microtask(() => widget.onDmThreadSelected(threadMetadata.id));
-              },
-              onLongPress: () {
-                _showThreadContextMenu(
-                  context,
-                  threadMetadata,
-                  userId,
-                );
-              },
             );
           },
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) {
+        debugPrint('❌ DM List Error: $error');
+        debugPrint('Stack trace: $stack');
+        
+        // Check if this is a Firestore index error
+        final errorMsg = error.toString();
+        final isIndexError = errorMsg.contains('index') || 
+                            errorMsg.contains('FAILED_PRECONDITION');
+        
         return Center(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Text('Error loading DMs: $error', textAlign: TextAlign.center),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  isIndexError 
+                    ? 'Database index required\n\nCheck the console for a link to create the missing Firestore index.'
+                    : 'Error loading DMs',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '$error',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },

@@ -10,7 +10,7 @@
         "firebase-debug.*.log",
         "__pycache__"
       ],
-      "runtime": "python313"
+      "runtime": "python312"
     }
   ],
   "hosting": {

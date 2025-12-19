@@ -43,7 +43,7 @@ class MaypoleChatService {
         .snapshots()
         .map((snapshot) {
       final messages = snapshot.docs
-          .map((doc) => MaypoleMessage.fromMap(doc.data()))
+          .map((doc) => MaypoleMessage.fromMap(doc.data(), documentId: doc.id))
           .toList();
       return _filterBlockedMessages(messages);
     });
@@ -61,7 +61,7 @@ class MaypoleChatService {
         .get();
 
     final messages = snapshot.docs
-        .map((doc) => MaypoleMessage.fromMap(doc.data()))
+        .map((doc) => MaypoleMessage.fromMap(doc.data(), documentId: doc.id))
         .toList();
     return _filterBlockedMessages(messages);
   }
@@ -268,6 +268,77 @@ class MaypoleChatService {
     } catch (e) {
       debugPrint('Error sending tag notifications: $e');
       // Don't throw - we don't want to fail message sending if notifications fail
+    }
+  }
+
+  /// Removes a maypole thread from the user's list of maypole chats
+  /// This only removes it from the user's personal list, not from Firebase
+  Future<void> deleteMaypoleThreadForUser(String threadId, String userId) async {
+    try {
+      final userRef = _firestore.collection('users').doc(userId);
+      final userDoc = await userRef.get();
+      
+      if (!userDoc.exists) {
+        debugPrint('User $userId does not exist');
+        return;
+      }
+      
+      final data = userDoc.data()!;
+      final maypoleChatThreads = List<Map<String, dynamic>>.from(
+        data['maypoleChatThreads'] ?? []
+      );
+      
+      // Remove the thread with matching id
+      maypoleChatThreads.removeWhere((thread) => thread['id'] == threadId);
+      
+      await userRef.update({
+        'maypoleChatThreads': maypoleChatThreads,
+      });
+      
+      debugPrint('✓ Removed maypole thread $threadId from user $userId\'s list');
+    } catch (e) {
+      debugPrint('❌ Error removing maypole thread from user: $e');
+      rethrow;
+    }
+  }
+
+  /// Completely deletes a maypole message from Firebase
+  /// Only the sender can delete their own messages
+  /// The message is removed for all users in the maypole chat
+  Future<void> deleteMaypoleMessage(
+    String threadId,
+    String messageId,
+    String userId,
+  ) async {
+    try {
+      final messageRef = _firestore
+          .collection('maypoles')
+          .doc(threadId)
+          .collection('messages')
+          .doc(messageId);
+
+      final messageDoc = await messageRef.get();
+
+      if (!messageDoc.exists) {
+        debugPrint('Message $messageId does not exist');
+        return;
+      }
+
+      final data = messageDoc.data()!;
+      final senderId = data['senderId'] as String?;
+
+      // Only allow the sender to delete their own message
+      if (senderId != userId) {
+        throw Exception('You can only delete your own messages');
+      }
+
+      // Permanently delete the message from Firebase
+      await messageRef.delete();
+
+      debugPrint('✓ Permanently deleted maypole message $messageId');
+    } catch (e) {
+      debugPrint('❌ Error deleting maypole message: $e');
+      rethrow;
     }
   }
 }
