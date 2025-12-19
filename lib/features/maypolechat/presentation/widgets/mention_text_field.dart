@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/domain/user_mention.dart';
@@ -126,14 +127,15 @@ class _MentionTextFieldState extends ConsumerState<MentionTextField> {
             child: CompositedTransformFollower(
               link: _layerLink,
               showWhenUnlinked: false,
-              offset: const Offset(0, -8),
-              targetAnchor: Alignment.bottomLeft,
+              offset: const Offset(0, 8),
+              targetAnchor: Alignment.topLeft,
+              followerAnchor: Alignment.bottomLeft,
               child: Material(
                 elevation: 4.0,
                 borderRadius: BorderRadius.circular(8),
                 child: Consumer(
                   builder: (context, ref, child) {
-                    final usersAsyncValue = ref.watch(
+                    final users = ref.watch(
                       userSearchProvider(
                         UserSearchParams(
                           threadId: widget.threadId,
@@ -142,83 +144,50 @@ class _MentionTextFieldState extends ConsumerState<MentionTextField> {
                       ),
                     );
 
-                    return usersAsyncValue.when(
-                      data: (users) {
-                        if (users.isEmpty) {
-                          return Container(
-                            padding: const EdgeInsets.all(16),
-                            child: Text(
-                              AppLocalizations.of(context)!.noUsersFound,
-                              style: Theme
-                                  .of(context)
-                                  .textTheme
-                                  .bodyMedium,
+                    if (users.isEmpty) {
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          AppLocalizations.of(context)!.noUsersFound,
+                          style: Theme
+                              .of(context)
+                              .textTheme
+                              .bodyMedium,
+                        ),
+                      );
+                    }
+
+                    return ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        padding: EdgeInsets.zero,
+                        itemCount: users.length,
+                        itemBuilder: (context, index) {
+                          final user = users[index];
+                          final isSelected = index == _selectedUserIndex;
+
+                          return ListTile(
+                            selected: isSelected,
+                            selectedTileColor: Theme
+                                .of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.1),
+                            leading: CircleAvatar(
+                              backgroundImage: user.profilePictureUrl
+                                  .isNotEmpty
+                                  ? NetworkImage(user.profilePictureUrl)
+                                  : null,
+                              child: user.profilePictureUrl.isEmpty
+                                  ? Text(user.username[0].toUpperCase())
+                                  : null,
                             ),
+                            title: Text(user.username),
+                            onTap: () => _selectUser(user),
                           );
-                        }
-
-                        return ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 200),
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            padding: EdgeInsets.zero,
-                            itemCount: users.length,
-                            itemBuilder: (context, index) {
-                              final user = users[index];
-                              final isSelected = index == _selectedUserIndex;
-
-                              return ListTile(
-                                selected: isSelected,
-                                selectedTileColor: Theme
-                                    .of(context)
-                                    .colorScheme
-                                    .primary
-                                    .withValues(alpha: 0.1),
-                                leading: CircleAvatar(
-                                  backgroundImage: user.profilePictureUrl
-                                      .isNotEmpty
-                                      ? NetworkImage(user.profilePictureUrl)
-                                      : null,
-                                  child: user.profilePictureUrl.isEmpty
-                                      ? Text(user.username[0].toUpperCase())
-                                      : null,
-                                ),
-                                title: Text(user.username),
-                                onTap: () => _selectUser(user),
-                              );
-                            },
-                          ),
-                        );
-                      },
-                      loading: () =>
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            child: const Center(
-                              child: SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2),
-                              ),
-                            ),
-                          ),
-                      error: (error, stack) {
-                        // Display error dialog after build phase
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          ErrorDialog.show(context, error);
-                        });
-                        // Show loading indicator while error dialog is being prepared
-                        return Container(
-                          padding: const EdgeInsets.all(16),
-                          child: const Center(
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          ),
-                        );
-                      },
+                        },
+                      ),
                     );
                   },
                 ),
@@ -290,9 +259,22 @@ class _MentionTextFieldState extends ConsumerState<MentionTextField> {
                 .onSurface
                 .withValues(alpha: 0.3),
           ),
-          border: const OutlineInputBorder(),
+          filled: true,
+          fillColor: lightPurple,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: BorderSide.none,
+          ),
           contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
+            horizontal: 16,
             vertical: 12,
           ),
         ),

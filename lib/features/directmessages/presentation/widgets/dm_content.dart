@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
+import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
 import 'package:maypole/core/widgets/cached_profile_avatar.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import '../../domain/direct_message.dart';
 import '../../domain/dm_thread.dart';
 import '../dm_providers.dart';
+import 'dm_message_bubble.dart';
 
 /// The content of a DM screen without the Scaffold wrapper.
 /// This allows it to be embedded in either a full-screen route (mobile)
@@ -67,6 +69,33 @@ class _DmContentState extends ConsumerState<DmContent> {
     }
   }
 
+  /// Determines if a message should be grouped with an adjacent message
+  /// Messages are grouped if they're from the same sender and sent within 2 minutes
+  bool _isGroupedWith(
+    List<DirectMessage> messages,
+    int currentIndex,
+    int adjacentIndex,
+    bool isCurrentUserMessage,
+  ) {
+    if (adjacentIndex < 0 || adjacentIndex >= messages.length) {
+      return false;
+    }
+
+    final currentMessage = messages[currentIndex];
+    final adjacentMessage = messages[adjacentIndex];
+    final currentUser = AppSession().currentUser;
+
+    if (currentUser == null) return false;
+
+    // Check if both messages are from the same sender
+    final isSameSender = currentMessage.sender == adjacentMessage.sender;
+    if (!isSameSender) return false;
+
+    // Check if messages are within 2 minutes of each other
+    final timeDiff = currentMessage.timestamp.difference(adjacentMessage.timestamp).abs();
+    return timeDiff.inMinutes <= 2;
+  }
+
   @override
   Widget build(BuildContext context) {
     final messagesAsyncValue = ref.watch(dmViewModelProvider(widget.thread.id));
@@ -90,39 +119,25 @@ class _DmContentState extends ConsumerState<DmContent> {
                 final bool isMe = message.sender == currentUser!.username;
                 final bool isDeleted = message.isDeletedFor(currentUser.firebaseID);
                 
-                return GestureDetector(
-                  onLongPress: !isDeleted ? () {
-                    HapticFeedback.mediumImpact();
-                    _showMessageContextMenu(context, message);
-                  } : null,
-                  child: Align(
-                    alignment: isMe
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isDeleted 
-                            ? Colors.transparent
-                            : (isMe ? Colors.blue[200] : Colors.grey[300]),
-                        border: isDeleted 
-                            ? Border.all(
-                                color: Colors.grey.withValues(alpha: 0.3),
-                                width: 1,
-                              )
-                            : null,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.all(12),
-                      margin: const EdgeInsets.all(4),
-                      child: Text(
-                        isDeleted ? 'message deleted' : message.body,
-                        style: TextStyle(
-                          fontStyle: isDeleted ? FontStyle.italic : FontStyle.normal,
-                          color: isDeleted ? Colors.grey.withValues(alpha: 0.6) : null,
-                        ),
-                      ),
-                    ),
-                  ),
+                // Determine if this message is grouped with adjacent messages
+                // Note: ListView is reversed, so visual "above" is index - 1, "below" is index + 1
+                final bool isGroupedWithNext = _isGroupedWith(
+                  messages, index, index - 1, isMe,
+                );
+                final bool isGroupedWithPrevious = _isGroupedWith(
+                  messages, index, index + 1, isMe,
+                );
+                
+                return DmMessageBubble(
+                  message: message,
+                  isOwnMessage: isMe,
+                  partnerId: partner?.id ?? '',
+                  partnerUsername: partner?.username ?? '',
+                  partnerProfilePicUrl: partner?.profilePicUrl ?? '',
+                  onDelete: isMe && !isDeleted ? () => _showMessageContextMenu(context, message) : null,
+                  isGroupedWithNext: isGroupedWithNext,
+                  isGroupedWithPrevious: isGroupedWithPrevious,
+                  isDeleted: isDeleted,
                 );
               },
             ),
@@ -204,6 +219,24 @@ class _DmContentState extends ConsumerState<DmContent> {
                   color: Theme.of(
                     context,
                   ).colorScheme.onSurface.withValues(alpha: 0.3),
+                ),
+                filled: true,
+                fillColor: lightPurple,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
                 ),
               ),
               onSubmitted: AppConfig.isWideScreen ? (_) => sendMessage() : null,

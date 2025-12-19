@@ -139,7 +139,10 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> {
             selectedTileColor: Colors.grey.withValues(alpha: 0.15),
             leading: const Icon(Icons.location_on),
             title: Text(thread.name),
-            onTap: () => widget.onMaypoleThreadSelected(thread.id, thread.name),
+            onTap: () {
+              // Allow the ripple animation to complete before navigating
+              Future.microtask(() => widget.onMaypoleThreadSelected(thread.id, thread.name));
+            },
             onLongPress: () {
               _showMaypoleThreadContextMenu(
                 context,
@@ -205,7 +208,10 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> {
                     color: Colors.white.withOpacity(0.5),
                   ),
                 ),
-                onTap: () => widget.onDmThreadSelected(threadMetadata.id),
+                onTap: () {
+                  // Allow the ripple animation to complete before navigating
+                  Future.microtask(() => widget.onDmThreadSelected(threadMetadata.id));
+                },
                 onLongPress: () {
                   _showThreadContextMenu(
                     context,

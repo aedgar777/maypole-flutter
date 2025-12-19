@@ -190,6 +190,12 @@ class DMThreadService {
         try {
           final data = doc.data();
           
+          // Check if this thread is hidden for the current user
+          final hiddenFor = List<String>.from(data['hiddenFor'] ?? []);
+          if (hiddenFor.contains(userId)) {
+            return null;
+          }
+          
           // Check if this is an old-format thread (missing participants field)
           if (!data.containsKey('participants') || data['participants'] == null) {
             debugPrint('⚠️ Skipping old-format DM thread ${doc.id} - needs migration');

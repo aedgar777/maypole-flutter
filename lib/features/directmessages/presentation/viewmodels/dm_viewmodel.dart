@@ -74,6 +74,17 @@ class DmViewModel extends AsyncNotifier<List<DirectMessage>> {
       _isLoadingMore = false;
     }
   }
+
+  Future<void> deleteDmMessage(DirectMessage message, String userId, String username) async {
+    try {
+      if (message.id == null) {
+        throw Exception('Message ID is required for deletion');
+      }
+      await _threadService.deleteDmMessage(_threadId, message.id!, userId, username);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
 }
 
 // Provider to hold the threadId parameter

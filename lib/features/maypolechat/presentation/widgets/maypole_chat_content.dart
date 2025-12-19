@@ -7,6 +7,7 @@ import 'package:maypole/core/utils/date_time_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/domain/maypole_message.dart';
+import 'package:maypole/features/maypolechat/domain/user_mention.dart';
 import 'package:maypole/features/maypolechat/presentation/viewmodels/mention_controller.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/mention_text_field.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/message_with_mentions.dart';
@@ -71,6 +72,49 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     }
   }
 
+  void _tagUser(String username, String userId) {
+    // Insert @username at the current cursor position or at the end
+    final currentText = _messageController.text;
+    final currentSelection = _messageController.selection;
+    
+    String tagText = '@$username ';
+    int insertPosition;
+    
+    if (currentSelection.isValid) {
+      insertPosition = currentSelection.baseOffset;
+    } else {
+      insertPosition = currentText.length;
+    }
+    
+    // Insert tag at the cursor position
+    final newText = currentText.substring(0, insertPosition) +
+        tagText +
+        currentText.substring(insertPosition);
+    
+    _messageController.text = newText;
+    
+    // Move cursor after the tag
+    final newCursorPosition = insertPosition + tagText.length;
+    _messageController.selection = TextSelection.fromPosition(
+      TextPosition(offset: newCursorPosition),
+    );
+    
+    // Add the mention to the controller
+    ref.read(mentionControllerProvider.notifier).addMention(
+      UserMention(
+        userId: userId,
+        username: username,
+        startIndex: insertPosition,
+        endIndex: insertPosition + '@$username'.length,
+      ),
+    );
+    
+    // Focus the text field
+    _messageFocusNode.requestFocus();
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     final messagesAsyncValue = ref.watch(
@@ -89,6 +133,9 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
               itemCount: messages.length,
               itemBuilder: (context, index) {
                 final message = messages[index];
+                final isOwnMessage = currentUser != null && 
+                    message.senderId == currentUser.firebaseID;
+                
                 return GestureDetector(
                   onLongPress: () {
                     HapticFeedback.mediumImpact();
@@ -105,6 +152,13 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                       senderProfilePictureUrl: message.senderProfilePictureUrl,
                       body: message.body,
                       timestamp: message.timestamp,
+                      isOwnMessage: isOwnMessage,
+                      onTagUser: !isOwnMessage 
+                          ? () => _tagUser(message.senderName, message.senderId)
+                          : null,
+                      onDelete: isOwnMessage
+                          ? () => _deleteMessage(message)
+                          : null,
                     ),
                   ),
                 );
