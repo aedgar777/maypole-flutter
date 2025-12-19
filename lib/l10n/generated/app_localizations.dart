@@ -583,6 +583,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{username} has been unblocked'**
   String userUnblocked(String username);
+
+  /// Error message when email client cannot be opened
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open email client'**
+  String get errorOpeningEmail;
 }
 
 class _AppLocalizationsDelegate

@@ -368,5 +368,9 @@
         "type": "String"
       }
     }
+  },
+  "errorOpeningEmail": "Could not open email client",
+  "@errorOpeningEmail": {
+    "description": "Error message when email client cannot be opened"
   }
 }

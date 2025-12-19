@@ -7,6 +7,7 @@ import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/identity/auth_providers.dart';
 import 'package:maypole/features/settings/settings_providers.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -62,6 +63,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       if (mounted) {
 
+      }
+    } catch (e) {
+      if (mounted) {
+        ErrorDialog.show(context, e);
+      }
+    }
+  }
+
+  Future<void> _openHelpAndFeedback() async {
+    try {
+      final Uri emailUri = Uri(
+        scheme: 'mailto',
+        path: 'info@maypole.app',
+        query: 'body=Describe your issue:',
+      );
+
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.errorOpeningEmail),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -183,12 +210,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   leading: const Icon(Icons.help_outline),
                   title: Text(l10n.help),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    // TODO: Navigate to help
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.comingSoon)),
-                    );
-                  },
+                  onTap: _openHelpAndFeedback,
                 ),
                 Divider(color: Colors.white.withValues(alpha: 0.1)),
                 ListTile(
