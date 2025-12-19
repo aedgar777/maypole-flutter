@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 @immutable
 class MaypoleMessage {
+  final String? id; // Firestore document ID
   final String senderName;
   final String senderId;
   final String senderProfilePictureUrl;
@@ -12,6 +13,7 @@ class MaypoleMessage {
   final List<String> taggedUserIds; // New field for multiple mentions
 
   const MaypoleMessage({
+    this.id,
     required this.senderName,
     required this.senderId,
     this.senderProfilePictureUrl = '',
@@ -21,8 +23,9 @@ class MaypoleMessage {
     this.taggedUserIds = const [],
   });
 
-  factory MaypoleMessage.fromMap(Map<String, dynamic> map) {
+  factory MaypoleMessage.fromMap(Map<String, dynamic> map, {String? documentId}) {
     return MaypoleMessage(
+      id: documentId,
       senderName:
           map['senderName'] as String? ?? map['sender'] as String? ?? '',
       senderId: map['senderId'] as String? ?? '',

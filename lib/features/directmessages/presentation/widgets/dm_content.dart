@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
+import 'package:maypole/core/utils/date_time_utils.dart';
 import 'package:maypole/core/widgets/cached_profile_avatar.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
+import '../../domain/direct_message.dart';
 import '../../domain/dm_thread.dart';
 import '../dm_providers.dart';
 
@@ -85,18 +88,40 @@ class _DmContentState extends ConsumerState<DmContent> {
               itemBuilder: (context, index) {
                 final message = messages[index];
                 final bool isMe = message.sender == currentUser!.username;
-                return Align(
-                  alignment: isMe
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isMe ? Colors.blue[200] : Colors.grey[300],
-                      borderRadius: BorderRadius.circular(8),
+                final bool isDeleted = message.isDeletedFor(currentUser.firebaseID);
+                
+                return GestureDetector(
+                  onLongPress: !isDeleted ? () {
+                    HapticFeedback.mediumImpact();
+                    _showMessageContextMenu(context, message);
+                  } : null,
+                  child: Align(
+                    alignment: isMe
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isDeleted 
+                            ? Colors.transparent
+                            : (isMe ? Colors.blue[200] : Colors.grey[300]),
+                        border: isDeleted 
+                            ? Border.all(
+                                color: Colors.grey.withValues(alpha: 0.3),
+                                width: 1,
+                              )
+                            : null,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.all(4),
+                      child: Text(
+                        isDeleted ? 'message deleted' : message.body,
+                        style: TextStyle(
+                          fontStyle: isDeleted ? FontStyle.italic : FontStyle.normal,
+                          color: isDeleted ? Colors.grey.withValues(alpha: 0.6) : null,
+                        ),
+                      ),
                     ),
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.all(4),
-                    child: Text(message.body),
                   ),
                 );
               },
@@ -192,5 +217,81 @@ class _DmContentState extends ConsumerState<DmContent> {
         ],
       ),
     );
+  }
+
+  void _showMessageContextMenu(BuildContext context, DirectMessage message) {
+    final currentUser = AppSession().currentUser;
+    if (currentUser == null || message.id == null) return;
+
+    final formattedDateTime = DateTimeUtils.formatFullDateTime(message.timestamp);
+    final bool isMyMessage = message.sender == currentUser.username;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Display the timestamp at the top
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  formattedDateTime,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
+              // Only show delete option if it's the user's own message
+              if (isMyMessage)
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text(
+                    'Delete Message',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _deleteMessage(message);
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.cancel),
+                title: const Text('Cancel'),
+                onTap: () {
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteMessage(DirectMessage message) async {
+    final currentUser = AppSession().currentUser;
+    if (currentUser == null || message.id == null) return;
+
+    try {
+      await ref.read(dmThreadServiceProvider).deleteDmMessage(
+        widget.thread.id,
+        message.id!,
+        currentUser.firebaseID,
+        currentUser.username,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting message: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

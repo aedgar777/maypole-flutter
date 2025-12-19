@@ -133,10 +133,17 @@ def send_notification(event: firestore_fn.Event[firestore_fn.DocumentSnapshot]) 
             return
 
         user_data = user_doc.to_dict()
-        fcm_token = user_data.get('fcmToken')
-
-        if not fcm_token:
-            print(f"User {user_id} has no FCM token")
+        
+        # Support both single token (old format) and multiple tokens (new format)
+        fcm_tokens = user_data.get('fcmTokens', [])
+        if not fcm_tokens:
+            # Fall back to old single token format
+            fcm_token = user_data.get('fcmToken')
+            if fcm_token:
+                fcm_tokens = [fcm_token]
+        
+        if not fcm_tokens:
+            print(f"User {user_id} has no FCM tokens")
             return
 
         # Prepare the notification based on type
@@ -165,19 +172,80 @@ def send_notification(event: firestore_fn.Event[firestore_fn.DocumentSnapshot]) 
                 'senderName': sender_name,
             }
 
-        # Create the FCM message
-        message = messaging.Message(
-            notification=messaging.Notification(
-                title=title,
-                body=display_body,
-            ),
-            data=data,
-            token=fcm_token,
-        )
+        # Send notification to all devices
+        success_count = 0
+        failed_tokens = []
+        
+        for token in fcm_tokens:
+            try:
+                # Configure platform-specific options for notification grouping
+                android_config = messaging.AndroidConfig(
+                    notification=messaging.AndroidNotification(
+                        # Group notifications by thread for stacking
+                        tag=thread_id,  # Same tag groups notifications together
+                        # Notification channel for DMs vs Tags
+                        channel_id='dm_messages' if notification_type == 'dm' else 'tag_mentions',
+                        # Show notification even if app is in foreground
+                        priority='high',
+                        # Default sound and vibration
+                        default_sound=True,
+                        default_vibrate_timings=True,
+                    ),
+                    # Collapse key for grouping (older Android versions)
+                    collapse_key=thread_id,
+                )
+                
+                # iOS configuration for notification grouping
+                apns_config = messaging.APNSConfig(
+                    payload=messaging.APNSPayload(
+                        aps=messaging.Aps(
+                            # Thread ID for grouping notifications
+                            thread_id=thread_id,
+                            # Badge increment
+                            badge=1,
+                            # Sound
+                            sound='default',
+                            # Show as alert
+                            alert=messaging.ApsAlert(
+                                title=title,
+                                body=display_body,
+                            ),
+                        ),
+                    ),
+                )
+                
+                # Create the FCM message with platform-specific configs
+                message = messaging.Message(
+                    notification=messaging.Notification(
+                        title=title,
+                        body=display_body,
+                    ),
+                    data=data,
+                    android=android_config,
+                    apns=apns_config,
+                    token=token,
+                )
 
-        # Send the message
-        response = messaging.send(message)
-        print(f"Successfully sent {notification_type} notification to {user_id}: {response}")
+                # Send the message
+                response = messaging.send(message)
+                print(f"Successfully sent {notification_type} notification to {user_id} (token: {token[:10]}...): {response}")
+                success_count += 1
+            except messaging.UnregisteredError:
+                # Token is no longer valid, mark for removal
+                print(f"Token {token[:10]}... is unregistered, marking for removal")
+                failed_tokens.append(token)
+            except Exception as e:
+                print(f"Error sending to token {token[:10]}...: {str(e)}")
+                failed_tokens.append(token)
+        
+        # Remove invalid tokens
+        if failed_tokens:
+            user_ref.update({
+                'fcmTokens': firestore.ArrayRemove(failed_tokens)
+            })
+            print(f"Removed {len(failed_tokens)} invalid FCM tokens for user {user_id}")
+        
+        print(f"Sent notification to {success_count}/{len(fcm_tokens)} devices for user {user_id}")
 
     except Exception as e:
         print(f"Error sending notification: {str(e)}")

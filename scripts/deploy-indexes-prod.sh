@@ -17,10 +17,10 @@ fi
 
 echo ""
 echo "🚀 Deploying Firestore indexes to PROD..."
-firebase deploy --only firestore:indexes --project maypole-prod
+firebase deploy --only firestore:indexes --project maypole-flutter-ce6c3
 
 echo ""
 echo "✅ Deployment complete!"
 echo ""
 echo "⏳ Note: Indexes may take a few minutes to build."
-echo "   Check status at: https://console.firebase.google.com/project/maypole-prod/firestore/indexes"
+echo "   Check status at: https://console.firebase.google.com/project/maypole-flutter-ce6c3/firestore/indexes"
