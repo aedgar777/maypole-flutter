@@ -271,37 +271,6 @@ class MaypoleChatService {
     }
   }
 
-  /// Removes a maypole thread from the user's list of maypole chats
-  /// This only removes it from the user's personal list, not from Firebase
-  Future<void> deleteMaypoleThreadForUser(String threadId, String userId) async {
-    try {
-      final userRef = _firestore.collection('users').doc(userId);
-      final userDoc = await userRef.get();
-      
-      if (!userDoc.exists) {
-        debugPrint('User $userId does not exist');
-        return;
-      }
-      
-      final data = userDoc.data()!;
-      final maypoleChatThreads = List<Map<String, dynamic>>.from(
-        data['maypoleChatThreads'] ?? []
-      );
-      
-      // Remove the thread with matching id
-      maypoleChatThreads.removeWhere((thread) => thread['id'] == threadId);
-      
-      await userRef.update({
-        'maypoleChatThreads': maypoleChatThreads,
-      });
-      
-      debugPrint('✓ Removed maypole thread $threadId from user $userId\'s list');
-    } catch (e) {
-      debugPrint('❌ Error removing maypole thread from user: $e');
-      rethrow;
-    }
-  }
-
   /// Completely deletes a maypole message from Firebase
   /// Only the sender can delete their own messages
   /// The message is removed for all users in the maypole chat
