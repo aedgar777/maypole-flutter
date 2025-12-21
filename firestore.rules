@@ -43,8 +43,8 @@ service cloud.firestore {
     
     // Usernames collection for username availability checking
     match /usernames/{username} {
-      // Allow anyone to read username documents (they only contain minimal data)
-      allow read: if true;
+      // FIXED: Require authentication to prevent username enumeration
+      allow read: if request.auth != null;
       
       // Allow authenticated users to create username documents with proper structure
       allow create: if request.auth != null 
@@ -70,8 +70,11 @@ service cloud.firestore {
         // Allow authenticated users to read messages in any thread
         allow read: if request.auth != null;
         
-        // Allow authenticated users to create messages
-        allow create: if request.auth != null;
+        // FIXED: Validate senderId matches authenticated user and add message length validation
+        allow create: if request.auth != null
+                      && request.resource.data.senderId == request.auth.uid
+                      && request.resource.data.body.size() > 0
+                      && request.resource.data.body.size() <= 5000;
         
         // Allow users to delete only their own messages
         allow delete: if request.auth != null 
@@ -100,7 +103,9 @@ service cloud.firestore {
       // For individual reads: check thread ID pattern
       // For queries: check participantIds array
       allow get: if isParticipant();
-      allow list: if request.auth != null;
+      // FIXED: More restrictive list query with limit
+      allow list: if request.auth != null 
+                  && request.query.limit <= 100;
       
       // Allow users to create threads they are part of
       allow create: if isParticipant();
