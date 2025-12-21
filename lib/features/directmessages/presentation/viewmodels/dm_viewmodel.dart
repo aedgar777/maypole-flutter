@@ -23,14 +23,40 @@ class DmViewModel extends AsyncNotifier<List<DirectMessage>> {
       _messagesSubscription?.cancel();
     });
 
-    _init();
+    // Try to load from cache first for instant display
+    await _initWithCache();
 
-    // Return empty list initially, the stream will update it
+    // Return empty list initially, cache or stream will update it
     return [];
   }
 
-  void _init() {
-    state = const AsyncValue.loading();
+  /// Initialize with cache-first strategy
+  /// Shows cached data immediately, then sets up stream for real-time updates
+  Future<void> _initWithCache() async {
+    try {
+      // First, try to load from cache for instant display
+      final cachedMessages = await _threadService.getCachedDmMessages(_threadId);
+      
+      if (cachedMessages.isNotEmpty) {
+        // Show cached data immediately
+        state = AsyncValue.data(cachedMessages);
+        developer.log('Loaded ${cachedMessages.length} cached messages', name: 'DmViewModel');
+      }
+    } catch (e) {
+      developer.log('Error loading cached messages: $e', name: 'DmViewModel');
+      // Continue to stream setup even if cache fails
+    }
+    
+    // Now set up the stream for real-time updates
+    _initStream();
+  }
+
+  void _initStream() {
+    // Don't show loading if we already have cached data
+    if (!state.hasValue) {
+      state = const AsyncValue.loading();
+    }
+    
     _messagesSubscription?.cancel();
     _messagesSubscription =
         _threadService.getDmMessages(_threadId).listen((messages) {

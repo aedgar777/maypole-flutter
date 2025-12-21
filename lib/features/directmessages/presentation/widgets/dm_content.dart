@@ -36,6 +36,7 @@ class _DmContentState extends ConsumerState<DmContent> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _messageFocusNode = FocusNode();
+  final Set<String> _animatedMessageIds = {};
 
   @override
   void initState() {
@@ -128,16 +129,29 @@ class _DmContentState extends ConsumerState<DmContent> {
                   messages, index, index + 1, isMe,
                 );
                 
-                return DmMessageBubble(
-                  message: message,
-                  isOwnMessage: isMe,
-                  partnerId: partner?.id ?? '',
-                  partnerUsername: partner?.username ?? '',
-                  partnerProfilePicUrl: partner?.profilePicUrl ?? '',
-                  onDelete: isMe && !isDeleted ? () => _showMessageContextMenu(context, message) : null,
-                  isGroupedWithNext: isGroupedWithNext,
-                  isGroupedWithPrevious: isGroupedWithPrevious,
-                  isDeleted: isDeleted,
+                // Use message ID or a combination of sender + timestamp as unique key
+                final messageKey = message.id ?? '${message.sender}_${message.timestamp.millisecondsSinceEpoch}';
+                final isNew = !_animatedMessageIds.contains(messageKey);
+                
+                // Mark this message as seen
+                if (isNew) {
+                  _animatedMessageIds.add(messageKey);
+                }
+                
+                return _AnimatedMessageItem(
+                  key: ValueKey(messageKey),
+                  isNew: isNew,
+                  child: DmMessageBubble(
+                    message: message,
+                    isOwnMessage: isMe,
+                    partnerId: partner?.id ?? '',
+                    partnerUsername: partner?.username ?? '',
+                    partnerProfilePicUrl: partner?.profilePicUrl ?? '',
+                    onDelete: isMe && !isDeleted ? () => _showMessageContextMenu(context, message) : null,
+                    isGroupedWithNext: isGroupedWithNext,
+                    isGroupedWithPrevious: isGroupedWithPrevious,
+                    isDeleted: isDeleted,
+                  ),
                 );
               },
             ),
@@ -326,5 +340,78 @@ class _DmContentState extends ConsumerState<DmContent> {
         );
       }
     }
+  }
+}
+
+/// A stateful widget that animates a message item sliding in from the bottom
+/// with a fade-in effect when it's new
+class _AnimatedMessageItem extends StatefulWidget {
+  final Widget child;
+  final bool isNew;
+
+  const _AnimatedMessageItem({
+    super.key,
+    required this.child,
+    required this.isNew,
+  });
+
+  @override
+  State<_AnimatedMessageItem> createState() => _AnimatedMessageItemState();
+}
+
+class _AnimatedMessageItemState extends State<_AnimatedMessageItem>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+
+    _slideAnimation = Tween<double>(
+      begin: widget.isNew ? 30.0 : 0.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _fadeAnimation = Tween<double>(
+      begin: widget.isNew ? 0.0 : 1.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    ));
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _slideAnimation.value),
+          child: Opacity(
+            opacity: _fadeAnimation.value,
+            child: child,
+          ),
+        );
+      },
+      child: widget.child,
+    );
   }
 }

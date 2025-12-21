@@ -152,18 +152,6 @@ abstract class AppLocalizations {
   /// **'Error: {message}'**
   String error(String message);
 
-  /// Welcome message with user email
-  ///
-  /// In en, this message translates to:
-  /// **'Welcome {email}'**
-  String welcome(String email);
-
-  /// Sign out button text
-  ///
-  /// In en, this message translates to:
-  /// **'Sign Out'**
-  String get signOut;
-
   /// Sign in button text
   ///
   /// In en, this message translates to:
@@ -199,12 +187,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Already have an account? Login'**
   String get alreadyHaveAccount;
-
-  /// Button text to continue to the app after registration
-  ///
-  /// In en, this message translates to:
-  /// **'Continue to App'**
-  String get continueToApp;
 
   /// Validation message for empty email
   ///

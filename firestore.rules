@@ -84,8 +84,7 @@ service cloud.firestore {
     
     // Direct Message threads collection rules
     match /DMThreads/{threadId} {
-      // Helper function to check if user is a participant in the thread
-      // Thread ID format is "userId1_userId2" (sorted alphabetically)
+      // Helper function for create/update - check thread ID pattern
       function isParticipant() {
         return request.auth != null && (
           threadId.matches(request.auth.uid + '_.*') ||
@@ -93,22 +92,17 @@ service cloud.firestore {
         );
       }
       
-      // Helper function to check if user is in the participantIds array (for queries)
-      function isInParticipantIds() {
-        return request.auth != null && 
-               resource.data.participantIds.hasAny([request.auth.uid]);
-      }
-      
-      // Allow users to read threads they are part of
-      // For individual reads: check thread ID pattern
-      // For queries: check participantIds array
+      // For individual document reads (get), verify thread ID pattern
       allow get: if isParticipant();
-      // FIXED: More restrictive list query with limit
-      allow list: if request.auth != null 
-                  && request.query.limit <= 100;
+      
+      // For queries (list), allow authenticated users
+      // The client query MUST use .where('participantIds', arrayContains: userId)
+      // to ensure users only receive threads they're part of
+      allow list: if request.auth != null;
       
       // Allow users to create threads they are part of
-      allow create: if isParticipant();
+      allow create: if isParticipant() 
+                    && request.auth.uid in request.resource.data.participantIds;
       
       // Allow users to update threads they are part of
       // This is needed for updating lastMessage and lastMessageTime

@@ -40,14 +40,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String welcome(String email) {
-    return 'Bienvenido $email';
-  }
-
-  @override
-  String get signOut => 'Cerrar sesión';
-
-  @override
   String get signIn => 'Iniciar sesión';
 
   @override
@@ -64,9 +56,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get alreadyHaveAccount => '¿Ya tienes una cuenta? Iniciar sesión';
-
-  @override
-  String get continueToApp => 'Continuar a la aplicación';
 
   @override
   String get pleaseEnterEmail => 'Por favor ingrese su correo electrónico';

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/services/fcm_service.dart';
+import 'package:maypole/core/services/user_data_prefetch_service.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 
 
@@ -11,6 +12,7 @@ class AuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final AppSession _session = AppSession();
   final FCMService _fcmService = FCMService();
+  final UserDataPrefetchService _prefetchService = UserDataPrefetchService();
 
   Stream<DomainUser?> get user {
     return _firebaseAuth.authStateChanges().asyncExpand((firebaseUser) {
@@ -110,6 +112,11 @@ class AuthService {
         debugPrint('⚠️ FCM setup failed (non-critical): $e');
       }
 
+      // Prefetch user data in background (new users won't have much data yet)
+      _prefetchService.prefetchUserData(result.user!.uid).catchError((e) {
+        debugPrint('⚠️ Prefetch failed (non-critical): $e');
+      });
+
       return result.user?.uid;
     } on FirebaseAuthException {
       rethrow;
@@ -136,6 +143,12 @@ class AuthService {
         } catch (e) {
           debugPrint('⚠️ FCM setup failed (non-critical): $e');
         }
+
+        // Prefetch user data in background to warm up cache
+        // This runs asynchronously and won't block the login flow
+        _prefetchService.prefetchUserData(result.user!.uid).catchError((e) {
+          debugPrint('⚠️ Prefetch failed (non-critical): $e');
+        });
       }
 
       return result.user?.uid;
@@ -172,6 +185,15 @@ class AuthService {
       
       await _firebaseAuth.signOut();
       _session.currentUser = null;
+
+      // Clear Firestore cache on logout
+      // This ensures next user login starts with fresh data
+      try {
+        await _prefetchService.clearCache();
+        debugPrint('✓ Cache cleared on logout');
+      } catch (e) {
+        debugPrint('⚠️ Cache clear failed (non-critical): $e');
+      }
     } catch (e) {
       rethrow;
     }

@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:maypole/core/services/prefetch_service_provider.dart';
 import 'package:maypole/core/widgets/adaptive_scaffold.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/directmessages/domain/dm_thread.dart';
@@ -56,6 +58,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   _SelectedThreadState _selectedThread = const _SelectedThreadState();
   bool _hasRequestedPermissions = false;
+  bool _hasPrefetchedData = false;
 
   @override
   void initState() {
@@ -64,6 +67,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _requestNotificationPermissionsIfNeeded();
       _initializeFcm();
+      _prefetchUserDataIfNeeded();
     });
   }
 
@@ -85,6 +89,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       await fcmService.initialize();
     } catch (e) {
       // Error is already logged in FcmService
+    }
+  }
+
+  /// Prefetches user data on app start/resume to warm up the cache
+  /// This runs in background and doesn't block the UI
+  Future<void> _prefetchUserDataIfNeeded() async {
+    // Only prefetch once per session
+    if (_hasPrefetchedData) return;
+    _hasPrefetchedData = true;
+
+    final authState = ref.read(authStateProvider);
+    final user = authState.value;
+    
+    if (user == null) return;
+
+    try {
+      final prefetchService = ref.read(userDataPrefetchServiceProvider);
+      // Run in background without blocking UI
+      prefetchService.prefetchUserData(user.firebaseID).catchError((e) {
+        debugPrint('⚠️ Background prefetch failed (non-critical): $e');
+      });
+    } catch (e) {
+      debugPrint('⚠️ Error starting prefetch: $e');
     }
   }
 
