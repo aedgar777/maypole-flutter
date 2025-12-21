@@ -46,19 +46,7 @@
       }
     }
   },
-  "welcome": "Welcome {email}",
-  "@welcome": {
-    "description": "Welcome message with user email",
-    "placeholders": {
-      "email": {
-        "type": "String"
-      }
-    }
-  },
-  "signOut": "Sign Out",
-  "@signOut": {
-    "description": "Sign out button text"
-  },
+
   "signIn": "Sign In",
   "@signIn": {
     "description": "Sign in button text"
@@ -82,10 +70,6 @@
   "alreadyHaveAccount": "Already have an account? Login",
   "@alreadyHaveAccount": {
     "description": "Text for users who already have an account"
-  },
-  "continueToApp": "Continue to App",
-  "@continueToApp": {
-    "description": "Button text to continue to the app after registration"
   },
   "pleaseEnterEmail": "Please enter your email",
   "@pleaseEnterEmail": {

@@ -40,8 +40,15 @@ class MaypoleChatService {
         .collection('messages')
         .orderBy('timestamp', descending: true)
         .limit(_messageLimit)
-        .snapshots()
+        .snapshots(includeMetadataChanges: true)
         .map((snapshot) {
+      // Log cache vs server source for monitoring
+      if (snapshot.metadata.isFromCache) {
+        debugPrint('📦 Maypole messages loaded from cache for thread: $threadId');
+      } else {
+        debugPrint('🌐 Maypole messages loaded from server for thread: $threadId');
+      }
+      
       final messages = snapshot.docs
           .map((doc) => MaypoleMessage.fromMap(doc.data(), documentId: doc.id))
           .toList();
@@ -59,6 +66,120 @@ class MaypoleChatService {
         .startAfter([lastMessage.timestamp])
         .limit(_messageLimit)
         .get();
+
+    final messages = snapshot.docs
+        .map((doc) => MaypoleMessage.fromMap(doc.data(), documentId: doc.id))
+        .toList();
+    return _filterBlockedMessages(messages);
+  }
+
+  /// Gets cached maypole messages if available
+  /// Returns null if no cached data exists
+  Future<List<MaypoleMessage>?> getCachedMessages(String threadId) async {
+    try {
+      final cacheSnapshot = await _firestore
+          .collection('maypoles')
+          .doc(threadId)
+          .collection('messages')
+          .orderBy('timestamp', descending: true)
+          .limit(_messageLimit)
+          .get(const GetOptions(source: Source.cache));
+
+      if (cacheSnapshot.docs.isEmpty) {
+        debugPrint('📦 No cached messages found for thread: $threadId');
+        return null;
+      }
+
+      debugPrint('📦 Retrieved ${cacheSnapshot.docs.length} cached maypole messages for thread: $threadId');
+      final messages = cacheSnapshot.docs
+          .map((doc) => MaypoleMessage.fromMap(doc.data(), documentId: doc.id))
+          .toList();
+      return _filterBlockedMessages(messages);
+    } catch (e) {
+      debugPrint('⚠️ Cache miss for maypole thread $threadId: $e');
+      return null;
+    }
+  }
+
+  /// Peeks at the most recent message timestamp from server (lightweight query)
+  /// This only fetches 1 document to check if cache is stale
+  Future<DateTime?> getMostRecentMessageTimestamp(String threadId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('maypoles')
+          .doc(threadId)
+          .collection('messages')
+          .orderBy('timestamp', descending: true)
+          .limit(1)
+          .get(const GetOptions(source: Source.server));
+
+      if (snapshot.docs.isEmpty) {
+        return null;
+      }
+
+      final timestamp = (snapshot.docs.first.data()['timestamp'] as Timestamp).toDate();
+      debugPrint('🔍 Most recent message timestamp for $threadId: $timestamp');
+      return timestamp;
+    } catch (e) {
+      debugPrint('⚠️ Error checking recent message timestamp: $e');
+      return null;
+    }
+  }
+
+  /// Smart cache strategy: Load cached messages immediately, then validate against server
+  /// Returns a CacheValidationResult that indicates what action to take
+  Future<CacheValidationResult> validateCachedMessages(
+    String threadId,
+    List<MaypoleMessage> cachedMessages,
+  ) async {
+    if (cachedMessages.isEmpty) {
+      return CacheValidationResult.noCache;
+    }
+
+    // Get the most recent cached message timestamp
+    final mostRecentCached = cachedMessages.first.timestamp;
+    
+    // Peek at server to check most recent message (only 1 document read!)
+    final serverMostRecent = await getMostRecentMessageTimestamp(threadId);
+    
+    if (serverMostRecent == null) {
+      // No messages on server, cache is fine
+      debugPrint('✅ No server messages, using cache');
+      return CacheValidationResult.cacheValid;
+    }
+
+    // Compare timestamps (allow 1 second tolerance for clock skew)
+    final timeDiff = serverMostRecent.difference(mostRecentCached).inSeconds;
+    
+    if (timeDiff.abs() <= 1) {
+      // Cache is current (within 1 second)
+      debugPrint('✅ Cache is current for thread: $threadId');
+      return CacheValidationResult.cacheValid;
+    } else if (timeDiff > 0) {
+      // Server has newer messages
+      final newMessageCount = timeDiff ~/ 60; // Rough estimate
+      debugPrint('⚠️ Cache is stale: ~$newMessageCount new messages since last visit');
+      
+      // Check if cached messages would still be in the "top 100" window
+      // If hundreds of new messages exist, cached messages might be beyond the limit
+      return CacheValidationResult.cacheStale;
+    } else {
+      // Cache is somehow newer than server (shouldn't happen, but handle gracefully)
+      debugPrint('⚠️ Unusual: Cache appears newer than server');
+      return CacheValidationResult.cacheValid;
+    }
+  }
+
+  /// Fetches fresh messages from server
+  Future<List<MaypoleMessage>> getFreshMessages(String threadId) async {
+    debugPrint('🌐 Fetching fresh messages from server for thread: $threadId');
+    final snapshot = await _firestore
+        .collection('maypoles')
+        .doc(threadId)
+        .collection('messages')
+        .orderBy('timestamp', descending: true)
+        .limit(_messageLimit)
+        .get(const GetOptions(source: Source.server));
 
     final messages = snapshot.docs
         .map((doc) => MaypoleMessage.fromMap(doc.data(), documentId: doc.id))
@@ -310,4 +431,16 @@ class MaypoleChatService {
       rethrow;
     }
   }
+}
+
+/// Result of cache validation check
+enum CacheValidationResult {
+  /// No cached data available
+  noCache,
+  
+  /// Cache is current and can be used
+  cacheValid,
+  
+  /// Cache exists but is stale (server has newer messages)
+  cacheStale,
 }

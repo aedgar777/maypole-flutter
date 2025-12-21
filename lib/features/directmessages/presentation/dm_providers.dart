@@ -16,7 +16,10 @@ final dmThreadsByUserProvider = StreamProvider.family<List<DMThreadMetaData>, St
   return ref.read(dmThreadServiceProvider).getUserDmThreads(userId);
 });
 
-final dmViewModelProvider = AsyncNotifierProvider.autoDispose
+/// DM View Model provider without autoDispose to maintain cache
+/// This keeps the stream subscription alive and reduces Firestore reads
+/// when navigating back to previously viewed DM threads
+final dmViewModelProvider = AsyncNotifierProvider
     .family<DmViewModel, List<DirectMessage>, String>(
       (threadId) => DmViewModel(threadId),
     );

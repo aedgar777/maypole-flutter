@@ -28,28 +28,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  Widget _buildLoggedInView(DomainUser user, BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
-    // Automatically navigate to home list when user is logged in
+  void _navigateToHome(BuildContext context) {
+    // Automatically navigate to home when user is logged in
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.go('/home');
+      if (mounted) {
+        context.go('/home');
+      }
     });
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(l10n.welcome(user.email)),
-          ElevatedButton(
-            onPressed: () {
-              ref.read(loginViewModelProvider.notifier).signOut();
-            },
-            child: Text(l10n.signOut),
-          ),
-        ],
-      ),
-    );
   }
 
   void _handleSignIn() {
@@ -157,27 +142,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return Scaffold(
       body: ref.watch(authStateProvider).when(
-        data: (user) =>
-        user != null
-            ? _buildLoggedInView(user, context)
-            : Stack(
-          children: [
-            _buildLoginForm(loginState, context),
-            if (!AppConfig.isProduction)
-              Positioned(
-                bottom: 20,
-                left: 16,
-                child: Text(
-                  l10n.devEnvironment,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.normal,
+        data: (user) {
+          if (user != null) {
+            _navigateToHome(context);
+            return const Center(child: CircularProgressIndicator());
+          }
+          return Stack(
+            children: [
+              _buildLoginForm(loginState, context),
+              if (!AppConfig.isProduction)
+                Positioned(
+                  bottom: 20,
+                  left: 16,
+                  child: Text(
+                    l10n.devEnvironment,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.normal,
+                    ),
                   ),
                 ),
-              ),
-          ],
-        ),
+            ],
+          );
+        },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) {
           WidgetsBinding.instance.addPostFrameCallback((_) {

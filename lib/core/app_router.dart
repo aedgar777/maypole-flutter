@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../features/maypolesearch/presentation/screens/maypole_search_screen.dart';
 import '../features/maypolechat/presentation/screens/maypole_chat_screen.dart';
@@ -13,10 +15,36 @@ import '../features/settings/presentation/screens/privacy_policy_screen.dart';
 import '../features/settings/presentation/screens/notification_settings_screen.dart';
 import '../features/settings/presentation/screens/account_settings_screen.dart';
 import '../features/settings/presentation/screens/blocked_users_screen.dart';
+import '../features/identity/auth_providers.dart';
 
-GoRouter createRouter() {
+final routerProvider = Provider<GoRouter>((ref) {
+  final authService = ref.watch(authServiceProvider);
+  
   return GoRouter(
     initialLocation: '/home',
+    refreshListenable: GoRouterRefreshStream(authService.user),
+    redirect: (context, state) {
+      final authState = ref.read(authStateProvider);
+      final isAuthenticated = authState.value != null;
+      final currentPath = state.matchedLocation;
+      
+      // Define public routes that don't require authentication
+      final publicRoutes = ['/login', '/register', '/privacy-policy'];
+      final isPublicRoute = publicRoutes.contains(currentPath);
+      
+      // If user is not authenticated and trying to access a protected route
+      if (!isAuthenticated && !isPublicRoute) {
+        return '/login';
+      }
+      
+      // If user is authenticated and on login screen, redirect to home
+      if (isAuthenticated && currentPath == '/login') {
+        return '/home';
+      }
+      
+      // No redirect needed
+      return null;
+    },
     routes: <RouteBase>[
       GoRoute(
           path: '/login', builder: (context, state) => const LoginScreen()),
@@ -87,4 +115,22 @@ GoRouter createRouter() {
       ),
     ],
   );
+});
+
+/// Helper class to refresh the router when auth state changes
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen(
+      (dynamic _) => notifyListeners(),
+    );
+  }
+
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
 }

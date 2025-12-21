@@ -101,10 +101,19 @@ class DMThreadService {
         .collection('messages')
         .orderBy('timestamp', descending: true)
         .limit(_messageLimit)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => DirectMessage.fromMap(doc.data(), documentId: doc.id))
-            .toList());
+        .snapshots(includeMetadataChanges: true)
+        .map((snapshot) {
+      // Log cache vs server source for monitoring
+      if (snapshot.metadata.isFromCache) {
+        debugPrint('📦 DM messages loaded from cache for thread: $threadId');
+      } else {
+        debugPrint('🌐 DM messages loaded from server for thread: $threadId');
+      }
+      
+      return snapshot.docs
+          .map((doc) => DirectMessage.fromMap(doc.data(), documentId: doc.id))
+          .toList();
+    });
   }
 
   Future<List<DirectMessage>> getMoreDmMessages(String threadId, DirectMessage lastMessage) async {
@@ -118,6 +127,44 @@ class DMThreadService {
         .get();
 
     return snapshot.docs.map((doc) => DirectMessage.fromMap(doc.data(), documentId: doc.id)).toList();
+  }
+
+  /// Gets DM messages from cache first, falls back to server if cache miss
+  /// This is useful for initial loads to show cached data immediately
+  Future<List<DirectMessage>> getCachedDmMessages(String threadId) async {
+    try {
+      // Try cache first
+      final cacheSnapshot = await _firestore
+          .collection('DMThreads')
+          .doc(threadId)
+          .collection('messages')
+          .orderBy('timestamp', descending: true)
+          .limit(_messageLimit)
+          .get(const GetOptions(source: Source.cache));
+
+      if (cacheSnapshot.docs.isNotEmpty) {
+        debugPrint('📦 Retrieved ${cacheSnapshot.docs.length} DM messages from cache for thread: $threadId');
+        return cacheSnapshot.docs
+            .map((doc) => DirectMessage.fromMap(doc.data(), documentId: doc.id))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('⚠️ Cache miss for DM thread $threadId: $e');
+    }
+
+    // Cache miss or error - fetch from server
+    debugPrint('🌐 Fetching DM messages from server for thread: $threadId');
+    final serverSnapshot = await _firestore
+        .collection('DMThreads')
+        .doc(threadId)
+        .collection('messages')
+        .orderBy('timestamp', descending: true)
+        .limit(_messageLimit)
+        .get(const GetOptions(source: Source.server));
+
+    return serverSnapshot.docs
+        .map((doc) => DirectMessage.fromMap(doc.data(), documentId: doc.id))
+        .toList();
   }
 
   Future<void> sendDmMessage(String threadId,
@@ -176,7 +223,7 @@ class DMThreadService {
         .collection('DMThreads')
         .where('participantIds', arrayContains: userId)
         .orderBy('lastMessageTime', descending: true)
-        .snapshots()
+        .snapshots(includeMetadataChanges: true)
         .handleError((error) {
       debugPrint('❌ Error in DM threads stream: $error');
       debugPrint('⚠️ This might be a missing Firestore index!');
@@ -186,6 +233,13 @@ class DMThreadService {
       throw error;
     })
         .map((snapshot) {
+      // Log cache vs server source for monitoring
+      if (snapshot.metadata.isFromCache) {
+        debugPrint('📦 DM thread list loaded from cache for user: $userId');
+      } else {
+        debugPrint('🌐 DM thread list loaded from server for user: $userId');
+      }
+      
       return snapshot.docs.map((doc) {
         try {
           final data = doc.data();

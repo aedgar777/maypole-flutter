@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'core/app_router.dart';
 import 'core/app_theme.dart';
@@ -37,9 +37,6 @@ Future<void> main() async {
     }
   }
 
-  // Initialize the router
-  final router = createRouter();
-
   // Initialize Firebase with error handling for duplicate initialization
   try {
     await Firebase.initializeApp(
@@ -56,16 +53,27 @@ Future<void> main() async {
     }
   }
 
+  // Enable Firestore offline persistence with unlimited cache size
+  // This dramatically reduces document reads by caching data between app sessions
+  try {
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
+    debugPrint('✅ Firestore persistence enabled with unlimited cache');
+  } catch (e) {
+    debugPrint('⚠️ Warning: Could not enable Firestore persistence: $e');
+    // Continue anyway - app will work without persistence
+  }
+
   // Setup background message handler for FCM
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  runApp(ProviderScope(child: MyApp(router: router)));
+  runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key, required this.router});
-
-  final GoRouter router;
+class MyApp extends ConsumerWidget {
+  const MyApp({super.key});
 
   String _getAppTitle() {
     const String dartDefineEnv = String.fromEnvironment(
@@ -92,7 +100,9 @@ class MyApp extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+    
     return NotificationHandler(
       child: MaterialApp.router(
         title: _getAppTitle(),
