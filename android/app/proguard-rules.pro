@@ -31,3 +31,8 @@
 
 # Keep custom model classes
 -keep class app.maypole.maypole.** { *; }
+
+# Play Core / Deferred Components - dontwarn for optional features
+-dontwarn com.google.android.play.core.splitcompat.SplitCompatApplication
+-dontwarn com.google.android.play.core.splitinstall.**
+-dontwarn com.google.android.play.core.tasks.**

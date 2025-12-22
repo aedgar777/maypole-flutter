@@ -55,8 +55,25 @@ app.*.map.json
 /ios/Runner/GoogleService-Info.plist
 /macos/Runner/GoogleService-Info.plist
 
+# iOS signing files
+ios/*.p12
+ios/*.mobileprovision
+ios/*.cer
+ios/*.certSigningRequest
+ios/AuthKey_*.p8
+
 # Local properties (contains SDK paths)
 android/local.properties
+
+# Android signing keys
+android/key.properties
+android/app/upload-keystore.jks
+android/app/*.jks
+android/app/*.keystore
+*.jks
+*keystore*.jks
+keystore_base64.txt
+*_base64.txt
 
 # Sensitive Firebase files
 firebase-debug.log
