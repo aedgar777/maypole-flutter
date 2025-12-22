@@ -19,7 +19,7 @@ class MaypoleListPanel extends ConsumerStatefulWidget {
   final VoidCallback onAddPressed;
   final Function(String threadId, String maypoleName) onMaypoleThreadSelected;
   final Function(String threadId) onDmThreadSelected;
-  final VoidCallback? onTabChanged;
+  final Function(int tabIndex)? onTabChanged;
   final String? selectedThreadId;
   final bool isMaypoleThread;
 
@@ -39,12 +39,14 @@ class MaypoleListPanel extends ConsumerStatefulWidget {
   ConsumerState<MaypoleListPanel> createState() => _MaypoleListPanelState();
 }
 
-class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> {
+class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with SingleTickerProviderStateMixin {
   // Track threads that are pending deletion (for both maypole and DM threads)
   final Set<String> _pendingDeletions = {};
   final Map<String, Timer> _deletionTimers = {};
   // Track maypole threads pending deletion separately for filtering
   final Set<String> _pendingMaypoleDeletions = {};
+  // Track current tab index for FAB animation
+  int _currentTabIndex = 0;
 
   @override
   void dispose() {
@@ -67,11 +69,18 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> {
       length: 2,
       child: Builder(
         builder: (context) {
-          // Listen for tab changes
+          // Listen for tab changes immediately (not just when animation completes)
           final tabController = DefaultTabController.of(context);
           tabController.addListener(() {
-            if (!tabController.indexIsChanging && widget.onTabChanged != null) {
-              widget.onTabChanged!();
+            // Update immediately when tab changes, even during animation
+            final newIndex = tabController.index;
+            if (_currentTabIndex != newIndex) {
+              setState(() {
+                _currentTabIndex = newIndex;
+              });
+              if (widget.onTabChanged != null) {
+                widget.onTabChanged!(newIndex);
+              }
             }
           });
 
@@ -100,10 +109,20 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> {
                 _buildDmList(context, l10n, userId),
               ],
             ),
-            floatingActionButton: FloatingActionButton(
-              heroTag: 'maypole_list_fab',
-              onPressed: widget.onAddPressed,
-              child: const Icon(Icons.add),
+            floatingActionButton: AnimatedScale(
+              scale: _currentTabIndex == 0 ? 1.0 : 0.0,
+              duration: kTabScrollDuration,
+              curve: Curves.ease,
+              child: AnimatedOpacity(
+                opacity: _currentTabIndex == 0 ? 1.0 : 0.0,
+                duration: kTabScrollDuration,
+                curve: Curves.ease,
+                child: FloatingActionButton(
+                  heroTag: 'maypole_list_fab',
+                  onPressed: _currentTabIndex == 0 ? widget.onAddPressed : null,
+                  child: const Icon(Icons.add),
+                ),
+              ),
             ),
           );
         },

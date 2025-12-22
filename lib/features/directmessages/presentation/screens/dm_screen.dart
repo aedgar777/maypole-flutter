@@ -66,7 +66,7 @@ class _DmScreenState extends ConsumerState<DmScreen> {
                             _handleMaypoleThreadSelected(threadId, maypoleName),
                         onDmThreadSelected: (threadId) =>
                             _handleDmThreadSelected(threadId),
-                        onTabChanged: () => setState(() {
+                        onTabChanged: (tabIndex) => setState(() {
                           // Clear selection when switching tabs
                           _currentThreadId = '';
                         }),
