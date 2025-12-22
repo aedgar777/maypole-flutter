@@ -148,18 +148,21 @@ jobs:
           EOF
 
       - name: Create google-services.json for prod flavor
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON_PROD }}
         run: |
           mkdir -p android/app/src/prod
-          echo "${{ secrets.GOOGLE_SERVICES_JSON_PROD }}" > android/app/src/prod/google-services.json
+          echo "$GOOGLE_SERVICES_JSON" > android/app/src/prod/google-services.json
           
           # Validate the JSON is well-formed
           if ! python3 -m json.tool android/app/src/prod/google-services.json > /dev/null 2>&1; then
-            echo "Error: google-services.json is not valid JSON"
-            cat android/app/src/prod/google-services.json
+            echo "❌ Error: google-services.json is not valid JSON"
+            echo "JSON parsing error:"
+            python3 -m json.tool android/app/src/prod/google-services.json 2>&1 || true
             exit 1
           fi
           
-          echo "google-services.json created successfully"
+          echo "✅ google-services.json created and validated successfully"
 
       # Android Signing with Google Play App Signing
       # This workflow uses the same upload keystore for all environments.
@@ -205,105 +208,106 @@ jobs:
           # Optional: You can also add release notes that will be pre-filled
           # whatsNewDirectory: distribution/whatsnew
 
-  build_ios:
-    name: Build and Deploy iOS (Production)
-    runs-on: macos-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.32.0'
-          channel: 'stable'
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Create .env file from secrets
-        run: |
-          cat > .env << EOF
-          ENVIRONMENT=prod
-          FIREBASE_PROD_WEB_API_KEY=${{ secrets.FIREBASE_PROD_WEB_API_KEY }}
-          FIREBASE_PROD_WEB_APP_ID=${{ secrets.FIREBASE_PROD_WEB_APP_ID }}
-          FIREBASE_PROD_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_PROD_WEB_MEASUREMENT_ID }}
-          FIREBASE_PROD_ANDROID_API_KEY=${{ secrets.FIREBASE_PROD_ANDROID_API_KEY }}
-          FIREBASE_PROD_ANDROID_APP_ID=${{ secrets.FIREBASE_PROD_ANDROID_APP_ID }}
-          FIREBASE_PROD_IOS_API_KEY=${{ secrets.FIREBASE_PROD_IOS_API_KEY }}
-          FIREBASE_PROD_IOS_APP_ID=${{ secrets.FIREBASE_PROD_IOS_APP_ID }}
-          FIREBASE_PROD_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_PROD_MESSAGING_SENDER_ID }}
-          FIREBASE_PROD_PROJECT_ID=${{ secrets.FIREBASE_PROD_PROJECT_ID }}
-          FIREBASE_PROD_AUTH_DOMAIN=${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }}
-          FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }}
-          IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
-          EOF
-
-      - name: Create GoogleService-Info.plist for prod
-        run: |
-          mkdir -p ios/Runner
-          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_PROD }}" > ios/Runner/GoogleService-Info.plist
-          
-          # Validate the plist is well-formed
-          if ! plutil -lint ios/Runner/GoogleService-Info.plist > /dev/null 2>&1; then
-            echo "Error: GoogleService-Info.plist is not valid"
-            cat ios/Runner/GoogleService-Info.plist
-            exit 1
-          fi
-          
-          echo "GoogleService-Info.plist created successfully"
-
-      # TODO: Configure iOS code signing
-      # You will need to:
-      # 1. Create certificates and provisioning profiles in Apple Developer Console
-      # 2. Export them and add to GitHub Secrets (see DEPLOYMENT_SETUP.md)
-      # 3. Add IOS_CERTIFICATE_BASE64 to GitHub Secrets
-      # 4. Add IOS_CERTIFICATE_PASSWORD to GitHub Secrets
-      # 5. Add IOS_PROVISIONING_PROFILE_BASE64 to GitHub Secrets
-      # 6. Add KEYCHAIN_PASSWORD to GitHub Secrets
-      - name: Setup iOS Signing
-        run: |
-          # Decode certificate and provisioning profile
-          echo "${{ secrets.IOS_CERTIFICATE_BASE64 }}" | base64 -d > certificate.p12
-          echo "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" | base64 -d > provisioning.mobileprovision
-          
-          # Create temporary keychain
-          security create-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
-          security set-keychain-settings -t 3600 -u build.keychain
-          
-          # Import certificate
-          security import certificate.p12 -k build.keychain -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
-          
-          # Install provisioning profile
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp provisioning.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
-
-      - name: Build iOS IPA (prodRelease)
-        run: |
-          flutter build ipa --release --flavor prod --export-options-plist=ios/ExportOptions.plist
-
-      # TODO: Configure App Store Connect API for production release
-      # You will need to:
-      # 1. Create an App Store Connect API Key (see DEPLOYMENT_SETUP.md)
-      # 2. Add APP_STORE_CONNECT_API_KEY_ID to GitHub Secrets
-      # 3. Add APP_STORE_CONNECT_API_ISSUER_ID to GitHub Secrets
-      # 4. Add APP_STORE_CONNECT_API_KEY_CONTENT to GitHub Secrets (base64 encoded .p8 file)
-      - name: Upload to App Store
-        run: |
-          # Decode API key
-          echo "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}" | base64 -d > AuthKey.p8
-          
-          # Upload to App Store using xcrun altool
-          xcrun altool --upload-app \
-            --type ios \
-            --file build/ios/ipa/*.ipa \
-            --apiKey ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
-            --apiIssuer ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
-
-      - name: Cleanup keychain
-        if: always()
-        run: |
-          security delete-keychain build.keychain || true
+  # TODO: Uncomment iOS deployment when Apple Developer credentials are available
+  # build_ios:
+  #   name: Build and Deploy iOS (Production)
+  #   runs-on: macos-latest
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v3
+  #
+  #     - name: Setup Flutter
+  #       uses: subosito/flutter-action@v2
+  #       with:
+  #         flutter-version: '3.32.0'
+  #         channel: 'stable'
+  #
+  #     - name: Get dependencies
+  #       run: flutter pub get
+  #
+  #     - name: Create .env file from secrets
+  #       run: |
+  #         cat > .env << EOF
+  #         ENVIRONMENT=prod
+  #         FIREBASE_PROD_WEB_API_KEY=${{ secrets.FIREBASE_PROD_WEB_API_KEY }}
+  #         FIREBASE_PROD_WEB_APP_ID=${{ secrets.FIREBASE_PROD_WEB_APP_ID }}
+  #         FIREBASE_PROD_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_PROD_WEB_MEASUREMENT_ID }}
+  #         FIREBASE_PROD_ANDROID_API_KEY=${{ secrets.FIREBASE_PROD_ANDROID_API_KEY }}
+  #         FIREBASE_PROD_ANDROID_APP_ID=${{ secrets.FIREBASE_PROD_ANDROID_APP_ID }}
+  #         FIREBASE_PROD_IOS_API_KEY=${{ secrets.FIREBASE_PROD_IOS_API_KEY }}
+  #         FIREBASE_PROD_IOS_APP_ID=${{ secrets.FIREBASE_PROD_IOS_APP_ID }}
+  #         FIREBASE_PROD_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_PROD_MESSAGING_SENDER_ID }}
+  #         FIREBASE_PROD_PROJECT_ID=${{ secrets.FIREBASE_PROD_PROJECT_ID }}
+  #         FIREBASE_PROD_AUTH_DOMAIN=${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }}
+  #         FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }}
+  #         IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
+  #         EOF
+  #
+  #     - name: Create GoogleService-Info.plist for prod
+  #       run: |
+  #         mkdir -p ios/Runner
+  #         echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_PROD }}" > ios/Runner/GoogleService-Info.plist
+  #         
+  #         # Validate the plist is well-formed
+  #         if ! plutil -lint ios/Runner/GoogleService-Info.plist > /dev/null 2>&1; then
+  #           echo "Error: GoogleService-Info.plist is not valid"
+  #           cat ios/Runner/GoogleService-Info.plist
+  #           exit 1
+  #         fi
+  #         
+  #         echo "GoogleService-Info.plist created successfully"
+  #
+  #     # TODO: Configure iOS code signing
+  #     # You will need to:
+  #     # 1. Create certificates and provisioning profiles in Apple Developer Console
+  #     # 2. Export them and add to GitHub Secrets (see DEPLOYMENT_SETUP.md)
+  #     # 3. Add IOS_CERTIFICATE_BASE64 to GitHub Secrets
+  #     # 4. Add IOS_CERTIFICATE_PASSWORD to GitHub Secrets
+  #     # 5. Add IOS_PROVISIONING_PROFILE_BASE64 to GitHub Secrets
+  #     # 6. Add KEYCHAIN_PASSWORD to GitHub Secrets
+  #     - name: Setup iOS Signing
+  #       run: |
+  #         # Decode certificate and provisioning profile
+  #         echo "${{ secrets.IOS_CERTIFICATE_BASE64 }}" | base64 -d > certificate.p12
+  #         echo "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" | base64 -d > provisioning.mobileprovision
+  #         
+  #         # Create temporary keychain
+  #         security create-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
+  #         security default-keychain -s build.keychain
+  #         security unlock-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
+  #         security set-keychain-settings -t 3600 -u build.keychain
+  #         
+  #         # Import certificate
+  #         security import certificate.p12 -k build.keychain -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+  #         security set-key-partition-list -S apple-tool:,apple: -s -k "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
+  #         
+  #         # Install provisioning profile
+  #         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+  #         cp provisioning.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+  #
+  #     - name: Build iOS IPA (prodRelease)
+  #       run: |
+  #         flutter build ipa --release --flavor prod --export-options-plist=ios/ExportOptions.plist
+  #
+  #     # TODO: Configure App Store Connect API for production release
+  #     # You will need to:
+  #     # 1. Create an App Store Connect API Key (see DEPLOYMENT_SETUP.md)
+  #     # 2. Add APP_STORE_CONNECT_API_KEY_ID to GitHub Secrets
+  #     # 3. Add APP_STORE_CONNECT_API_ISSUER_ID to GitHub Secrets
+  #     # 4. Add APP_STORE_CONNECT_API_KEY_CONTENT to GitHub Secrets (base64 encoded .p8 file)
+  #     - name: Upload to App Store
+  #       run: |
+  #         # Decode API key
+  #         echo "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}" | base64 -d > AuthKey.p8
+  #         
+  #         # Upload to App Store using xcrun altool
+  #         xcrun altool --upload-app \
+  #           --type ios \
+  #           --file build/ios/ipa/*.ipa \
+  #           --apiKey ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
+  #           --apiIssuer ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+  #
+  #     - name: Cleanup keychain
+  #       if: always()
+  #       run: |
+  #         security delete-keychain build.keychain || true
