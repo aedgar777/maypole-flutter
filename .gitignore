@@ -70,6 +70,10 @@ android/key.properties
 android/app/upload-keystore.jks
 android/app/*.jks
 android/app/*.keystore
+*.jks
+*keystore*.jks
+keystore_base64.txt
+*_base64.txt
 
 # Sensitive Firebase files
 firebase-debug.log

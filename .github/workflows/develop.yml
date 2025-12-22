@@ -13,6 +13,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Validate Version Format
+        run: |
+          chmod +x scripts/validate-version.sh
+          ./scripts/validate-version.sh
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -139,14 +144,19 @@ jobs:
         run: |
           echo '${{ secrets.GOOGLE_SERVICES_JSON_DEV }}' > android/app/src/dev/google-services.json
 
-      # TODO: Add Android keystore from GitHub Secrets
-      # You will need to:
-      # 1. Create a keystore file (see DEPLOYMENT_SETUP.md)
-      # 2. Base64 encode it: base64 -i keystore.jks | tr -d '\n' > keystore_base64.txt
-      # 3. Add ANDROID_KEYSTORE_BASE64 to GitHub Secrets
-      # 4. Add ANDROID_KEY_ALIAS to GitHub Secrets
-      # 5. Add ANDROID_KEY_PASSWORD to GitHub Secrets
-      # 6. Add ANDROID_STORE_PASSWORD to GitHub Secrets
+      # TODO: Setup Android Signing with Google Play App Signing
+      # This uses an upload keystore that signs your AAB before upload to Play Store.
+      # Google Play then re-signs with the app signing key before distribution.
+      # 
+      # Setup steps (see DEPLOYMENT_SETUP.md for details):
+      # 1. Create upload keystore: keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+      # 2. Enable Play App Signing in Play Console (done automatically on first AAB upload)
+      # 3. Base64 encode keystore: base64 -i upload-keystore.jks | tr -d '\n' > keystore_base64.txt
+      # 4. Add these secrets to GitHub (Repository Settings → Secrets → Actions):
+      #    - ANDROID_KEYSTORE_BASE64: Content of keystore_base64.txt
+      #    - ANDROID_KEY_ALIAS: "upload" (or your chosen alias)
+      #    - ANDROID_KEY_PASSWORD: Your key password
+      #    - ANDROID_STORE_PASSWORD: Your keystore password (usually same as key password)
       - name: Setup Android Signing
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
@@ -158,11 +168,10 @@ jobs:
       - name: Build Android App Bundle (devRelease)
         run: flutter build appbundle --release --flavor dev
 
-      # TODO: Configure Play Store deployment
-      # You will need to:
-      # 1. Create a Google Cloud Service Account (see DEPLOYMENT_SETUP.md)
-      # 2. Add PLAY_STORE_SERVICE_ACCOUNT_JSON to GitHub Secrets
-      # 3. Set up internal testing track in Play Console
+      # Deploy to Play Store Internal Testing Track
+      # This automatically releases to internal testers for quick feedback.
+      # Internal testing track supports up to 100 testers.
+      # The secrets should already be configured in GitHub repository settings.
       - name: Deploy to Play Store Internal Testing
         uses: r0adkll/upload-google-play@v1
         with:

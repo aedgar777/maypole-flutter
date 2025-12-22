@@ -12,6 +12,30 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Auto-Bump Build Number
+        run: |
+          chmod +x scripts/auto-bump-build.sh scripts/get-version.sh
+          echo "📱 Current version:"
+          ./scripts/get-version.sh
+          echo ""
+          echo "🔄 Auto-bumping build number..."
+          ./scripts/auto-bump-build.sh
+          echo ""
+          echo "✅ New version:"
+          ./scripts/get-version.sh
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Commit and push the version bump
+          git add pubspec.yaml
+          git commit -m "chore: auto-bump build number to $(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ') [skip ci]"
+          git push origin beta
 
       - name: Setup Java
         uses: actions/setup-java@v3
@@ -50,14 +74,9 @@ jobs:
         run: |
           echo '${{ secrets.GOOGLE_SERVICES_JSON_PROD }}' > android/app/src/prod/google-services.json
 
-      # TODO: Add Android keystore from GitHub Secrets
-      # You will need to:
-      # 1. Create a keystore file (see DEPLOYMENT_SETUP.md)
-      # 2. Base64 encode it: base64 -i keystore.jks | tr -d '\n' > keystore_base64.txt
-      # 3. Add ANDROID_KEYSTORE_BASE64 to GitHub Secrets
-      # 4. Add ANDROID_KEY_ALIAS to GitHub Secrets
-      # 5. Add ANDROID_KEY_PASSWORD to GitHub Secrets
-      # 6. Add ANDROID_STORE_PASSWORD to GitHub Secrets
+      # Android Signing with Google Play App Signing
+      # This workflow uses the same upload keystore for all environments.
+      # The secrets should already be configured from the develop workflow setup.
       - name: Setup Android Signing
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
@@ -69,12 +88,12 @@ jobs:
       - name: Build Android App Bundle (prodRelease)
         run: flutter build appbundle --release --flavor prod
 
-      # TODO: Configure Play Store deployment for beta track
-      # You will need to:
-      # 1. Create a Google Cloud Service Account (see DEPLOYMENT_SETUP.md)
-      # 2. Add PLAY_STORE_SERVICE_ACCOUNT_JSON to GitHub Secrets
-      # 3. Set up beta testing track in Play Console
-      - name: Deploy to Play Store Beta Track
+      # Deploy to Play Store Beta Track (Open Testing)
+      # This automatically releases to the beta track.
+      # Configure the beta track as "Open Testing" in Play Console to allow
+      # anyone to join and test your app.
+      # The secrets should already be configured from the develop workflow setup.
+      - name: Deploy to Play Store Beta Track (Open Testing)
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}

@@ -2,42 +2,79 @@
 
 Use this checklist to track your progress in setting up the automated deployment pipeline.
 
+## Deployment Strategy Overview
+
+Your CI/CD pipeline follows a three-tier deployment strategy:
+
+### **Branch → Environment → Destination**
+
+| Branch | Build Config | Android Track | Release Status | Purpose |
+|--------|-------------|---------------|----------------|---------|
+| `develop` | dev-release | Internal Testing | Auto-release (`status: completed`) | Internal testing with dev Firebase |
+| `beta` | prod-release | Beta Track (Open Testing) | Auto-release (`status: completed`) | Public beta testing with prod Firebase |
+| `master` | prod-release | Production Track | **Draft** (`status: draft`) | Production - **requires manual publish** |
+
+### **Why Draft for Production?**
+
+When you merge `beta` → `master`, the workflow uploads the AAB to the Play Console as a **draft release**. This means:
+
+✅ **AAB is uploaded and ready** - The build is in the Play Console  
+✅ **Store listing editable** - You can update descriptions, screenshots, etc.  
+✅ **Release notes editable** - Polish your what's new section  
+✅ **Staged rollout option** - Start with 5-10% of users and gradually increase  
+✅ **Full control** - Choose exactly when to publish to millions of users  
+❌ **Not live yet** - You must manually click "Publish" in the Play Console  
+
+**To publish:**
+1. Go to Play Console → Your App → Production track
+2. Review the draft release
+3. Optionally set up a staged rollout (recommended: start at 5-10%)
+4. Click "Start rollout to Production" when ready
+
+---
+
 ## Pre-requisites
 
-- [ ] Apple Developer Program membership is approved ($99/year)
-- [ ] Google Play Developer account is active ($25 one-time)
-- [ ] Firebase projects exist: `maypole-flutter-dev` and `maypole-flutter`
+- [] Apple Developer Program membership is approved ($99/year)
+- [X] Google Play Developer account is active ($25 one-time)
+- [X] Firebase projects exist: `maypole-flutter-dev` and `maypole-flutter`
 
 ---
 
 ## Android Setup
 
-### Play Console Configuration
-- [ ] Create internal testing track in Play Console
-- [ ] Create closed testing track (beta) in Play Console
-- [ ] Set up production track in Play Console
-- [ ] Add test users to internal testing group
+### Upload Keystore (for Google Play App Signing)
+- [X] Generate upload keystore: `keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`
+- [X] Save keystore passwords securely
+- [X] Convert keystore to base64: `base64 -i upload-keystore.jks | tr -d '\n' > keystore_base64.txt`
+- [X] Verify `android/app/build.gradle.kts` has signing config (✅ Already done)
+- [X] Test local signing works: `flutter build appbundle --release --flavor prod`
 
-### Keystore and Signing
-- [ ] Generate Android keystore file
-- [ ] Convert keystore to base64
-- [ ] Update `android/app/build.gradle.kts` with signing config (✅ Already done)
-- [ ] Test local signing works: `flutter build appbundle --release --flavor prod`
+### Play Console Setup
+- [X] Create app in Play Console (or navigate to existing app)
+- [X] Navigate to **Setup** → **App signing**
+- [X] Choose to let Google create and manage your app signing key
+- [X] Build and manually upload your first AAB to enable Play App Signing
+- [X] Download and save your app signing certificate (for reference)
+- [X] Create internal testing track and add test users
+- [X] Create closed testing track (beta) and add beta testers
+- [X] Verify production track is accessible
 
-### Service Account
+### Service Account for API Access
 - [ ] Create service account in Google Cloud Console
 - [ ] Download service account JSON key
-- [ ] Grant service account access in Play Console
-- [ ] Verify permissions include "Release apps to testing tracks"
+- [ ] Link service account in Play Console (**Setup** → **API access**)
+- [ ] Grant permissions: "View app info", "Release to testing tracks", "Release to production"
+- [ ] Verify service account has access to your app
 
 ### GitHub Secrets - Android
-- [ ] Add `ANDROID_KEYSTORE_BASE64`
-- [ ] Add `ANDROID_KEY_ALIAS`
-- [ ] Add `ANDROID_KEY_PASSWORD`
-- [ ] Add `ANDROID_STORE_PASSWORD`
-- [ ] Add `PLAY_STORE_SERVICE_ACCOUNT_JSON`
-- [ ] Add `GOOGLE_SERVICES_JSON_DEV`
-- [ ] Add `GOOGLE_SERVICES_JSON_PROD`
+- [ ] Add `ANDROID_KEYSTORE_BASE64` (content of keystore_base64.txt)
+- [ ] Add `ANDROID_KEY_ALIAS` (typically "upload")
+- [ ] Add `ANDROID_KEY_PASSWORD` (your key password)
+- [ ] Add `ANDROID_STORE_PASSWORD` (your keystore password)
+- [ ] Add `PLAY_STORE_SERVICE_ACCOUNT_JSON` (service account JSON content)
+- [ ] Add `GOOGLE_SERVICES_JSON_DEV` (dev flavor google-services.json content)
+- [ ] Add `GOOGLE_SERVICES_JSON_PROD` (prod flavor google-services.json content)
 
 ---
 
