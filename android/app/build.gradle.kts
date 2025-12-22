@@ -83,8 +83,8 @@ android {
     productFlavors {
         create("dev") {
             dimension = "environment"
-            // Set applicationId directly to match Firebase config
-            applicationId = "app.maypole.dev"
+            // Use same package name for all flavors (single app, multiple tracks)
+            // applicationId remains "app.maypole.maypole" from defaultConfig
             versionNameSuffix = "-dev"
             manifestPlaceholders["appName"] = "Maypole Dev"
         }
