@@ -2,18 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CLIENT_ID</key>
-	<string>902296622907-sn6s2vtj7vvf9rrcb4mo80gl87lpb41q.apps.googleusercontent.com</string>
-	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.902296622907-sn6s2vtj7vvf9rrcb4mo80gl87lpb41q</string>
 	<key>API_KEY</key>
-	<string>AIzaSyBj1oqw3nrtt18xFVJGqWQguEJjMRqN1bQ</string>
+	<string>AIzaSyC-tcVQAUDRJTZq-okP5cA8lkiYtyaopYs</string>
 	<key>GCM_SENDER_ID</key>
 	<string>902296622907</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>app.maypole.dev</string>
+	<string>app.maypole.maypole</string>
 	<key>PROJECT_ID</key>
 	<string>maypole-flutter-dev</string>
 	<key>STORAGE_BUCKET</key>
@@ -29,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:902296622907:ios:cb86fc6e8af29c9c20891e</string>
+	<string>1:902296622907:ios:26b6f280de807dc720891e</string>
 </dict>
 </plist>
