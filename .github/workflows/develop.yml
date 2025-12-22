@@ -177,7 +177,9 @@ jobs:
       #    - ANDROID_KEY_PASSWORD: Your key password
       #    - ANDROID_STORE_PASSWORD: Your keystore password (usually same as key password)
       - name: Debug Android Signing Secrets
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           echo "Checking ANDROID_KEYSTORE_BASE64 secret..."
           echo "Secret length: $(echo -n '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' | wc -c)"
@@ -187,7 +189,9 @@ jobs:
           echo "Checking for spaces: $(echo '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' | grep -c ' ' || echo 0)"
 
       - name: Setup Android Signing
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           # Remove any whitespace/newlines and decode
           echo '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' | tr -d '\n\r ' | base64 -d > android/app/upload-keystore.jks
@@ -208,11 +212,15 @@ jobs:
           echo "storeFile=upload-keystore.jks" >> android/key.properties
 
       - name: Build Android App Bundle (devRelease)
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: flutter build appbundle --release --flavor dev
 
       - name: Build Android APK (devRelease) - unsigned
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 == '' }}
+        if: ${{ env.ANDROID_KEYSTORE_BASE64 == '' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: flutter build apk --release --flavor dev
 
       # Deploy to Play Store Internal Testing Track
@@ -220,11 +228,14 @@ jobs:
       # Internal testing track supports up to 100 testers.
       # The secrets should already be configured in GitHub repository settings.
       - name: Deploy to Play Store Internal Testing
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON != '' }}
+        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' && env.PLAY_STORE_SERVICE_ACCOUNT_JSON != '' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          PLAY_STORE_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
-          packageName: app.maypole.dev
+          packageName: app.maypole.maypole
           releaseFiles: build/app/outputs/bundle/devRelease/app-dev-release.aab
           track: internal
           status: completed
@@ -277,7 +288,9 @@ jobs:
       # 5. Add IOS_PROVISIONING_PROFILE_BASE64 to GitHub Secrets
       # 6. Add KEYCHAIN_PASSWORD to GitHub Secrets
       - name: Setup iOS Signing
-        if: ${{ secrets.IOS_CERTIFICATE_BASE64 != '' }}
+        if: ${{ env.IOS_CERTIFICATE_BASE64 != '' }}
+        env:
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
         run: |
           # Decode certificate and provisioning profile
           echo "${{ secrets.IOS_CERTIFICATE_BASE64 }}" | base64 -d > certificate.p12
@@ -298,12 +311,16 @@ jobs:
           cp provisioning.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
       - name: Build iOS IPA (devRelease) - signed
-        if: ${{ secrets.IOS_CERTIFICATE_BASE64 != '' }}
+        if: ${{ env.IOS_CERTIFICATE_BASE64 != '' }}
+        env:
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
         run: |
           flutter build ipa --release --flavor dev --export-options-plist=ios/ExportOptions.plist
 
       - name: Build iOS (devRelease) - unsigned
-        if: ${{ secrets.IOS_CERTIFICATE_BASE64 == '' }}
+        if: ${{ env.IOS_CERTIFICATE_BASE64 == '' }}
+        env:
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
         run: |
           flutter build ios --release --flavor dev --no-codesign
 
@@ -314,7 +331,10 @@ jobs:
       # 3. Add APP_STORE_CONNECT_API_ISSUER_ID to GitHub Secrets
       # 4. Add APP_STORE_CONNECT_API_KEY_CONTENT to GitHub Secrets (base64 encoded .p8 file)
       - name: Upload to TestFlight
-        if: ${{ secrets.IOS_CERTIFICATE_BASE64 != '' && secrets.APP_STORE_CONNECT_API_KEY_CONTENT != '' }}
+        if: ${{ env.IOS_CERTIFICATE_BASE64 != '' && env.APP_STORE_CONNECT_API_KEY_CONTENT != '' }}
+        env:
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
         run: |
           # Decode API key
           echo "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}" | base64 -d > AuthKey.p8
@@ -327,6 +347,8 @@ jobs:
             --apiIssuer ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
 
       - name: Cleanup keychain
-        if: always() && secrets.IOS_CERTIFICATE_BASE64 != ''
+        if: always() && env.IOS_CERTIFICATE_BASE64 != ''
+        env:
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
         run: |
           security delete-keychain build.keychain || true
