@@ -161,7 +161,17 @@ jobs:
 
       - name: Create google-services.json for dev flavor
         run: |
-          echo '${{ secrets.GOOGLE_SERVICES_JSON_DEV }}' > android/app/src/dev/google-services.json
+          mkdir -p android/app/src/dev
+          echo "${{ secrets.GOOGLE_SERVICES_JSON_DEV }}" > android/app/src/dev/google-services.json
+          
+          # Validate the JSON is well-formed
+          if ! python3 -m json.tool android/app/src/dev/google-services.json > /dev/null 2>&1; then
+            echo "Error: google-services.json is not valid JSON"
+            cat android/app/src/dev/google-services.json
+            exit 1
+          fi
+          
+          echo "google-services.json created successfully"
 
       # TODO: Setup Android Signing with Google Play App Signing
       # This uses an upload keystore that signs your AAB before upload to Play Store.
@@ -277,7 +287,17 @@ jobs:
 
       - name: Create GoogleService-Info.plist for dev
         run: |
-          echo '${{ secrets.GOOGLE_SERVICE_INFO_PLIST_DEV }}' > ios/Runner/GoogleService-Info.plist
+          mkdir -p ios/Runner
+          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_DEV }}" > ios/Runner/GoogleService-Info.plist
+          
+          # Validate the plist is well-formed
+          if ! plutil -lint ios/Runner/GoogleService-Info.plist > /dev/null 2>&1; then
+            echo "Error: GoogleService-Info.plist is not valid"
+            cat ios/Runner/GoogleService-Info.plist
+            exit 1
+          fi
+          
+          echo "GoogleService-Info.plist created successfully"
 
       # TODO: Configure iOS code signing
       # You will need to:

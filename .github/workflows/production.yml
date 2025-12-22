@@ -149,14 +149,36 @@ jobs:
 
       - name: Create google-services.json for prod flavor
         run: |
-          echo '${{ secrets.GOOGLE_SERVICES_JSON_PROD }}' > android/app/src/prod/google-services.json
+          mkdir -p android/app/src/prod
+          echo "${{ secrets.GOOGLE_SERVICES_JSON_PROD }}" > android/app/src/prod/google-services.json
+          
+          # Validate the JSON is well-formed
+          if ! python3 -m json.tool android/app/src/prod/google-services.json > /dev/null 2>&1; then
+            echo "Error: google-services.json is not valid JSON"
+            cat android/app/src/prod/google-services.json
+            exit 1
+          fi
+          
+          echo "google-services.json created successfully"
 
       # Android Signing with Google Play App Signing
       # This workflow uses the same upload keystore for all environments.
       # The secrets should already be configured from the develop workflow setup.
       - name: Setup Android Signing
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
+          # Remove any whitespace/newlines and decode
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | tr -d '\n\r ' | base64 -d > android/app/upload-keystore.jks
+          
+          # Verify the keystore was created successfully
+          if [ ! -f android/app/upload-keystore.jks ]; then
+            echo "Error: Failed to create keystore file"
+            exit 1
+          fi
+          
+          FILESIZE=$(stat -f%z android/app/upload-keystore.jks 2>/dev/null || stat -c%s android/app/upload-keystore.jks 2>/dev/null)
+          echo "Keystore file created successfully (size: $FILESIZE bytes)"
+          
+          # Create key.properties
           echo "storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}" > android/key.properties
           echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/key.properties
           echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/key.properties
@@ -219,7 +241,17 @@ jobs:
 
       - name: Create GoogleService-Info.plist for prod
         run: |
-          echo '${{ secrets.GOOGLE_SERVICE_INFO_PLIST_PROD }}' > ios/Runner/GoogleService-Info.plist
+          mkdir -p ios/Runner
+          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_PROD }}" > ios/Runner/GoogleService-Info.plist
+          
+          # Validate the plist is well-formed
+          if ! plutil -lint ios/Runner/GoogleService-Info.plist > /dev/null 2>&1; then
+            echo "Error: GoogleService-Info.plist is not valid"
+            cat ios/Runner/GoogleService-Info.plist
+            exit 1
+          fi
+          
+          echo "GoogleService-Info.plist created successfully"
 
       # TODO: Configure iOS code signing
       # You will need to:
