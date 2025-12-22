@@ -203,7 +203,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   title: Text(l10n.privacy),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
-                    context.go('/privacy-policy');
+                    context.push('/privacy-policy');
                   },
                 ),
                 ListTile(

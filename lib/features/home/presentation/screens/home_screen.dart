@@ -59,6 +59,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   _SelectedThreadState _selectedThread = const _SelectedThreadState();
   bool _hasRequestedPermissions = false;
   bool _hasPrefetchedData = false;
+  int _currentTabIndex = 0;
 
   @override
   void initState() {
@@ -185,30 +186,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
               onDmThreadSelected: (threadId) =>
                   _handleDmThreadSelected(context, threadId, isWideScreen),
-              onTabChanged: () => _handleTabChanged(isWideScreen),
+              onTabChanged: (tabIndex) => _handleTabChanged(tabIndex, isWideScreen),
             ),
             contentPanel: _buildContentPanel(),
           ),
-          // Only show FAB on mobile screens
+          // Only show FAB on mobile screens and on Maypole List tab (index 0)
           floatingActionButton: isWideScreen
               ? null
-              : FloatingActionButton(
-            heroTag: 'home_fab',
-                  onPressed: () => _handleAddPressed(context),
-                  child: const Icon(Icons.add),
+              : AnimatedScale(
+                  scale: _currentTabIndex == 0 ? 1.0 : 0.0,
+                  duration: kTabScrollDuration,
+                  curve: Curves.ease,
+                  child: AnimatedOpacity(
+                    opacity: _currentTabIndex == 0 ? 1.0 : 0.0,
+                    duration: kTabScrollDuration,
+                    curve: Curves.ease,
+                    child: FloatingActionButton(
+                      heroTag: 'home_fab',
+                      onPressed: _currentTabIndex == 0 ? () => _handleAddPressed(context) : null,
+                      child: const Icon(Icons.add),
+                    ),
+                  ),
                 ),
         );
       },
     );
   }
 
-  void _handleTabChanged(bool isWideScreen) {
-    if (isWideScreen) {
-      // On wide screen, clear selection when switching tabs
-      setState(() {
+  void _handleTabChanged(int tabIndex, bool isWideScreen) {
+    setState(() {
+      _currentTabIndex = tabIndex;
+      if (isWideScreen) {
+        // On wide screen, clear selection when switching tabs
         _selectedThread = const _SelectedThreadState();
-      });
-    }
+      }
+    });
   }
 
   Widget? _buildContentPanel() {

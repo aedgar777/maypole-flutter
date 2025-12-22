@@ -14,7 +14,15 @@ class PrivacyPolicyScreen extends StatelessWidget {
         title: Text(l10n.privacyPolicy),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/settings'),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              // If there's no navigation stack (e.g., web deep link),
+              // navigate to settings
+              context.go('/settings');
+            }
+          },
         ),
       ),
       body: SingleChildScrollView(
