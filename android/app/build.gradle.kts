@@ -36,7 +36,7 @@ android {
         applicationId = "app.maypole.maypole"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion  // Required by cloud_functions and other Firebase plugins
+        minSdk = 23  // Required by cloud_functions and other Firebase plugins
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
