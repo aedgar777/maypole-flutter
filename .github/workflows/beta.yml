@@ -34,9 +34,22 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
+          # Pull latest changes in case branch was updated
+          git pull --rebase origin beta || {
+            echo "⚠️ Rebase conflict detected, attempting to resolve..."
+            # If there's a conflict, prefer our version bump changes
+            git checkout --ours pubspec.yaml
+            git add pubspec.yaml
+            git rebase --continue || {
+              echo "❌ Failed to resolve conflicts automatically"
+              git rebase --abort
+              exit 1
+            }
+          }
+          
           # Commit and push the version bump
           git add pubspec.yaml
-          git commit -m "chore: auto-bump build number to $(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ') [skip ci]"
+          git commit -m "chore: auto-bump build number to $(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ') [skip ci]" || echo "No changes to commit"
           git push origin beta
 
       - name: Setup Java
