@@ -128,18 +128,20 @@ jobs:
         run: flutter build appbundle --release --flavor prod
 
       # Deploy to Play Store Beta Track (Open Testing)
-      # This automatically releases to the beta track.
+      # For apps in draft status (not yet published), this uploads as a draft.
+      # Once your app is published, you can change status: draft to status: completed
+      # to automatically release to the beta track.
       # Configure the beta track as "Open Testing" in Play Console to allow
       # anyone to join and test your app.
       # The secrets should already be configured from the develop workflow setup.
-      - name: Deploy to Play Store Beta Track (Open Testing)
+      - name: Deploy to Play Store Beta Track (Draft)
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
           packageName: app.maypole.maypole
           releaseFiles: build/app/outputs/bundle/prodRelease/app-prod-release.aab
           track: beta
-          status: completed
+          status: draft
 
   # TODO: Uncomment iOS deployment when Apple Developer credentials are available
   # build_ios:

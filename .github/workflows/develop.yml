@@ -302,10 +302,12 @@ jobs:
         run: flutter build apk --release --flavor dev
 
       # Deploy to Play Store Internal Testing Track
-      # This automatically releases to internal testers for quick feedback.
+      # For apps in draft status (not yet published), this uploads as a draft.
+      # Once your app is published, you can change status: draft to status: completed
+      # to automatically release to internal testers.
       # Internal testing track supports up to 100 testers.
       # The secrets should already be configured in GitHub repository settings.
-      - name: Deploy to Play Store Internal Testing
+      - name: Deploy to Play Store Internal Testing (Draft)
         if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' && env.PLAY_STORE_SERVICE_ACCOUNT_JSON != '' }}
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -316,7 +318,7 @@ jobs:
           packageName: app.maypole.maypole
           releaseFiles: build/app/outputs/bundle/devRelease/app-dev-release.aab
           track: internal
-          status: completed
+          status: draft
 
   # TODO: Uncomment iOS deployment when Apple Developer credentials are available
   # build_ios:
