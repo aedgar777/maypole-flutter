@@ -488,6 +488,27 @@ Quick checklist:
 
 **Fix it now**: Follow the step-by-step guide in `PLAY_STORE_PERMISSIONS_FIX.md`
 
+#### Play Store: "Only releases with status draft may be created on draft app"
+
+**This error occurs when your app is still in draft status** (hasn't been published yet).
+
+**Solution**: The workflows are already configured to upload as `draft` for unpublished apps:
+- ✅ `develop.yml` uploads to internal track as `draft`
+- ✅ `beta.yml` uploads to beta track as `draft`
+- ✅ `production.yml` uploads to production track as `draft`
+
+**After your first release is published**, you can optionally change `status: draft` to `status: completed` in the workflows to automatically release new versions without manual approval.
+
+**Initial App Setup Requirements**:
+1. Create app in Google Play Console with package name `app.maypole.maypole`
+2. Complete all required store listing details (app name, description, screenshots, etc.)
+3. Complete content rating questionnaire
+4. Select target audience and content settings
+5. The workflow will upload the APK/AAB as a draft
+6. Manually review and publish your first release through the Play Console
+
+Once published, subsequent builds will continue to upload as drafts that you can review and release manually.
+
 #### Play Store: "Package not found"
 - Verify package name matches exactly: `app.maypole.maypole`
 - Check AndroidManifest.xml and build.gradle have correct package/applicationId
