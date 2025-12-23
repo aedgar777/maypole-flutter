@@ -114,6 +114,19 @@ jobs:
         run: |
           mkdir -p android/app/src/prod
           
+          # Debug: Check if secret is set
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "❌ ERROR: GOOGLE_SERVICES_JSON_PROD secret is not set or is empty!"
+            echo ""
+            echo "Please check:"
+            echo "1. Go to https://github.com/${{ github.repository }}/settings/secrets/actions"
+            echo "2. Verify 'GOOGLE_SERVICES_JSON_PROD' exists"
+            echo "3. Make sure it contains the full google-services.json content"
+            exit 1
+          fi
+          
+          echo "✅ Secret is set (length: ${#GOOGLE_SERVICES_JSON} characters)"
+          
           # Write the secret to file using environment variable (safer than command substitution)
           echo "$GOOGLE_SERVICES_JSON" > android/app/src/prod/google-services.json
           
