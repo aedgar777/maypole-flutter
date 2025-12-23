@@ -123,6 +123,8 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     environment: development
+    permissions:
+      contents: write  # Required to push version bump commits
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3

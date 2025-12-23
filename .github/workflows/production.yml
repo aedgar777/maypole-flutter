@@ -86,6 +86,8 @@ jobs:
   build_android:
     name: Build and Deploy Android (Production)
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required to push version bump commits
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3

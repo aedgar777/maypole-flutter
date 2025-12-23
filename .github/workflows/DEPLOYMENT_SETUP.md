@@ -297,6 +297,20 @@ base64 -i AuthKey_XXXXXXXXXX.p8 | tr -d '\n' > api_key_base64.txt
 
 ## GitHub Secrets Configuration
 
+### Step 1: Configure GitHub Actions Permissions
+
+**IMPORTANT**: Enable GitHub Actions to push version bumps back to your repository:
+
+1. Go to your GitHub repository → **Settings** → **Actions** → **General**
+2. Scroll down to **Workflow permissions**
+3. Select **Read and write permissions** (this allows workflows to push version bumps)
+4. Check ✅ **Allow GitHub Actions to create and approve pull requests** (optional)
+5. Click **Save**
+
+> **Why is this needed?** The workflows automatically increment the build number and commit it back to the repository to ensure each deployment has a unique version code. Without write permissions, you'll get a 403 error when the workflow tries to push.
+
+### Step 2: Add Repository Secrets
+
 Go to your GitHub repository → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
 
 Add the following secrets:
