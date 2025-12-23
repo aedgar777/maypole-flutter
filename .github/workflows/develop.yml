@@ -258,6 +258,28 @@ jobs:
           echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/key.properties
           echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/key.properties
           echo "storeFile=upload-keystore.jks" >> android/key.properties
+          
+          # Verify keystore password and alias
+          echo "Verifying keystore credentials..."
+          if keytool -list -v -keystore android/app/upload-keystore.jks \
+            -storepass "${{ secrets.ANDROID_STORE_PASSWORD }}" \
+            -alias "${{ secrets.ANDROID_KEY_ALIAS }}" > /dev/null 2>&1; then
+            echo "✅ Keystore credentials verified successfully"
+          else
+            echo "❌ ERROR: Keystore verification failed!"
+            echo ""
+            echo "This means one of these secrets is wrong:"
+            echo "  - ANDROID_STORE_PASSWORD"
+            echo "  - ANDROID_KEY_ALIAS"
+            echo ""
+            echo "Attempting to list available aliases in keystore..."
+            keytool -list -keystore android/app/upload-keystore.jks \
+              -storepass "${{ secrets.ANDROID_STORE_PASSWORD }}" 2>&1 || true
+            echo ""
+            echo "If you see 'keystore password was incorrect' above, check ANDROID_STORE_PASSWORD"
+            echo "If you see a list of aliases, your alias name might be wrong"
+            exit 1
+          fi
 
       - name: Build Android App Bundle (devRelease)
         if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
