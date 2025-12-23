@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:902296622907:android:8e15e9dca4480f9420891e",
+        "mobilesdk_app_id": "1:902296622907:android:a4780ec8eb6ff87f20891e",
         "android_client_info": {
-          "package_name": "app.maypole.dev"
+          "package_name": "app.maypole.maypole"
         }
       },
       "oauth_client": [],
@@ -20,7 +20,15 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "902296622907-sn6s2vtj7vvf9rrcb4mo80gl87lpb41q.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "app.maypole.maypole"
+              }
+            }
+          ]
         }
       }
     }

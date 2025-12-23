@@ -48,6 +48,16 @@ app.*.map.json
 .env
 .env.dev
 .env.prod
+
+# Android keystore and signing files (NEVER commit these!)
+android/key.properties
+android/app/*.jks
+android/app/*.keystore
+*.jks
+*.keystore
+
+# Keystore backup documentation (contains sensitive info)
+KEYSTORE_BACKUP.md
 .env.production
 
 # Firebase configuration files with sensitive data
@@ -67,9 +77,12 @@ android/local.properties
 
 # Android signing keys
 android/key.properties
-android/app/upload-keystore.jks
 android/app/*.jks
 android/app/*.keystore
+*.jks
+*keystore*.jks
+keystore_base64.txt
+*_base64.txt
 
 # Sensitive Firebase files
 firebase-debug.log

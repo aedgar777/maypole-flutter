@@ -15,61 +15,66 @@ This guide will walk you through setting up automated deployments for the Maypol
 
 ## Android Setup
 
-### 1. Create Android Keystore
+> **📱 About Google Play App Signing**
+>
+> This setup uses **Google Play App Signing**, which is Google's recommended approach and provides significant security benefits:
+> 
+> **How it works:**
+> 1. You create a simple **upload key** (easy to reset if compromised)
+> 2. Google generates and securely stores the real **app signing key**
+> 3. You sign your AABs with the upload key and upload to Play Console
+> 4. Google re-signs with the app signing key before distributing to users
+>
+> **Benefits:**
+> - ✅ **Lost/stolen upload key?** Just reset it in Play Console - your app signing key is safe with Google
+> - ✅ **Simpler CI/CD** - Only need to manage a simple upload keystore in GitHub Secrets
+> - ✅ **Better security** - Your actual app signing key never leaves Google's infrastructure
+> - ✅ **Required for App Bundles** - Google Play requires App Signing for dynamic delivery features
+>
+> **The traditional approach** (managing your own app signing key) is more complex, riskier, and not recommended.
 
-You'll need to create a signing keystore for your Android app. Run this command locally:
+### 1. Create Upload Keystore
+
+Create a simple upload keystore for signing your app bundles:
 
 ```bash
-keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias play-store-upload
 ```
 
-**Important**: Save the following information securely (you'll need it for GitHub Secrets):
-- **Key alias**: The alias you chose (e.g., "upload")
-- **Key password**: The password for the key
-- **Store password**: The password for the keystore file
+**Fill in the prompts**:
+- **Password**: Choose a secure password (you'll need this for GitHub Secrets)
+- **Name**: Your name or organization
+- **Organization Unit**: Your team/department
+- **Organization**: Your company name
+- **City/Locality**: Your city
+- **State/Province**: Your state
+- **Country Code**: Your two-letter country code (e.g., US)
+
+**Important**: Save this information securely:
+- **Key alias**: `upload` (or whatever you chose)
+- **Key password**: The password you set
+- **Store password**: Usually the same as key password
 
 ### 2. Configure Android Build for Signing
 
-Update `android/app/build.gradle.kts` to include signing configuration:
+The build configuration has already been updated in `android/app/build.gradle.kts` to support keystore signing. The workflow will create the `key.properties` file automatically during CI/CD builds.
 
-Add this before the `android` block:
+**Local Testing** (optional): If you want to test release builds locally, create `android/key.properties`:
 
-```kotlin
-// Load keystore properties
-val keystorePropertiesFile = rootProject.file("key.properties")
-val keystoreProperties = Properties()
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-}
+```properties
+storePassword=YOUR_STORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=play-store-upload
+storeFile=upload-keystore.jks
 ```
 
-Update the `signingConfigs` section inside the `android` block:
+Then copy your keystore to `android/app/upload-keystore.jks`.
 
-```kotlin
-android {
-    // ... existing config ...
-    
-    signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String?
-            keyPassword = keystoreProperties["keyPassword"] as String?
-            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-            storePassword = keystoreProperties["storePassword"] as String?
-        }
-    }
-    
-    buildTypes {
-        release {
-            signingConfig = signingConfigs.getByName("release")
-            // ... rest of release config
-        }
-    }
-}
-```
+**Note**: These files are gitignored and won't be committed.
 
-### 3. Google Play Console Setup
+### 3. Create Service Account for Play Console API
 
-#### Create Service Account
+This allows GitHub Actions to automatically upload builds to Play Console.
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Select or create a project
 3. Navigate to **IAM & Admin** → **Service Accounts**
@@ -83,36 +88,81 @@ android {
 11. Choose **JSON** format and download it
 12. **Save this JSON file securely** - you'll add it to GitHub Secrets
 
-#### Link Service Account to Play Console
+### 4. Link Service Account to Play Console
+
+**⚠️ CRITICAL**: This step is essential for automated deployments to work. Permission errors are the #1 cause of deployment failures.
+
 1. Go to [Google Play Console](https://play.google.com/console/)
 2. Navigate to **Setup** → **API access**
 3. Link your Google Cloud project if not already linked
+   - Click **Link to Google Cloud Project**
+   - Select the project where you created the service account
 4. Grant access to your service account:
-   - Find the service account you created
-   - Click **Grant access**
-   - Under **App permissions**, select your app
-   - Under **Account permissions**, grant:
-     - **View app information and download bulk reports** (read-only)
-     - **Release apps to testing tracks** (release management)
-     - **Release apps to production** (release management, only if you want automated production releases)
+   - Find the service account you created (should end with `.iam.gserviceaccount.com`)
+   - Click **View Play Console permissions** (or three dots → **Manage Play Console permissions**)
+   - Under **App permissions**:
+     - Select **app.maypole.maypole** (or select "All apps" if you prefer)
+   - Under **Account permissions**, grant these permissions:
+     - ✅ **View app information and download bulk reports** (read-only)
+     - ✅ **Manage testing tracks and edit tester lists** (REQUIRED for internal/beta releases)
+     - ✅ **Release to production, exclude devices, and use Play App Signing** (only if you want automated production releases)
    - Click **Apply** then **Invite user**
+   - Wait 5-10 minutes for permissions to propagate
 
-#### Set Up Testing Tracks
+**📝 Note**: The exact permission names may vary slightly in the Play Console UI. The key permission is anything related to "managing testing tracks" or "releasing to testing tracks".
+
+### 5. Set Up Play App Signing
+
+**First Time Setup** (when creating a new app):
+
+1. In Play Console, create your app
+2. Navigate to **Setup** → **App signing**
+3. Choose **Continue** to let Google create and manage your app signing key
+4. Upload your first signed AAB (you'll need to do this before the automated pipeline works)
+
+**To upload your first AAB manually**:
+
+```bash
+# Build your first AAB locally
+flutter build appbundle --release --flavor prod
+
+# Sign it with your upload key
+jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+  -keystore upload-keystore.jks \
+  build/app/outputs/bundle/prodRelease/app-prod-release.aab \
+  upload
+
+# Upload through Play Console web UI:
+# Release → Production (or Internal testing) → Create new release → Upload AAB
+```
+
+After the first upload, Google will display your app signing key certificate. The automated workflow will handle subsequent uploads.
+
+**Important**: After setup, download the **App Signing Certificate** from Play Console:
+1. Go to **Setup** → **App signing**
+2. Download the **App signing certificate** (for verification purposes)
+3. Keep this safe - you may need it for API integrations
+
+### 6. Set Up Testing Tracks
+
 1. In Play Console, go to your app
 2. Navigate to **Testing** → **Internal testing**
 3. Create an internal testing track if you haven't already
-4. Add testers/testing groups
-5. Repeat for **Closed testing** → **Beta** track
+4. Add testers/testing groups (email addresses or Google Groups)
+5. Repeat for **Closed testing** → Create **Beta** track
+6. Add beta testers to the beta track
 
-### 4. Prepare Keystore for GitHub
+### 7. Prepare Keystore for GitHub
 
-Convert your keystore to base64:
+Convert your upload keystore to base64:
 
 ```bash
 base64 -i upload-keystore.jks | tr -d '\n' > keystore_base64.txt
 ```
 
 The content of `keystore_base64.txt` will be added to GitHub Secrets.
+
+**Security Note**: Your upload key is stored in GitHub Secrets and used only for CI/CD. Even if compromised, you can reset it in Play Console without affecting your app's signing key or requiring users to reinstall.
 
 ---
 
@@ -246,6 +296,20 @@ base64 -i AuthKey_XXXXXXXXXX.p8 | tr -d '\n' > api_key_base64.txt
 ---
 
 ## GitHub Secrets Configuration
+
+### Step 1: Configure GitHub Actions Permissions
+
+**IMPORTANT**: Enable GitHub Actions to push version bumps back to your repository:
+
+1. Go to your GitHub repository → **Settings** → **Actions** → **General**
+2. Scroll down to **Workflow permissions**
+3. Select **Read and write permissions** (this allows workflows to push version bumps)
+4. Check ✅ **Allow GitHub Actions to create and approve pull requests** (optional)
+5. Click **Save**
+
+> **Why is this needed?** The workflows automatically increment the build number and commit it back to the repository to ensure each deployment has a unique version code. Without write permissions, you'll get a 403 error when the workflow tries to push.
+
+### Step 2: Add Repository Secrets
 
 Go to your GitHub repository → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
 
@@ -410,9 +474,50 @@ This should:
 - Check that provisioning profile matches the bundle ID
 - Ensure certificate password is correct
 
-#### Play Store: "Permission denied"
-- Check service account has correct permissions in Play Console
-- Verify service account JSON is complete and valid
+#### Play Store: "The caller does not have permission" ⚠️ MOST COMMON
+
+**This is the #1 deployment error.** See the dedicated fix guide:
+👉 **[PLAY_STORE_PERMISSIONS_FIX.md](./PLAY_STORE_PERMISSIONS_FIX.md)**
+
+Quick checklist:
+- ✅ Service account has **"Manage testing tracks"** permission in Play Console
+- ✅ Service account is linked to your specific app (not just the account)
+- ✅ Waited 5-10 minutes after granting permissions
+- ✅ First APK/AAB was uploaded manually (for new apps)
+- ✅ Service account email in GitHub secret matches Play Console
+
+**Fix it now**: Follow the step-by-step guide in `PLAY_STORE_PERMISSIONS_FIX.md`
+
+#### Play Store: "Only releases with status draft may be created on draft app"
+
+**This error occurs when your app is still in draft status** (hasn't been published yet).
+
+**Solution**: The workflows are already configured to upload as `draft` for unpublished apps:
+- ✅ `develop.yml` uploads to internal track as `draft`
+- ✅ `beta.yml` uploads to beta track as `draft`
+- ✅ `production.yml` uploads to production track as `draft`
+
+**After your first release is published**, you can optionally change `status: draft` to `status: completed` in the workflows to automatically release new versions without manual approval.
+
+**Initial App Setup Requirements**:
+1. Create app in Google Play Console with package name `app.maypole.maypole`
+2. Complete all required store listing details (app name, description, screenshots, etc.)
+3. Complete content rating questionnaire
+4. Select target audience and content settings
+5. The workflow will upload the APK/AAB as a draft
+6. Manually review and publish your first release through the Play Console
+
+Once published, subsequent builds will continue to upload as drafts that you can review and release manually.
+
+#### Play Store: "Package not found"
+- Verify package name matches exactly: `app.maypole.maypole`
+- Check AndroidManifest.xml and build.gradle have correct package/applicationId
+- Ensure app exists in Play Console with this exact package name
+
+#### Play Store: "Invalid service account JSON"
+- Verify the JSON is complete (not truncated)
+- Ensure no extra quotes or escaping around the JSON in GitHub secrets
+- Validate JSON: `echo "$JSON" | jq .` should parse successfully
 
 #### TestFlight: "Invalid API Key"
 - Verify Key ID and Issuer ID are correct
@@ -462,7 +567,8 @@ Create a `maypole-flutter-beta` Firebase project and deploy there instead. This 
 
 - **Apple Distribution Certificate**: Valid for 1 year, renew annually
 - **Provisioning Profiles**: Valid for 1 year, renew annually
-- **Android Keystore**: Valid for 10000 days (27+ years)
+- **Android Upload Keystore**: Valid for 10000 days (27+ years)
+  - Note: Even if compromised, you can reset your upload key in Play Console without affecting your app signing key or requiring users to reinstall
 
 ### Regular Updates
 
@@ -474,10 +580,16 @@ Create a `maypole-flutter-beta` Firebase project and deploy there instead. This 
 
 ## Summary Checklist
 
-- [ ] Android keystore created and base64 encoded
-- [ ] Android build.gradle.kts updated with signing config
-- [ ] Google Play Console service account created and configured
+### Android
+- [ ] Upload keystore created and base64 encoded
+- [ ] Android build.gradle.kts updated with signing config (✅ Already done)
+- [ ] First AAB manually uploaded to enable Google Play App Signing
+- [ ] App signing certificate downloaded from Play Console (for reference)
+- [ ] Google Cloud service account created and configured
+- [ ] Service account linked to Play Console with correct permissions
 - [ ] Play Console testing tracks set up (internal and beta)
+
+### iOS
 - [ ] iOS certificates created and exported
 - [ ] iOS provisioning profiles created
 - [ ] App Store Connect API key created

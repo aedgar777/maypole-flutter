@@ -9,15 +9,51 @@ jobs:
   build_android:
     name: Build and Deploy Android (Beta)
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required to push version bump commits
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Auto-Bump Build Number
+        run: |
+          chmod +x scripts/auto-bump-build.sh scripts/get-version.sh
+          echo "📱 Current version:"
+          ./scripts/get-version.sh
+          echo ""
+          echo "🔄 Auto-bumping build number..."
+          ./scripts/auto-bump-build.sh
+          echo ""
+          echo "✅ New version:"
+          ./scripts/get-version.sh
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Commit and push the version bump
+          git add pubspec.yaml
+          git commit -m "chore: auto-bump build number to $(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ') [skip ci]"
+          git push origin beta
 
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
+
+      - name: Cache Gradle
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -47,131 +83,166 @@ jobs:
           EOF
 
       - name: Create google-services.json for prod flavor
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON_PROD }}
         run: |
-          echo '${{ secrets.GOOGLE_SERVICES_JSON_PROD }}' > android/app/src/prod/google-services.json
+          mkdir -p android/app/src/prod
+          echo "$GOOGLE_SERVICES_JSON" > android/app/src/prod/google-services.json
+          
+          # Validate the JSON is well-formed
+          if ! python3 -m json.tool android/app/src/prod/google-services.json > /dev/null 2>&1; then
+            echo "❌ Error: google-services.json is not valid JSON"
+            echo "JSON parsing error:"
+            python3 -m json.tool android/app/src/prod/google-services.json 2>&1 || true
+            exit 1
+          fi
+          
+          echo "✅ google-services.json created and validated successfully"
 
-      # TODO: Add Android keystore from GitHub Secrets
-      # You will need to:
-      # 1. Create a keystore file (see DEPLOYMENT_SETUP.md)
-      # 2. Base64 encode it: base64 -i keystore.jks | tr -d '\n' > keystore_base64.txt
-      # 3. Add ANDROID_KEYSTORE_BASE64 to GitHub Secrets
-      # 4. Add ANDROID_KEY_ALIAS to GitHub Secrets
-      # 5. Add ANDROID_KEY_PASSWORD to GitHub Secrets
-      # 6. Add ANDROID_STORE_PASSWORD to GitHub Secrets
+      # Android Signing with Google Play App Signing
+      # This workflow uses the same upload keystore for all environments.
+      # The secrets should already be configured from the develop workflow setup.
       - name: Setup Android Signing
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
-          echo "storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}" > android/key.properties
-          echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/key.properties
-          echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/key.properties
-          echo "storeFile=upload-keystore.jks" >> android/key.properties
+          # Remove any whitespace/newlines and decode
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | tr -d '\n\r ' | base64 -d > android/app/upload-keystore.jks
+          
+          # Verify the keystore was created successfully
+          if [ ! -f android/app/upload-keystore.jks ]; then
+            echo "Error: Failed to create keystore file"
+            exit 1
+          fi
+          
+          FILESIZE=$(stat -f%z android/app/upload-keystore.jks 2>/dev/null || stat -c%s android/app/upload-keystore.jks 2>/dev/null)
+          echo "Keystore file created successfully (size: $FILESIZE bytes)"
+          
+          # Create key.properties with proper escaping for special characters
+          cat > android/key.properties << 'KEYSTORE_EOF'
+          storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storeFile=upload-keystore.jks
+          KEYSTORE_EOF
 
       - name: Build Android App Bundle (prodRelease)
         run: flutter build appbundle --release --flavor prod
 
-      # TODO: Configure Play Store deployment for beta track
-      # You will need to:
-      # 1. Create a Google Cloud Service Account (see DEPLOYMENT_SETUP.md)
-      # 2. Add PLAY_STORE_SERVICE_ACCOUNT_JSON to GitHub Secrets
-      # 3. Set up beta testing track in Play Console
-      - name: Deploy to Play Store Beta Track
+      # Deploy to Play Store Beta Track (Open Testing)
+      # For apps in draft status (not yet published), this uploads as a draft.
+      # Once your app is published, you can change status: draft to status: completed
+      # to automatically release to the beta track.
+      # Configure the beta track as "Open Testing" in Play Console to allow
+      # anyone to join and test your app.
+      # The secrets should already be configured from the develop workflow setup.
+      - name: Deploy to Play Store Beta Track (Draft)
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
           packageName: app.maypole.maypole
           releaseFiles: build/app/outputs/bundle/prodRelease/app-prod-release.aab
           track: beta
-          status: completed
+          status: draft
 
-  build_ios:
-    name: Build and Deploy iOS (Beta TestFlight)
-    runs-on: macos-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.32.0'
-          channel: 'stable'
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Create .env file from secrets
-        run: |
-          cat > .env << EOF
-          ENVIRONMENT=prod
-          FIREBASE_PROD_WEB_API_KEY=${{ secrets.FIREBASE_PROD_WEB_API_KEY }}
-          FIREBASE_PROD_WEB_APP_ID=${{ secrets.FIREBASE_PROD_WEB_APP_ID }}
-          FIREBASE_PROD_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_PROD_WEB_MEASUREMENT_ID }}
-          FIREBASE_PROD_ANDROID_API_KEY=${{ secrets.FIREBASE_PROD_ANDROID_API_KEY }}
-          FIREBASE_PROD_ANDROID_APP_ID=${{ secrets.FIREBASE_PROD_ANDROID_APP_ID }}
-          FIREBASE_PROD_IOS_API_KEY=${{ secrets.FIREBASE_PROD_IOS_API_KEY }}
-          FIREBASE_PROD_IOS_APP_ID=${{ secrets.FIREBASE_PROD_IOS_APP_ID }}
-          FIREBASE_PROD_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_PROD_MESSAGING_SENDER_ID }}
-          FIREBASE_PROD_PROJECT_ID=${{ secrets.FIREBASE_PROD_PROJECT_ID }}
-          FIREBASE_PROD_AUTH_DOMAIN=${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }}
-          FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }}
-          IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
-          EOF
-
-      - name: Create GoogleService-Info.plist for prod
-        run: |
-          echo '${{ secrets.GOOGLE_SERVICE_INFO_PLIST_PROD }}' > ios/Runner/GoogleService-Info.plist
-
-      # TODO: Configure iOS code signing
-      # You will need to:
-      # 1. Create certificates and provisioning profiles in Apple Developer Console
-      # 2. Export them and add to GitHub Secrets (see DEPLOYMENT_SETUP.md)
-      # 3. Add IOS_CERTIFICATE_BASE64 to GitHub Secrets
-      # 4. Add IOS_CERTIFICATE_PASSWORD to GitHub Secrets
-      # 5. Add IOS_PROVISIONING_PROFILE_BASE64 to GitHub Secrets
-      # 6. Add KEYCHAIN_PASSWORD to GitHub Secrets
-      - name: Setup iOS Signing
-        run: |
-          # Decode certificate and provisioning profile
-          echo "${{ secrets.IOS_CERTIFICATE_BASE64 }}" | base64 -d > certificate.p12
-          echo "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" | base64 -d > provisioning.mobileprovision
-          
-          # Create temporary keychain
-          security create-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
-          security set-keychain-settings -t 3600 -u build.keychain
-          
-          # Import certificate
-          security import certificate.p12 -k build.keychain -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
-          
-          # Install provisioning profile
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp provisioning.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
-
-      - name: Build iOS IPA (prodRelease)
-        run: |
-          flutter build ipa --release --flavor prod --export-options-plist=ios/ExportOptions.plist
-
-      # TODO: Configure App Store Connect API
-      # You will need to:
-      # 1. Create an App Store Connect API Key (see DEPLOYMENT_SETUP.md)
-      # 2. Add APP_STORE_CONNECT_API_KEY_ID to GitHub Secrets
-      # 3. Add APP_STORE_CONNECT_API_ISSUER_ID to GitHub Secrets
-      # 4. Add APP_STORE_CONNECT_API_KEY_CONTENT to GitHub Secrets (base64 encoded .p8 file)
-      - name: Upload to TestFlight (Beta Group)
-        run: |
-          # Decode API key
-          echo "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}" | base64 -d > AuthKey.p8
-          
-          # Upload to TestFlight using xcrun altool
-          xcrun altool --upload-app \
-            --type ios \
-            --file build/ios/ipa/*.ipa \
-            --apiKey ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
-            --apiIssuer ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
-
-      - name: Cleanup keychain
-        if: always()
-        run: |
-          security delete-keychain build.keychain || true
+  # TODO: Uncomment iOS deployment when Apple Developer credentials are available
+  # build_ios:
+  #   name: Build and Deploy iOS (Beta TestFlight)
+  #   runs-on: macos-latest
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v3
+  #
+  #     - name: Setup Flutter
+  #       uses: subosito/flutter-action@v2
+  #       with:
+  #         flutter-version: '3.32.0'
+  #         channel: 'stable'
+  #
+  #     - name: Get dependencies
+  #       run: flutter pub get
+  #
+  #     - name: Create .env file from secrets
+  #       run: |
+  #         cat > .env << EOF
+  #         ENVIRONMENT=prod
+  #         FIREBASE_PROD_WEB_API_KEY=${{ secrets.FIREBASE_PROD_WEB_API_KEY }}
+  #         FIREBASE_PROD_WEB_APP_ID=${{ secrets.FIREBASE_PROD_WEB_APP_ID }}
+  #         FIREBASE_PROD_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_PROD_WEB_MEASUREMENT_ID }}
+  #         FIREBASE_PROD_ANDROID_API_KEY=${{ secrets.FIREBASE_PROD_ANDROID_API_KEY }}
+  #         FIREBASE_PROD_ANDROID_APP_ID=${{ secrets.FIREBASE_PROD_ANDROID_APP_ID }}
+  #         FIREBASE_PROD_IOS_API_KEY=${{ secrets.FIREBASE_PROD_IOS_API_KEY }}
+  #         FIREBASE_PROD_IOS_APP_ID=${{ secrets.FIREBASE_PROD_IOS_APP_ID }}
+  #         FIREBASE_PROD_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_PROD_MESSAGING_SENDER_ID }}
+  #         FIREBASE_PROD_PROJECT_ID=${{ secrets.FIREBASE_PROD_PROJECT_ID }}
+  #         FIREBASE_PROD_AUTH_DOMAIN=${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }}
+  #         FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }}
+  #         IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
+  #         EOF
+  #
+  #     - name: Create GoogleService-Info.plist for prod
+  #       run: |
+  #         mkdir -p ios/Runner
+  #         echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_PROD }}" > ios/Runner/GoogleService-Info.plist
+  #         
+  #         # Validate the plist is well-formed
+  #         if ! plutil -lint ios/Runner/GoogleService-Info.plist > /dev/null 2>&1; then
+  #           echo "Error: GoogleService-Info.plist is not valid"
+  #           cat ios/Runner/GoogleService-Info.plist
+  #           exit 1
+  #         fi
+  #         
+  #         echo "GoogleService-Info.plist created successfully"
+  #
+  #     # TODO: Configure iOS code signing
+  #     # You will need to:
+  #     # 1. Create certificates and provisioning profiles in Apple Developer Console
+  #     # 2. Export them and add to GitHub Secrets (see DEPLOYMENT_SETUP.md)
+  #     # 3. Add IOS_CERTIFICATE_BASE64 to GitHub Secrets
+  #     # 4. Add IOS_CERTIFICATE_PASSWORD to GitHub Secrets
+  #     # 5. Add IOS_PROVISIONING_PROFILE_BASE64 to GitHub Secrets
+  #     # 6. Add KEYCHAIN_PASSWORD to GitHub Secrets
+  #     - name: Setup iOS Signing
+  #       run: |
+  #         # Decode certificate and provisioning profile
+  #         echo "${{ secrets.IOS_CERTIFICATE_BASE64 }}" | base64 -d > certificate.p12
+  #         echo "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" | base64 -d > provisioning.mobileprovision
+  #         
+  #         # Create temporary keychain
+  #         security create-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
+  #         security default-keychain -s build.keychain
+  #         security unlock-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
+  #         security set-keychain-settings -t 3600 -u build.keychain
+  #         
+  #         # Import certificate
+  #         security import certificate.p12 -k build.keychain -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+  #         security set-key-partition-list -S apple-tool:,apple: -s -k "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
+  #         
+  #         # Install provisioning profile
+  #         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+  #         cp provisioning.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+  #
+  #     - name: Build iOS IPA (prodRelease)
+  #       run: |
+  #         flutter build ipa --release --flavor prod --export-options-plist=ios/ExportOptions.plist
+  #
+  #     # TODO: Configure App Store Connect API
+  #     # You will need to:
+  #     # 1. Create an App Store Connect API Key (see DEPLOYMENT_SETUP.md)
+  #     # 2. Add APP_STORE_CONNECT_API_KEY_ID to GitHub Secrets
+  #     # 3. Add APP_STORE_CONNECT_API_ISSUER_ID to GitHub Secrets
+  #     # 4. Add APP_STORE_CONNECT_API_KEY_CONTENT to GitHub Secrets (base64 encoded .p8 file)
+  #     - name: Upload to TestFlight (Beta Group)
+  #       run: |
+  #         # Decode API key
+  #         echo "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}" | base64 -d > AuthKey.p8
+  #         
+  #         # Upload to TestFlight using xcrun altool
+  #         xcrun altool --upload-app \
+  #           --type ios \
+  #           --file build/ios/ipa/*.ipa \
+  #           --apiKey ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
+  #           --apiIssuer ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+  #
+  #     - name: Cleanup keychain
+  #       if: always()
+  #       run: |
+  #         security delete-keychain build.keychain || true

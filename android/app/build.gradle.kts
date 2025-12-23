@@ -8,17 +8,20 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+import java.util.Properties
+import java.io.FileInputStream
+
 // Load keystore properties for release signing
 val keystorePropertiesFile = rootProject.file("key.properties")
-val keystoreProperties = java.util.Properties()
+val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 android {
     namespace = "app.maypole.maypole"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -33,7 +36,7 @@ android {
         applicationId = "app.maypole.maypole"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 23  // Required by cloud_functions and other Firebase plugins
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -80,8 +83,8 @@ android {
     productFlavors {
         create("dev") {
             dimension = "environment"
-            // Set applicationId directly to match Firebase config
-            applicationId = "app.maypole.dev"
+            // Use same package name for all flavors (single app, multiple tracks)
+            // applicationId remains "app.maypole.maypole" from defaultConfig
             versionNameSuffix = "-dev"
             manifestPlaceholders["appName"] = "Maypole Dev"
         }
