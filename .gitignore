@@ -51,7 +51,6 @@ app.*.map.json
 
 # Android keystore and signing files (NEVER commit these!)
 android/key.properties
-android/app/upload-keystore.jks
 android/app/*.jks
 android/app/*.keystore
 *.jks
@@ -78,7 +77,6 @@ android/local.properties
 
 # Android signing keys
 android/key.properties
-android/app/upload-keystore.jks
 android/app/*.jks
 android/app/*.keystore
 *.jks
