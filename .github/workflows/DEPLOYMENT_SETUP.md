@@ -89,18 +89,27 @@ This allows GitHub Actions to automatically upload builds to Play Console.
 12. **Save this JSON file securely** - you'll add it to GitHub Secrets
 
 ### 4. Link Service Account to Play Console
+
+**⚠️ CRITICAL**: This step is essential for automated deployments to work. Permission errors are the #1 cause of deployment failures.
+
 1. Go to [Google Play Console](https://play.google.com/console/)
 2. Navigate to **Setup** → **API access**
 3. Link your Google Cloud project if not already linked
+   - Click **Link to Google Cloud Project**
+   - Select the project where you created the service account
 4. Grant access to your service account:
-   - Find the service account you created
-   - Click **Grant access**
-   - Under **App permissions**, select your app
-   - Under **Account permissions**, grant:
-     - **View app information and download bulk reports** (read-only)
-     - **Release apps to testing tracks** (release management)
-     - **Release apps to production** (release management, only if you want automated production releases)
+   - Find the service account you created (should end with `.iam.gserviceaccount.com`)
+   - Click **View Play Console permissions** (or three dots → **Manage Play Console permissions**)
+   - Under **App permissions**:
+     - Select **app.maypole.maypole** (or select "All apps" if you prefer)
+   - Under **Account permissions**, grant these permissions:
+     - ✅ **View app information and download bulk reports** (read-only)
+     - ✅ **Manage testing tracks and edit tester lists** (REQUIRED for internal/beta releases)
+     - ✅ **Release to production, exclude devices, and use Play App Signing** (only if you want automated production releases)
    - Click **Apply** then **Invite user**
+   - Wait 5-10 minutes for permissions to propagate
+
+**📝 Note**: The exact permission names may vary slightly in the Play Console UI. The key permission is anything related to "managing testing tracks" or "releasing to testing tracks".
 
 ### 5. Set Up Play App Signing
 
@@ -451,9 +460,29 @@ This should:
 - Check that provisioning profile matches the bundle ID
 - Ensure certificate password is correct
 
-#### Play Store: "Permission denied"
-- Check service account has correct permissions in Play Console
-- Verify service account JSON is complete and valid
+#### Play Store: "The caller does not have permission" ⚠️ MOST COMMON
+
+**This is the #1 deployment error.** See the dedicated fix guide:
+👉 **[PLAY_STORE_PERMISSIONS_FIX.md](./PLAY_STORE_PERMISSIONS_FIX.md)**
+
+Quick checklist:
+- ✅ Service account has **"Manage testing tracks"** permission in Play Console
+- ✅ Service account is linked to your specific app (not just the account)
+- ✅ Waited 5-10 minutes after granting permissions
+- ✅ First APK/AAB was uploaded manually (for new apps)
+- ✅ Service account email in GitHub secret matches Play Console
+
+**Fix it now**: Follow the step-by-step guide in `PLAY_STORE_PERMISSIONS_FIX.md`
+
+#### Play Store: "Package not found"
+- Verify package name matches exactly: `app.maypole.maypole`
+- Check AndroidManifest.xml and build.gradle have correct package/applicationId
+- Ensure app exists in Play Console with this exact package name
+
+#### Play Store: "Invalid service account JSON"
+- Verify the JSON is complete (not truncated)
+- Ensure no extra quotes or escaping around the JSON in GitHub secrets
+- Validate JSON: `echo "$JSON" | jq .` should parse successfully
 
 #### TestFlight: "Invalid API Key"
 - Verify Key ID and Issuer ID are correct
