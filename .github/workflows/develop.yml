@@ -126,6 +126,30 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Auto-Bump Build Number
+        run: |
+          chmod +x scripts/auto-bump-build.sh scripts/get-version.sh
+          echo "📱 Current version:"
+          ./scripts/get-version.sh
+          echo ""
+          echo "🔄 Auto-bumping build number..."
+          ./scripts/auto-bump-build.sh
+          echo ""
+          echo "✅ New version:"
+          ./scripts/get-version.sh
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Commit and push the version bump
+          git add pubspec.yaml
+          git commit -m "chore: auto-bump build number to $(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ') [skip ci]"
+          git push origin develop
 
       - name: Setup Java
         uses: actions/setup-java@v3
