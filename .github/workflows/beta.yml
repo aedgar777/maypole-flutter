@@ -87,13 +87,37 @@ jobs:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON_PROD }}
         run: |
           mkdir -p android/app/src/prod
+          
+          # Write the secret to file using environment variable (safer than command substitution)
           echo "$GOOGLE_SERVICES_JSON" > android/app/src/prod/google-services.json
           
+          # Debug: Show file info
+          echo "Debug: File size: $(wc -c < android/app/src/prod/google-services.json) bytes"
+          echo "Debug: First 100 chars:"
+          head -c 100 android/app/src/prod/google-services.json
+          echo ""
+          echo "Debug: Last 100 chars:"
+          tail -c 100 android/app/src/prod/google-services.json
+          echo ""
+          
           # Validate the JSON is well-formed
+          echo "Validating JSON..."
           if ! python3 -m json.tool android/app/src/prod/google-services.json > /dev/null 2>&1; then
             echo "❌ Error: google-services.json is not valid JSON"
+            echo ""
+            echo "Full file contents:"
+            cat android/app/src/prod/google-services.json
+            echo ""
             echo "JSON parsing error:"
             python3 -m json.tool android/app/src/prod/google-services.json 2>&1 || true
+            echo ""
+            echo "💡 Tip: Your GOOGLE_SERVICES_JSON_PROD secret might:"
+            echo "  - Have extra quotes around the entire JSON"
+            echo "  - Be stored as a string instead of raw JSON"
+            echo "  - Have escape characters that need to be removed"
+            echo ""
+            echo "To fix: Copy the ENTIRE contents of your google-services.json file"
+            echo "and paste it directly into the GitHub secret (no extra quotes)"
             exit 1
           fi
           

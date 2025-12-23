@@ -388,6 +388,62 @@ The intended workflow is:
 1. **Development**: `maypole-flutter-dev`
 2. **Production**: `maypole-flutter` (or `maypole-flutter-ce6c3`)
 
+### Configure google-services.json for Android
+
+**Important**: Each environment (dev/prod) needs its own `google-services.json` file from Firebase.
+
+#### Download google-services.json Files
+
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. For **Development** environment:
+   - Select `maypole-flutter-dev` project
+   - Click ⚙️ Settings → Project Settings
+   - Scroll to "Your apps" section
+   - Find your Android app (package: `app.maypole.maypole`)
+   - Click the download icon (⬇) to download `google-services.json`
+   - Save as `google-services-dev.json` (for reference)
+
+3. For **Production** environment:
+   - Select `maypole-flutter-ce6c3` (or `maypole-flutter`) project
+   - Repeat the same steps above
+   - Save as `google-services-prod.json` (for reference)
+
+#### Add to GitHub Secrets
+
+**CRITICAL**: When adding these files as GitHub secrets, follow these exact steps:
+
+1. Open the `google-services-dev.json` file in a text editor
+2. **Copy the ENTIRE file contents** (from the first `{` to the last `}`)
+3. Go to GitHub → Repository Settings → Secrets and variables → Actions
+4. Create a new secret named `GOOGLE_SERVICES_JSON_DEV`
+5. **Paste the raw JSON directly** - DO NOT:
+   - ❌ Add quotes around the JSON
+   - ❌ Escape any characters
+   - ❌ Modify the content in any way
+6. Repeat for production: Create `GOOGLE_SERVICES_JSON_PROD` with contents of `google-services-prod.json`
+
+**Example of what the secret should look like:**
+```json
+{
+  "project_info": {
+    "project_number": "1234567890",
+    "project_id": "your-project-id",
+    ...
+  },
+  "client": [
+    ...
+  ]
+}
+```
+
+**Common mistakes to avoid:**
+- ❌ Wrapping the entire JSON in quotes: `"{\"project_info\": ...}"`
+- ❌ Adding escape characters: `{\\\"project_info\\\": ...}`
+- ❌ Copying only part of the file
+- ❌ Adding extra newlines or spaces
+
+If you see errors like "Expecting value: line 2 column 1", your secret likely has quotes around it or is otherwise malformed. Delete the secret and recreate it with the raw JSON content.
+
 ### Firebase Rules Files
 
 Ensure you have these files in your project root:
@@ -468,6 +524,39 @@ This should:
 #### Android: "Failed to find Build Tools"
 - Ensure Java 17 is being used (specified in workflow)
 - Check that `build.gradle.kts` is properly configured
+
+#### Android: "google-services.json is not valid JSON" ⚠️ COMMON
+
+**Error Message**: `❌ Error: google-services.json is not valid JSON - Expecting value: line 2 column 1 (char 1)`
+
+**Root Cause**: The `GOOGLE_SERVICES_JSON_DEV` or `GOOGLE_SERVICES_JSON_PROD` secret in GitHub is malformed.
+
+**Common causes**:
+1. ❌ Extra quotes around the entire JSON: `"{\"project_info\": ...}"`
+2. ❌ Escape characters added: `{\\\"project_info\\\": ...}`
+3. ❌ Only copied part of the file
+4. ❌ Added extra whitespace or newlines before/after the JSON
+
+**Solution**:
+1. Download the correct `google-services.json` from [Firebase Console](https://console.firebase.google.com/)
+   - For dev: Project `maypole-flutter-dev` → Settings → Download `google-services.json`
+   - For prod: Project `maypole-flutter-ce6c3` → Settings → Download `google-services.json`
+2. Open the file in a text editor
+3. **Copy the ENTIRE raw JSON** (from first `{` to last `}`)
+4. Go to GitHub → Settings → Secrets → Actions
+5. **Delete** the existing `GOOGLE_SERVICES_JSON_DEV` or `GOOGLE_SERVICES_JSON_PROD` secret
+6. **Create a new secret** with the same name
+7. **Paste the raw JSON directly** - no quotes, no modifications
+8. Save and re-run the workflow
+
+**Verify locally** (optional):
+```bash
+# Test that your JSON is valid
+cat your-google-services.json | python3 -m json.tool
+# Should output formatted JSON without errors
+```
+
+The workflows now include enhanced debugging that will show you exactly what's wrong with the file when this error occurs.
 
 #### iOS: "No signing identity found"
 - Verify certificate is valid and not expired
