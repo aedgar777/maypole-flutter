@@ -67,10 +67,23 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/chat/:threadId',
         builder: (context, state) {
           final threadId = state.pathParameters['threadId']!;
-          final maypoleName = state.extra as String? ?? 'Unknown';
+          // Handle both legacy String format and new Map format
+          final extra = state.extra;
+          final String maypoleName;
+          final String? address;
+          
+          if (extra is Map<String, dynamic>) {
+            maypoleName = extra['name'] as String? ?? 'Unknown';
+            address = extra['address'] as String?;
+          } else {
+            maypoleName = extra as String? ?? 'Unknown';
+            address = null;
+          }
+          
           return MaypoleChatScreen(
             threadId: threadId,
             maypoleName: maypoleName,
+            address: address,
           );
         },
       ),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../../data/models/autocomplete_response.dart';
@@ -50,6 +51,33 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: l10n.searchForMaypole,
+                hintStyle: TextStyle(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.3),
+                ),
+                filled: true,
+                fillColor: lightPurple,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 2.0,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
               autofocus: true,
             ),

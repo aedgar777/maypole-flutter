@@ -20,6 +20,7 @@ import '../maypole_chat_providers.dart';
 class MaypoleChatContent extends ConsumerStatefulWidget {
   final String threadId;
   final String maypoleName;
+  final String? address;
   final bool showAppBar;
   final bool autoFocus;
 
@@ -27,6 +28,7 @@ class MaypoleChatContent extends ConsumerStatefulWidget {
     super.key,
     required this.threadId,
     required this.maypoleName,
+    this.address,
     this.showAppBar = true,
     this.autoFocus = false,
   });
@@ -217,6 +219,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
               _messageController.text,
               sender,
               taggedUserIds: mentionedUserIds,
+              address: widget.address ?? '',
             );
 
         _messageController.clear();

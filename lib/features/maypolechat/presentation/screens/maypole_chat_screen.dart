@@ -16,11 +16,13 @@ import '../widgets/maypole_chat_content.dart';
 class MaypoleChatScreen extends ConsumerStatefulWidget {
   final String threadId;
   final String maypoleName;
+  final String? address;
 
   const MaypoleChatScreen({
     super.key,
     required this.threadId,
     required this.maypoleName,
+    this.address,
   });
 
   @override
@@ -30,6 +32,7 @@ class MaypoleChatScreen extends ConsumerStatefulWidget {
 class _MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
   late String _currentThreadId;
   late String _currentMaypoleName;
+  String? _currentAddress;
   bool _isMaypoleThread = true;
   DMThread? _currentDmThread;
 
@@ -38,6 +41,7 @@ class _MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
     super.initState();
     _currentThreadId = widget.threadId;
     _currentMaypoleName = widget.maypoleName;
+    _currentAddress = widget.address;
   }
 
   @override
@@ -67,7 +71,7 @@ class _MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
                         isMaypoleThread: _isMaypoleThread,
                         onSettingsPressed: () => context.push('/settings'),
                         onAddPressed: () => _handleAddPressed(context),
-                        onMaypoleThreadSelected: (threadId, maypoleName) =>
+                        onMaypoleThreadSelected: (threadId, maypoleName, address) =>
                             _handleMaypoleThreadSelected(threadId, maypoleName),
                         onDmThreadSelected: (threadId) =>
                             _handleDmThreadSelected(threadId),
@@ -87,6 +91,7 @@ class _MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
                   return MaypoleChatContent(
                     threadId: _currentThreadId,
                     maypoleName: _currentMaypoleName,
+                    address: _currentAddress,
                     showAppBar: true,
                   );
                 } else if (!_isMaypoleThread && _currentDmThread != null) {
@@ -100,6 +105,7 @@ class _MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
                 return MaypoleChatContent(
                   threadId: widget.threadId,
                   maypoleName: widget.maypoleName,
+                  address: widget.address,
                   showAppBar: true,
                 );
               },
@@ -124,6 +130,7 @@ class _MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
       return MaypoleChatContent(
         threadId: _currentThreadId,
         maypoleName: _currentMaypoleName,
+        address: _currentAddress,
         showAppBar: false,
         autoFocus: true,
       );
@@ -143,7 +150,10 @@ class _MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
     if (result != null && mounted) {
       // Navigate to the new chat
       if (context.mounted) {
-        context.go('/chat/${result.placeId}', extra: result.placeName);
+        context.go('/chat/${result.placeId}', extra: {
+          'name': result.placeName,
+          'address': result.address,
+        });
       }
     }
   }

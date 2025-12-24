@@ -19,12 +19,14 @@ import '../widgets/maypole_list_panel.dart';
 class _SelectedThreadState {
   final String? threadId;
   final String? maypoleName;
+  final String? address;
   final DMThread? dmThread;
   final bool isMaypoleThread;
 
   const _SelectedThreadState({
     this.threadId,
     this.maypoleName,
+    this.address,
     this.dmThread,
     this.isMaypoleThread = true,
   });
@@ -32,12 +34,14 @@ class _SelectedThreadState {
   _SelectedThreadState copyWith({
     String? threadId,
     String? maypoleName,
+    String? address,
     DMThread? dmThread,
     bool? isMaypoleThread,
   }) {
     return _SelectedThreadState(
       threadId: threadId ?? this.threadId,
       maypoleName: maypoleName ?? this.maypoleName,
+      address: address ?? this.address,
       dmThread: dmThread ?? this.dmThread,
       isMaypoleThread: isMaypoleThread ?? this.isMaypoleThread,
     );
@@ -177,11 +181,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               isMaypoleThread: _selectedThread.isMaypoleThread,
               onSettingsPressed: () => context.push('/settings'),
               onAddPressed: () => _handleAddPressed(context),
-              onMaypoleThreadSelected: (threadId, maypoleName) =>
+              onMaypoleThreadSelected: (threadId, maypoleName, address) =>
                   _handleMaypoleThreadSelected(
                     context,
                     threadId,
                     maypoleName,
+                    address,
                     isWideScreen,
                   ),
               onDmThreadSelected: (threadId) =>
@@ -233,6 +238,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return MaypoleChatContent(
         threadId: _selectedThread.threadId!,
         maypoleName: _selectedThread.maypoleName!,
+        address: _selectedThread.address,
         showAppBar: false,
         autoFocus: true,
       );
@@ -260,13 +266,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _selectedThread = _SelectedThreadState(
             threadId: result.placeId,
             maypoleName: result.placeName,
+            address: result.address,
             isMaypoleThread: true,
           );
         });
       } else {
         // On mobile, navigate to the chat screen
         if (context.mounted) {
-          context.push('/chat/${result.placeId}', extra: result.placeName);
+          context.push('/chat/${result.placeId}', extra: {
+            'name': result.placeName,
+            'address': result.address,
+          });
         }
       }
     }
@@ -276,6 +286,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     BuildContext context,
     String threadId,
     String maypoleName,
+    String address,
     bool isWideScreen,
   ) {
     if (isWideScreen) {
@@ -284,12 +295,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         _selectedThread = _SelectedThreadState(
           threadId: threadId,
           maypoleName: maypoleName,
+          address: address,
           isMaypoleThread: true,
         );
       });
     } else {
       // On mobile, navigate to the chat screen
-      context.push('/chat/$threadId', extra: maypoleName);
+      context.push('/chat/$threadId', extra: {
+        'name': maypoleName,
+        'address': address,
+      });
     }
   }
 

@@ -17,7 +17,7 @@ class MaypoleListPanel extends ConsumerStatefulWidget {
   final DomainUser user;
   final VoidCallback onSettingsPressed;
   final VoidCallback onAddPressed;
-  final Function(String threadId, String maypoleName) onMaypoleThreadSelected;
+  final Function(String threadId, String maypoleName, String address) onMaypoleThreadSelected;
   final Function(String threadId) onDmThreadSelected;
   final Function(int tabIndex)? onTabChanged;
   final String? selectedThreadId;
@@ -157,10 +157,22 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
             selected: isSelected,
             selectedTileColor: Colors.grey.withValues(alpha: 0.15),
             leading: const Icon(Icons.location_on),
-            title: Text(thread.name),
+            title: Text(
+              thread.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: thread.address.isNotEmpty
+                ? Text(
+                    thread.address,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.5),
+                    ),
+                  )
+                : null,
             onTap: () {
               // Allow the ripple animation to complete before navigating
-              Future.microtask(() => widget.onMaypoleThreadSelected(thread.id, thread.name));
+              Future.microtask(() => widget.onMaypoleThreadSelected(thread.id, thread.name, thread.address));
             },
             onLongPress: () {
               _showMaypoleThreadContextMenu(
