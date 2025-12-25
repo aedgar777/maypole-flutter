@@ -193,6 +193,7 @@ class MaypoleChatService {
     String body,
     DomainUser sender, {
         List<String> taggedUserIds = const [],
+        String address = '',
       }) async {
     final now = DateTime.now();
     final message = MaypoleMessage(
@@ -216,6 +217,7 @@ class MaypoleChatService {
         {
           'id': threadId,
           'name': maypoleName,
+          'address': address,
         },
         SetOptions(merge: true));
 
@@ -227,6 +229,7 @@ class MaypoleChatService {
       final maypoleMetaData = MaypoleMetaData(
         id: threadId,
         name: maypoleName,
+        address: address,
       );
       final userRef = _firestore.collection('users').doc(sender.firebaseID);
       batch.update(userRef, {
@@ -253,6 +256,7 @@ class MaypoleChatService {
       String body,
       DomainUser sender, {
         List<String> taggedUserIds = const [],
+        String address = '',
       }) async {
     final now = DateTime.now();
     final message = MaypoleMessage(
@@ -274,6 +278,7 @@ class MaypoleChatService {
         {
           'id': threadId,
           'name': maypoleName,
+          'address': address,
         },
         SetOptions(merge: true));
     batch.set(messageRef, message.toMap());
@@ -281,7 +286,7 @@ class MaypoleChatService {
     // Check if user already has this maypole in their list (using local data)
     if (!sender.maypoleChatThreads.any((element) => element.id == threadId)) {
       final maypoleMetaData =
-      MaypoleMetaData(id: threadId, name: maypoleName);
+      MaypoleMetaData(id: threadId, name: maypoleName, address: address);
       final userRef = _firestore.collection('users').doc(sender.firebaseID);
       batch.update(userRef, {
         'maypoleChatThreads': FieldValue.arrayUnion([maypoleMetaData.toMap()])

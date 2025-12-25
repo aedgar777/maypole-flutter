@@ -12,6 +12,8 @@ import 'package:maypole/features/maypolechat/presentation/viewmodels/mention_con
 import 'package:maypole/features/maypolechat/presentation/widgets/mention_text_field.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/message_with_mentions.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
+import 'package:maypole/core/ads/widgets/banner_ad_widget.dart';
+import 'package:maypole/core/ads/ad_config.dart';
 import '../maypole_chat_providers.dart';
 
 /// The content of a maypole chat screen without the Scaffold wrapper.
@@ -20,6 +22,7 @@ import '../maypole_chat_providers.dart';
 class MaypoleChatContent extends ConsumerStatefulWidget {
   final String threadId;
   final String maypoleName;
+  final String? address;
   final bool showAppBar;
   final bool autoFocus;
 
@@ -27,6 +30,7 @@ class MaypoleChatContent extends ConsumerStatefulWidget {
     super.key,
     required this.threadId,
     required this.maypoleName,
+    this.address,
     this.showAppBar = true,
     this.autoFocus = false,
   });
@@ -199,6 +203,11 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     return Scaffold(
       appBar: AppBar(title: Text(widget.maypoleName)),
       body: body,
+      bottomNavigationBar: AdConfig.adsEnabled
+          ? const BannerAdWidget(
+              padding: EdgeInsets.all(4),
+            )
+          : null,
     );
   }
 
@@ -217,6 +226,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
               _messageController.text,
               sender,
               taggedUserIds: mentionedUserIds,
+              address: widget.address ?? '',
             );
 
         _messageController.clear();

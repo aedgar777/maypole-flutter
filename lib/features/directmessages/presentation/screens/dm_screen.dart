@@ -62,7 +62,7 @@ class _DmScreenState extends ConsumerState<DmScreen> {
                         isMaypoleThread: _isMaypoleThread,
                         onSettingsPressed: () => context.push('/settings'),
                         onAddPressed: () => _handleAddPressed(context),
-                        onMaypoleThreadSelected: (threadId, maypoleName) =>
+                        onMaypoleThreadSelected: (threadId, maypoleName, address) =>
                             _handleMaypoleThreadSelected(threadId, maypoleName),
                         onDmThreadSelected: (threadId) =>
                             _handleDmThreadSelected(threadId),

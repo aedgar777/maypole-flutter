@@ -46,6 +46,7 @@ dependencies:
   cloud_functions: ^6.0.4
   firebase_storage: ^13.0.4
   firebase_messaging: ^16.0.4
+  firebase_remote_config: ^6.1.2
   flutter_dotenv: ^6.0.0
   google_places_api_flutter: ^2.0.0
   image_picker: ^1.0.7
@@ -53,6 +54,7 @@ dependencies:
   permission_handler: ^11.3.1
   shared_preferences: ^2.3.4
   url_launcher: ^6.3.0
+  google_mobile_ads: ^5.2.0
 
 
   http: any
