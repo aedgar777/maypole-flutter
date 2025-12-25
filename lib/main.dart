@@ -9,6 +9,8 @@ import 'core/app_router.dart';
 import 'core/app_theme.dart';
 import 'core/firebase_options.dart';
 import 'core/widgets/notification_handler.dart';
+import 'core/ads/ad_providers.dart';
+import 'core/services/remote_config_service.dart';
 
 /// Handler for background messages when app is terminated
 /// This runs in a separate isolate and cannot access app state
@@ -69,7 +71,34 @@ Future<void> main() async {
   // Setup background message handler for FCM
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  runApp(const ProviderScope(child: MyApp()));
+  // Create provider container for initialization
+  final container = ProviderContainer();
+  
+  // Initialize Remote Config (for feature flags)
+  try {
+    final remoteConfig = RemoteConfigService();
+    await remoteConfig.initialize();
+    debugPrint('✅ Remote Config initialized in main');
+  } catch (e) {
+    debugPrint('⚠️ Warning: Could not initialize Remote Config: $e');
+    // Continue anyway - will use default values
+  }
+  
+  // Initialize AdMob SDK
+  try {
+    final adService = container.read(adServiceProvider);
+    await adService.initialize();
+    container.read(adInitializedProvider.notifier).setInitialized(true);
+    debugPrint('✅ AdMob initialized in main');
+  } catch (e) {
+    debugPrint('⚠️ Warning: Could not initialize AdMob: $e');
+    // Continue anyway - app will work without ads
+  }
+
+  runApp(UncontrolledProviderScope(
+    container: container,
+    child: const MyApp(),
+  ));
 }
 
 class MyApp extends ConsumerWidget {

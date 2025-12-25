@@ -8,6 +8,8 @@ import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
 import 'package:maypole/core/widgets/cached_profile_avatar.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
+import 'package:maypole/core/ads/widgets/banner_ad_widget.dart';
+import 'package:maypole/core/ads/ad_config.dart';
 import '../../domain/direct_message.dart';
 import '../../domain/dm_thread.dart';
 import '../dm_providers.dart';
@@ -198,6 +200,11 @@ class _DmContentState extends ConsumerState<DmContent> {
             : const Text('Direct Message'),
       ),
       body: body,
+      bottomNavigationBar: AdConfig.adsEnabled
+          ? const BannerAdWidget(
+              padding: EdgeInsets.all(4),
+            )
+          : null,
     );
   }
 

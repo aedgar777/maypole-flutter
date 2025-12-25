@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
@@ -10,6 +11,7 @@ import 'package:maypole/features/directmessages/domain/dm_thread.dart';
 import 'package:maypole/features/maypolechat/domain/maypole.dart';
 import 'package:maypole/features/maypolechat/presentation/maypole_chat_providers.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
+import 'package:maypole/core/ads/widgets/banner_ad_widget.dart';
 
 /// A panel showing the list of maypole chats and DM threads.
 /// This widget is used in both mobile and desktop layouts.
@@ -103,10 +105,21 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
                 ],
               ),
             ),
-            body: TabBarView(
+            body: Column(
               children: [
-                _buildMaypoleList(context, l10n),
-                _buildDmList(context, l10n, userId),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _buildMaypoleList(context, l10n),
+                      _buildDmList(context, l10n, userId),
+                    ],
+                  ),
+                ),
+                // Show banner at bottom on web (fixed in sidebar)
+                if (kIsWeb)
+                  const BannerAdWidget(
+                    padding: EdgeInsets.all(8),
+                  ),
               ],
             ),
             floatingActionButton: AnimatedScale(
@@ -145,10 +158,27 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
       );
     }
 
+    // Calculate total items including ads (1 ad per 6 threads)
+    final adCount = filteredMaypoleThreads.length ~/ 6;
+    final totalItems = filteredMaypoleThreads.length + adCount;
+
     return ListView.builder(
-      itemCount: filteredMaypoleThreads.length,
+      itemCount: totalItems,
       itemBuilder: (context, index) {
-        final thread = filteredMaypoleThreads[index];
+        // Show ad every 6 items (at positions 6, 13, 20, etc.)
+        if (index > 0 && (index + 1) % 7 == 0) {
+          return const ListBannerAdWidget(
+            padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          );
+        }
+
+        // Calculate the actual thread index (accounting for ads)
+        final threadIndex = index - (index ~/ 7);
+        if (threadIndex >= filteredMaypoleThreads.length) {
+          return const SizedBox.shrink();
+        }
+        
+        final thread = filteredMaypoleThreads[threadIndex];
         final isSelected = widget.selectedThreadId == thread.id && widget.isMaypoleThread;
 
         return Material(
@@ -216,10 +246,27 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
           );
         }
 
+        // Calculate total items including ads (1 ad per 6 threads)
+        final adCount = filteredDmThreads.length ~/ 6;
+        final totalItems = filteredDmThreads.length + adCount;
+
         return ListView.builder(
-          itemCount: filteredDmThreads.length,
+          itemCount: totalItems,
           itemBuilder: (context, index) {
-            final threadMetadata = filteredDmThreads[index];
+            // Show ad every 6 items (at positions 6, 13, 20, etc.)
+            if (index > 0 && (index + 1) % 7 == 0) {
+              return const ListBannerAdWidget(
+                padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              );
+            }
+
+            // Calculate the actual thread index (accounting for ads)
+            final threadIndex = index - (index ~/ 7);
+            if (threadIndex >= filteredDmThreads.length) {
+              return const SizedBox.shrink();
+            }
+            
+            final threadMetadata = filteredDmThreads[threadIndex];
             final isSelected =
                 widget.selectedThreadId == threadMetadata.id && !widget.isMaypoleThread;
             final formattedTimestamp = DateTimeUtils.formatThreadTimestamp(

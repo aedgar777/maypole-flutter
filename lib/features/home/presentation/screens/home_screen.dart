@@ -11,6 +11,8 @@ import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/maypole_chat_content.dart';
 import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
 import 'package:maypole/features/settings/settings_providers.dart';
+import 'package:maypole/core/ads/widgets/interstitial_ad_manager.dart';
+import 'package:maypole/core/ads/ad_config.dart';
 import '../../../identity/auth_providers.dart';
 import '../../../directmessages/presentation/dm_providers.dart';
 import '../widgets/maypole_list_panel.dart';
@@ -64,6 +66,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _hasRequestedPermissions = false;
   bool _hasPrefetchedData = false;
   int _currentTabIndex = 0;
+  int _threadSwitchCount = 0; // Track thread switches for interstitial ads
 
   @override
   void initState() {
@@ -288,7 +291,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     String maypoleName,
     String address,
     bool isWideScreen,
-  ) {
+  ) async {
+    // Increment counter and show interstitial ad based on Remote Config frequency
+    _threadSwitchCount++;
+    final frequency = AdConfig.interstitialFrequency;
+    if (_threadSwitchCount % frequency == 0 && AdConfig.interstitialAdsEnabled) {
+      final adManager = ref.read(interstitialAdManagerProvider);
+      if (adManager.isAdReady) {
+        await adManager.showAd();
+      }
+    }
+
     if (isWideScreen) {
       // On wide screen, update the selected thread to show in the content panel
       setState(() {
