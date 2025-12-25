@@ -4,165 +4,11 @@ This guide will walk you through setting up automated deployments for the Maypol
 
 ## Table of Contents
 
-1. [Android Setup](#android-setup)
-2. [iOS Setup](#ios-setup)
-3. [GitHub Secrets Configuration](#github-secrets-configuration)
-4. [Beta Branch Creation](#beta-branch-creation)
-5. [Firebase Configuration](#firebase-configuration)
-6. [Testing the Workflows](#testing-the-workflows)
-
----
-
-## Android Setup
-
-> **📱 About Google Play App Signing**
->
-> This setup uses **Google Play App Signing**, which is Google's recommended approach and provides significant security benefits:
-> 
-> **How it works:**
-> 1. You create a simple **upload key** (easy to reset if compromised)
-> 2. Google generates and securely stores the real **app signing key**
-> 3. You sign your AABs with the upload key and upload to Play Console
-> 4. Google re-signs with the app signing key before distributing to users
->
-> **Benefits:**
-> - ✅ **Lost/stolen upload key?** Just reset it in Play Console - your app signing key is safe with Google
-> - ✅ **Simpler CI/CD** - Only need to manage a simple upload keystore in GitHub Secrets
-> - ✅ **Better security** - Your actual app signing key never leaves Google's infrastructure
-> - ✅ **Required for App Bundles** - Google Play requires App Signing for dynamic delivery features
->
-> **The traditional approach** (managing your own app signing key) is more complex, riskier, and not recommended.
-
-### 1. Create Upload Keystore
-
-Create a simple upload keystore for signing your app bundles:
-
-```bash
-keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias play-store-upload
-```
-
-**Fill in the prompts**:
-- **Password**: Choose a secure password (you'll need this for GitHub Secrets)
-- **Name**: Your name or organization
-- **Organization Unit**: Your team/department
-- **Organization**: Your company name
-- **City/Locality**: Your city
-- **State/Province**: Your state
-- **Country Code**: Your two-letter country code (e.g., US)
-
-**Important**: Save this information securely:
-- **Key alias**: `upload` (or whatever you chose)
-- **Key password**: The password you set
-- **Store password**: Usually the same as key password
-
-### 2. Configure Android Build for Signing
-
-The build configuration has already been updated in `android/app/build.gradle.kts` to support keystore signing. The workflow will create the `key.properties` file automatically during CI/CD builds.
-
-**Local Testing** (optional): If you want to test release builds locally, create `android/key.properties`:
-
-```properties
-storePassword=YOUR_STORE_PASSWORD
-keyPassword=YOUR_KEY_PASSWORD
-keyAlias=play-store-upload
-storeFile=upload-keystore.jks
-```
-
-Then copy your keystore to `android/app/upload-keystore.jks`.
-
-**Note**: These files are gitignored and won't be committed.
-
-### 3. Create Service Account for Play Console API
-
-This allows GitHub Actions to automatically upload builds to Play Console.
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Select or create a project
-3. Navigate to **IAM & Admin** → **Service Accounts**
-4. Click **Create Service Account**
-5. Name it something like "github-actions-play-store"
-6. Click **Create and Continue**
-7. Grant the **Service Account User** role
-8. Click **Done**
-9. Click on the created service account
-10. Go to **Keys** tab → **Add Key** → **Create new key**
-11. Choose **JSON** format and download it
-12. **Save this JSON file securely** - you'll add it to GitHub Secrets
-
-### 4. Link Service Account to Play Console
-
-**⚠️ CRITICAL**: This step is essential for automated deployments to work. Permission errors are the #1 cause of deployment failures.
-
-1. Go to [Google Play Console](https://play.google.com/console/)
-2. Navigate to **Setup** → **API access**
-3. Link your Google Cloud project if not already linked
-   - Click **Link to Google Cloud Project**
-   - Select the project where you created the service account
-4. Grant access to your service account:
-   - Find the service account you created (should end with `.iam.gserviceaccount.com`)
-   - Click **View Play Console permissions** (or three dots → **Manage Play Console permissions**)
-   - Under **App permissions**:
-     - Select **app.maypole.maypole** (or select "All apps" if you prefer)
-   - Under **Account permissions**, grant these permissions:
-     - ✅ **View app information and download bulk reports** (read-only)
-     - ✅ **Manage testing tracks and edit tester lists** (REQUIRED for internal/beta releases)
-     - ✅ **Release to production, exclude devices, and use Play App Signing** (only if you want automated production releases)
-   - Click **Apply** then **Invite user**
-   - Wait 5-10 minutes for permissions to propagate
-
-**📝 Note**: The exact permission names may vary slightly in the Play Console UI. The key permission is anything related to "managing testing tracks" or "releasing to testing tracks".
-
-### 5. Set Up Play App Signing
-
-**First Time Setup** (when creating a new app):
-
-1. In Play Console, create your app
-2. Navigate to **Setup** → **App signing**
-3. Choose **Continue** to let Google create and manage your app signing key
-4. Upload your first signed AAB (you'll need to do this before the automated pipeline works)
-
-**To upload your first AAB manually**:
-
-```bash
-# Build your first AAB locally
-flutter build appbundle --release --flavor prod
-
-# Sign it with your upload key
-jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-  -keystore upload-keystore.jks \
-  build/app/outputs/bundle/prodRelease/app-prod-release.aab \
-  upload
-
-# Upload through Play Console web UI:
-# Release → Production (or Internal testing) → Create new release → Upload AAB
-```
-
-After the first upload, Google will display your app signing key certificate. The automated workflow will handle subsequent uploads.
-
-**Important**: After setup, download the **App Signing Certificate** from Play Console:
-1. Go to **Setup** → **App signing**
-2. Download the **App signing certificate** (for verification purposes)
-3. Keep this safe - you may need it for API integrations
-
-### 6. Set Up Testing Tracks
-
-1. In Play Console, go to your app
-2. Navigate to **Testing** → **Internal testing**
-3. Create an internal testing track if you haven't already
-4. Add testers/testing groups (email addresses or Google Groups)
-5. Repeat for **Closed testing** → Create **Beta** track
-6. Add beta testers to the beta track
-
-### 7. Prepare Keystore for GitHub
-
-Convert your upload keystore to base64:
-
-```bash
-base64 -i upload-keystore.jks | tr -d '\n' > keystore_base64.txt
-```
-
-The content of `keystore_base64.txt` will be added to GitHub Secrets.
-
-**Security Note**: Your upload key is stored in GitHub Secrets and used only for CI/CD. Even if compromised, you can reset it in Play Console without affecting your app's signing key or requiring users to reinstall.
+1. [iOS Setup](#ios-setup)
+2. [GitHub Secrets Configuration](#github-secrets-configuration)
+3. [Beta Branch Creation](#beta-branch-creation)
+4. [Firebase Configuration](#firebase-configuration)
+5. [Testing the Workflows](#testing-the-workflows)
 
 ---
 
@@ -315,18 +161,6 @@ Go to your GitHub repository → **Settings** → **Secrets and variables** → 
 
 Add the following secrets:
 
-### Android Secrets
-
-| Secret Name | Description | Where to Find |
-|------------|-------------|---------------|
-| `ANDROID_KEYSTORE_BASE64` | Base64-encoded keystore file | Content of `keystore_base64.txt` |
-| `ANDROID_KEY_ALIAS` | Keystore key alias | The alias you used when creating keystore |
-| `ANDROID_KEY_PASSWORD` | Key password | Password you set for the key |
-| `ANDROID_STORE_PASSWORD` | Keystore password | Password you set for the keystore |
-| `PLAY_STORE_SERVICE_ACCOUNT_JSON` | Service account JSON | Content of JSON file from Google Cloud |
-| `GOOGLE_SERVICES_JSON_DEV` | Dev google-services.json | Content of dev flavor google-services.json |
-| `GOOGLE_SERVICES_JSON_PROD` | Prod google-services.json | Content of prod flavor google-services.json |
-
 ### iOS Secrets
 
 | Secret Name | Description | Where to Find |
@@ -388,62 +222,6 @@ The intended workflow is:
 1. **Development**: `maypole-flutter-dev`
 2. **Production**: `maypole-flutter` (or `maypole-flutter-ce6c3`)
 
-### Configure google-services.json for Android
-
-**Important**: Each environment (dev/prod) needs its own `google-services.json` file from Firebase.
-
-#### Download google-services.json Files
-
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. For **Development** environment:
-   - Select `maypole-flutter-dev` project
-   - Click ⚙️ Settings → Project Settings
-   - Scroll to "Your apps" section
-   - Find your Android app (package: `app.maypole.maypole`)
-   - Click the download icon (⬇) to download `google-services.json`
-   - Save as `google-services-dev.json` (for reference)
-
-3. For **Production** environment:
-   - Select `maypole-flutter-ce6c3` (or `maypole-flutter`) project
-   - Repeat the same steps above
-   - Save as `google-services-prod.json` (for reference)
-
-#### Add to GitHub Secrets
-
-**CRITICAL**: When adding these files as GitHub secrets, follow these exact steps:
-
-1. Open the `google-services-dev.json` file in a text editor
-2. **Copy the ENTIRE file contents** (from the first `{` to the last `}`)
-3. Go to GitHub → Repository Settings → Secrets and variables → Actions
-4. Create a new secret named `GOOGLE_SERVICES_JSON_DEV`
-5. **Paste the raw JSON directly** - DO NOT:
-   - ❌ Add quotes around the JSON
-   - ❌ Escape any characters
-   - ❌ Modify the content in any way
-6. Repeat for production: Create `GOOGLE_SERVICES_JSON_PROD` with contents of `google-services-prod.json`
-
-**Example of what the secret should look like:**
-```json
-{
-  "project_info": {
-    "project_number": "1234567890",
-    "project_id": "your-project-id",
-    ...
-  },
-  "client": [
-    ...
-  ]
-}
-```
-
-**Common mistakes to avoid:**
-- ❌ Wrapping the entire JSON in quotes: `"{\"project_info\": ...}"`
-- ❌ Adding escape characters: `{\\\"project_info\\\": ...}`
-- ❌ Copying only part of the file
-- ❌ Adding extra newlines or spaces
-
-If you see errors like "Expecting value: line 2 column 1", your secret likely has quotes around it or is otherwise malformed. Delete the secret and recreate it with the raw JSON content.
-
 ### Firebase Rules Files
 
 Ensure you have these files in your project root:
@@ -497,7 +275,6 @@ git push origin beta
 ```
 
 This should:
-- ✅ Build Android APK and upload to Play Store beta track
 - ✅ Build iOS IPA and upload to TestFlight beta group
 
 ### Test Production Workflow
@@ -512,7 +289,6 @@ git push origin master
 This should:
 - ✅ Build and deploy web to Firebase Hosting production
 - ✅ Deploy Firebase services (Firestore rules, indexes, storage rules)
-- ✅ Build Android APK and upload to Play Store production track
 - ✅ Build iOS IPA and upload to App Store
 
 ---
@@ -521,92 +297,10 @@ This should:
 
 ### Common Issues
 
-#### Android: "Failed to find Build Tools"
-- Ensure Java 17 is being used (specified in workflow)
-- Check that `build.gradle.kts` is properly configured
-
-#### Android: "google-services.json is not valid JSON" ⚠️ COMMON
-
-**Error Message**: `❌ Error: google-services.json is not valid JSON - Expecting value: line 2 column 1 (char 1)`
-
-**Root Cause**: The `GOOGLE_SERVICES_JSON_DEV` or `GOOGLE_SERVICES_JSON_PROD` secret in GitHub is malformed.
-
-**Common causes**:
-1. ❌ Extra quotes around the entire JSON: `"{\"project_info\": ...}"`
-2. ❌ Escape characters added: `{\\\"project_info\\\": ...}`
-3. ❌ Only copied part of the file
-4. ❌ Added extra whitespace or newlines before/after the JSON
-
-**Solution**:
-1. Download the correct `google-services.json` from [Firebase Console](https://console.firebase.google.com/)
-   - For dev: Project `maypole-flutter-dev` → Settings → Download `google-services.json`
-   - For prod: Project `maypole-flutter-ce6c3` → Settings → Download `google-services.json`
-2. Open the file in a text editor
-3. **Copy the ENTIRE raw JSON** (from first `{` to last `}`)
-4. Go to GitHub → Settings → Secrets → Actions
-5. **Delete** the existing `GOOGLE_SERVICES_JSON_DEV` or `GOOGLE_SERVICES_JSON_PROD` secret
-6. **Create a new secret** with the same name
-7. **Paste the raw JSON directly** - no quotes, no modifications
-8. Save and re-run the workflow
-
-**Verify locally** (optional):
-```bash
-# Test that your JSON is valid
-cat your-google-services.json | python3 -m json.tool
-# Should output formatted JSON without errors
-```
-
-The workflows now include enhanced debugging that will show you exactly what's wrong with the file when this error occurs.
-
 #### iOS: "No signing identity found"
 - Verify certificate is valid and not expired
 - Check that provisioning profile matches the bundle ID
 - Ensure certificate password is correct
-
-#### Play Store: "The caller does not have permission" ⚠️ MOST COMMON
-
-**This is the #1 deployment error.** See the dedicated fix guide:
-👉 **[PLAY_STORE_PERMISSIONS_FIX.md](./PLAY_STORE_PERMISSIONS_FIX.md)**
-
-Quick checklist:
-- ✅ Service account has **"Manage testing tracks"** permission in Play Console
-- ✅ Service account is linked to your specific app (not just the account)
-- ✅ Waited 5-10 minutes after granting permissions
-- ✅ First APK/AAB was uploaded manually (for new apps)
-- ✅ Service account email in GitHub secret matches Play Console
-
-**Fix it now**: Follow the step-by-step guide in `PLAY_STORE_PERMISSIONS_FIX.md`
-
-#### Play Store: "Only releases with status draft may be created on draft app"
-
-**This error occurs when your app is still in draft status** (hasn't been published yet).
-
-**Solution**: The workflows are already configured to upload as `draft` for unpublished apps:
-- ✅ `develop.yml` uploads to internal track as `draft`
-- ✅ `beta.yml` uploads to beta track as `draft`
-- ✅ `production.yml` uploads to production track as `draft`
-
-**After your first release is published**, you can optionally change `status: draft` to `status: completed` in the workflows to automatically release new versions without manual approval.
-
-**Initial App Setup Requirements**:
-1. Create app in Google Play Console with package name `app.maypole.maypole`
-2. Complete all required store listing details (app name, description, screenshots, etc.)
-3. Complete content rating questionnaire
-4. Select target audience and content settings
-5. The workflow will upload the APK/AAB as a draft
-6. Manually review and publish your first release through the Play Console
-
-Once published, subsequent builds will continue to upload as drafts that you can review and release manually.
-
-#### Play Store: "Package not found"
-- Verify package name matches exactly: `app.maypole.maypole`
-- Check AndroidManifest.xml and build.gradle have correct package/applicationId
-- Ensure app exists in Play Console with this exact package name
-
-#### Play Store: "Invalid service account JSON"
-- Verify the JSON is complete (not truncated)
-- Ensure no extra quotes or escaping around the JSON in GitHub secrets
-- Validate JSON: `echo "$JSON" | jq .` should parse successfully
 
 #### TestFlight: "Invalid API Key"
 - Verify Key ID and Issuer ID are correct
@@ -656,8 +350,6 @@ Create a `maypole-flutter-beta` Firebase project and deploy there instead. This 
 
 - **Apple Distribution Certificate**: Valid for 1 year, renew annually
 - **Provisioning Profiles**: Valid for 1 year, renew annually
-- **Android Upload Keystore**: Valid for 10000 days (27+ years)
-  - Note: Even if compromised, you can reset your upload key in Play Console without affecting your app signing key or requiring users to reinstall
 
 ### Regular Updates
 
@@ -668,15 +360,6 @@ Create a `maypole-flutter-beta` Firebase project and deploy there instead. This 
 ---
 
 ## Summary Checklist
-
-### Android
-- [ ] Upload keystore created and base64 encoded
-- [ ] Android build.gradle.kts updated with signing config (✅ Already done)
-- [ ] First AAB manually uploaded to enable Google Play App Signing
-- [ ] App signing certificate downloaded from Play Console (for reference)
-- [ ] Google Cloud service account created and configured
-- [ ] Service account linked to Play Console with correct permissions
-- [ ] Play Console testing tracks set up (internal and beta)
 
 ### iOS
 - [ ] iOS certificates created and exported
