@@ -59,6 +59,10 @@
   "@password": {
     "description": "Password field label"
   },
+  "confirmPassword": "Confirm Password",
+  "@confirmPassword": {
+    "description": "Confirm password field label"
+  },
   "username": "Username",
   "@username": {
     "description": "Username field label"

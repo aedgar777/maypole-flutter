@@ -18,17 +18,7 @@ class RegistrationViewModel extends Notifier<RegistrationState> {
   }) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-
-      final isAvailable = await _authService.isUsernameAvailable(username);
-      if (!isAvailable) {
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: 'Username is already taken',
-        );
-        return;
-      }
-
-      // Proceed with registration if username is available
+      // Username availability check is done in registerWithEmailAndPassword
       await _authService.registerWithEmailAndPassword(
         email,
         password,

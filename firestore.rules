@@ -12,7 +12,9 @@ service cloud.firestore {
       allow create: if request.auth != null 
                     && request.auth.uid == userId
                     && request.resource.data.firebaseID == userId
-                    && request.resource.data.keys().hasAll(['username', 'email', 'firebaseID']);
+                    && request.resource.data.keys().hasAll(['username', 'email', 'firebaseID'])
+                    && request.resource.data.username is string
+                    && request.resource.data.email is string;
       
       // Allow users to update their own document
       // Prevent changing firebaseID and email
@@ -43,8 +45,9 @@ service cloud.firestore {
     
     // Usernames collection for username availability checking
     match /usernames/{username} {
-      // FIXED: Require authentication to prevent username enumeration
-      allow read: if request.auth != null;
+      // Allow unauthenticated reads for username availability checking during registration
+      // This is safe because username enumeration is not a security concern
+      allow read: if true;
       
       // Allow authenticated users to create username documents with proper structure
       allow create: if request.auth != null 

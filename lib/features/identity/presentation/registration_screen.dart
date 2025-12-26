@@ -21,12 +21,14 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _usernameController = TextEditingController();
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _usernameController.dispose();
     super.dispose();
   }
@@ -55,6 +57,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
               AuthFormField(
                   controller: _usernameController,
                   labelText: l10n.username,
+                  maxLength: StringUtils.maxUsernameLength,
                   onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
                       _handleRegistration() : null,
                   validator: StringUtils.validateUsername
@@ -64,6 +67,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   controller: _emailController,
                   labelText: l10n.email,
                   keyboardType: TextInputType.emailAddress,
+                  maxLength: StringUtils.maxEmailLength,
                   onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
                       _handleRegistration() : null,
                   validator: StringUtils.validateEmail
@@ -73,9 +77,23 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   controller: _passwordController,
                   labelText: l10n.password,
                   obscureText: true,
+                  maxLength: StringUtils.maxPasswordLength,
                   onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
                       _handleRegistration() : null,
                   validator: StringUtils.validatePassword
+              ),
+              const SizedBox(height: 20),
+              AuthFormField(
+                  controller: _confirmPasswordController,
+                  labelText: l10n.confirmPassword,
+                  obscureText: true,
+                  maxLength: StringUtils.maxPasswordLength,
+                  onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
+                      _handleRegistration() : null,
+                  validator: (value) => StringUtils.validateConfirmPassword(
+                    value,
+                    _passwordController.text
+                  )
               ),
               const SizedBox(height: 30),
               if (registrationState.isLoading)
