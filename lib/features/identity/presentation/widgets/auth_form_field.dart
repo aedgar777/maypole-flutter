@@ -9,6 +9,7 @@ class AuthFormField extends StatelessWidget {
   final String? Function(String?)? validator;
   final void Function(String)? onChanged;
   final void Function(String)? onFieldSubmitted;
+  final int? maxLength;
 
   const AuthFormField({
     super.key,
@@ -19,6 +20,7 @@ class AuthFormField extends StatelessWidget {
     this.validator,
     this.onChanged,
     this.onFieldSubmitted,
+    this.maxLength,
   });
 
   @override
@@ -62,12 +64,14 @@ class AuthFormField extends StatelessWidget {
           horizontal: 16,
           vertical: 12,
         ),
+        counterText: '',
       ),
       obscureText: obscureText,
       keyboardType: keyboardType,
       validator: validator,
       onChanged: onChanged,
       onFieldSubmitted: onFieldSubmitted,
+      maxLength: maxLength,
     );
   }
 }

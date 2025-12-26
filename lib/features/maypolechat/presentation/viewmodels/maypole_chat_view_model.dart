@@ -127,6 +127,7 @@ class MaypoleChatViewModel extends AsyncNotifier<List<MaypoleMessage>> {
       String body,
       DomainUser sender, {
         List<String> taggedUserIds = const [],
+        String address = '',
       }) async {
     try {
       await _threadService.sendMessage(
@@ -135,6 +136,7 @@ class MaypoleChatViewModel extends AsyncNotifier<List<MaypoleMessage>> {
         body,
         sender,
         taggedUserIds: taggedUserIds,
+        address: address,
       );
     } catch (e, st) {
       state = AsyncValue.error(e, st);

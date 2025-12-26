@@ -170,6 +170,12 @@ abstract class AppLocalizations {
   /// **'Password'**
   String get password;
 
+  /// Confirm password field label
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Password'**
+  String get confirmPassword;
+
   /// Username field label
   ///
   /// In en, this message translates to:
@@ -211,6 +217,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Password must be at least 6 characters'**
   String get passwordMinLength;
+
+  /// Validation message for empty username
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a username'**
+  String get pleaseEnterUsername;
+
+  /// Validation message for username minimum length
+  ///
+  /// In en, this message translates to:
+  /// **'Username must be at least 3 characters'**
+  String get usernameMinLength;
+
+  /// Validation message for username maximum length
+  ///
+  /// In en, this message translates to:
+  /// **'Username must be no more than {maxLength} characters'**
+  String usernameMaxLength(int maxLength);
+
+  /// Validation message for invalid username characters
+  ///
+  /// In en, this message translates to:
+  /// **'Username can only contain letters, numbers, and underscores'**
+  String get usernameInvalidCharacters;
+
+  /// Validation message for email maximum length
+  ///
+  /// In en, this message translates to:
+  /// **'Email must be no more than {maxLength} characters'**
+  String emailMaxLength(int maxLength);
+
+  /// Validation message for password maximum length
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be no more than {maxLength} characters'**
+  String passwordMaxLength(int maxLength);
+
+  /// Validation message for empty password confirmation
+  ///
+  /// In en, this message translates to:
+  /// **'Please confirm your password'**
+  String get pleaseConfirmPassword;
+
+  /// Validation message when passwords don't match
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get passwordsDoNotMatch;
 
   /// Title for the search screen
   ///
@@ -571,6 +625,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not open email client'**
   String get errorOpeningEmail;
+
+  /// Generic message for unknown errors
+  ///
+  /// In en, this message translates to:
+  /// **'An unknown error occurred'**
+  String get unknownError;
+
+  /// Delete message option in context menu
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get deleteMessage;
+
+  /// Tag user option in context menu
+  ///
+  /// In en, this message translates to:
+  /// **'Tag {name}'**
+  String tagUser(String name);
+
+  /// View profile option in context menu
+  ///
+  /// In en, this message translates to:
+  /// **'View Profile'**
+  String get viewProfile;
+
+  /// Error message when user cannot be found
+  ///
+  /// In en, this message translates to:
+  /// **'User not found'**
+  String get userNotFound;
+
+  /// Success message after deleting a message
+  ///
+  /// In en, this message translates to:
+  /// **'Message deleted'**
+  String get messageDeleted;
+
+  /// Message when deletion is cancelled
+  ///
+  /// In en, this message translates to:
+  /// **'Deletion cancelled'**
+  String get deletionCancelled;
+
+  /// Success message after deleting a conversation
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation deleted'**
+  String get conversationDeleted;
+
+  /// Error message when message deletion fails
+  ///
+  /// In en, this message translates to:
+  /// **'Error deleting message: {error}'**
+  String errorDeletingMessage(String error);
+
+  /// Error message when conversation deletion fails
+  ///
+  /// In en, this message translates to:
+  /// **'Error deleting conversation: {error}'**
+  String errorDeletingConversation(String error);
+
+  /// Label for email address display
+  ///
+  /// In en, this message translates to:
+  /// **'Email Address'**
+  String get emailAddress;
+
+  /// Status text when email is verified
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get validated;
+
+  /// Status text when email is not verified
+  ///
+  /// In en, this message translates to:
+  /// **'Not Verified'**
+  String get notValidated;
+
+  /// Button text to verify email
+  ///
+  /// In en, this message translates to:
+  /// **'Verify Email'**
+  String get verifyEmail;
+
+  /// Button text to resend verification email
+  ///
+  /// In en, this message translates to:
+  /// **'Resend Verification'**
+  String get resendVerification;
+
+  /// Success message after sending verification email
+  ///
+  /// In en, this message translates to:
+  /// **'Verification email sent! Please check your inbox.'**
+  String get verificationEmailSent;
+
+  /// Title for registration success dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Maypole!'**
+  String get registrationSuccessTitle;
+
+  /// Message shown after successful registration
+  ///
+  /// In en, this message translates to:
+  /// **'Your account has been created successfully. We\'ve sent a verification email to {email}. Please check your inbox and click the verification link to activate all features.'**
+  String registrationSuccessMessage(String email);
+
+  /// Button text to acknowledge a message
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get gotIt;
 }
 
 class _AppLocalizationsDelegate

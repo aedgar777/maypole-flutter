@@ -141,10 +141,12 @@ void main() {
       final metadata = MaypoleMetaData(
         id: 'meta123',
         name: 'Test Place',
+        address: '123 Main St',
       );
 
       expect(metadata.id, 'meta123');
       expect(metadata.name, 'Test Place');
+      expect(metadata.address, '123 Main St');
     });
 
     test('toMap serializes correctly', () {
@@ -157,37 +159,43 @@ void main() {
 
       expect(map['id'], 'meta123');
       expect(map['name'], 'Test Place');
-      expect(map.length, 2);
+      expect(map['address'], ''); // Default empty string
+      expect(map.length, 3); // Now includes address field
     });
 
     test('fromMap deserializes correctly', () {
       final map = {
         'id': 'meta123',
         'name': 'Test Place',
+        'address': '456 Oak Ave',
       };
 
       final metadata = MaypoleMetaData.fromMap(map);
 
       expect(metadata.id, 'meta123');
       expect(metadata.name, 'Test Place');
+      expect(metadata.address, '456 Oak Ave');
     });
 
     test('fromMap handles null values with defaults', () {
       final map = <String, dynamic>{
         'id': null,
         'name': null,
+        'address': null,
       };
 
       final metadata = MaypoleMetaData.fromMap(map);
 
       expect(metadata.id, '');
       expect(metadata.name, '');
+      expect(metadata.address, '');
     });
 
     test('serialization round-trip preserves data', () {
       final original = MaypoleMetaData(
         id: 'test_id_123',
         name: 'Test Location Name',
+        address: '789 Elm Street',
       );
 
       final map = original.toMap();
@@ -195,6 +203,7 @@ void main() {
 
       expect(restored.id, original.id);
       expect(restored.name, original.name);
+      expect(restored.address, original.address);
     });
   });
 }

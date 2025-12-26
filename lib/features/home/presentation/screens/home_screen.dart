@@ -11,6 +11,8 @@ import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/maypole_chat_content.dart';
 import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
 import 'package:maypole/features/settings/settings_providers.dart';
+import 'package:maypole/core/ads/widgets/interstitial_ad_manager.dart';
+import 'package:maypole/core/ads/ad_config.dart';
 import '../../../identity/auth_providers.dart';
 import '../../../directmessages/presentation/dm_providers.dart';
 import '../widgets/maypole_list_panel.dart';
@@ -19,12 +21,14 @@ import '../widgets/maypole_list_panel.dart';
 class _SelectedThreadState {
   final String? threadId;
   final String? maypoleName;
+  final String? address;
   final DMThread? dmThread;
   final bool isMaypoleThread;
 
   const _SelectedThreadState({
     this.threadId,
     this.maypoleName,
+    this.address,
     this.dmThread,
     this.isMaypoleThread = true,
   });
@@ -32,12 +36,14 @@ class _SelectedThreadState {
   _SelectedThreadState copyWith({
     String? threadId,
     String? maypoleName,
+    String? address,
     DMThread? dmThread,
     bool? isMaypoleThread,
   }) {
     return _SelectedThreadState(
       threadId: threadId ?? this.threadId,
       maypoleName: maypoleName ?? this.maypoleName,
+      address: address ?? this.address,
       dmThread: dmThread ?? this.dmThread,
       isMaypoleThread: isMaypoleThread ?? this.isMaypoleThread,
     );
@@ -60,6 +66,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _hasRequestedPermissions = false;
   bool _hasPrefetchedData = false;
   int _currentTabIndex = 0;
+  int _threadSwitchCount = 0; // Track thread switches for interstitial ads
 
   @override
   void initState() {
@@ -69,6 +76,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _requestNotificationPermissionsIfNeeded();
       _initializeFcm();
       _prefetchUserDataIfNeeded();
+      _checkEmailVerificationIfNeeded();
     });
   }
 
@@ -113,6 +121,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       });
     } catch (e) {
       debugPrint('⚠️ Error starting prefetch: $e');
+    }
+  }
+
+  /// Check email verification status when the app starts
+  /// This ensures the verification status is up-to-date
+  Future<void> _checkEmailVerificationIfNeeded() async {
+    try {
+      final authService = ref.read(authServiceProvider);
+      // Run in background to check and update verification status
+      authService.checkEmailVerificationStatus().catchError((e) {
+        debugPrint('⚠️ Email verification check failed (non-critical): $e');
+      });
+    } catch (e) {
+      debugPrint('⚠️ Error checking email verification: $e');
     }
   }
 
@@ -177,11 +199,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               isMaypoleThread: _selectedThread.isMaypoleThread,
               onSettingsPressed: () => context.push('/settings'),
               onAddPressed: () => _handleAddPressed(context),
-              onMaypoleThreadSelected: (threadId, maypoleName) =>
+              onMaypoleThreadSelected: (threadId, maypoleName, address) =>
                   _handleMaypoleThreadSelected(
                     context,
                     threadId,
                     maypoleName,
+                    address,
                     isWideScreen,
                   ),
               onDmThreadSelected: (threadId) =>
@@ -233,6 +256,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return MaypoleChatContent(
         threadId: _selectedThread.threadId!,
         maypoleName: _selectedThread.maypoleName!,
+        address: _selectedThread.address,
         showAppBar: false,
         autoFocus: true,
       );
@@ -260,13 +284,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _selectedThread = _SelectedThreadState(
             threadId: result.placeId,
             maypoleName: result.placeName,
+            address: result.address,
             isMaypoleThread: true,
           );
         });
       } else {
         // On mobile, navigate to the chat screen
         if (context.mounted) {
-          context.push('/chat/${result.placeId}', extra: result.placeName);
+          context.push('/chat/${result.placeId}', extra: {
+            'name': result.placeName,
+            'address': result.address,
+          });
         }
       }
     }
@@ -276,20 +304,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     BuildContext context,
     String threadId,
     String maypoleName,
+    String address,
     bool isWideScreen,
-  ) {
+  ) async {
+    // Increment counter and show interstitial ad based on Remote Config frequency
+    _threadSwitchCount++;
+    final frequency = AdConfig.interstitialFrequency;
+    if (_threadSwitchCount % frequency == 0 && AdConfig.interstitialAdsEnabled) {
+      final adManager = ref.read(interstitialAdManagerProvider);
+      if (adManager.isAdReady) {
+        await adManager.showAd();
+      }
+    }
+
     if (isWideScreen) {
       // On wide screen, update the selected thread to show in the content panel
       setState(() {
         _selectedThread = _SelectedThreadState(
           threadId: threadId,
           maypoleName: maypoleName,
+          address: address,
           isMaypoleThread: true,
         );
       });
     } else {
       // On mobile, navigate to the chat screen
-      context.push('/chat/$threadId', extra: maypoleName);
+      context.push('/chat/$threadId', extra: {
+        'name': maypoleName,
+        'address': address,
+      });
     }
   }
 

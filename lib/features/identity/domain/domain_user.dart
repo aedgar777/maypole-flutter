@@ -9,6 +9,7 @@ class DomainUser {
   List<MaypoleMetaData> maypoleChatThreads;
   List<BlockedUser> blockedUsers;
   String? fcmToken;
+  bool emailVerified;
 
   DomainUser({
     required this.username,
@@ -18,6 +19,7 @@ class DomainUser {
     this.maypoleChatThreads = const [],
     this.blockedUsers = const [],
     this.fcmToken,
+    this.emailVerified = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -29,6 +31,7 @@ class DomainUser {
       'maypoleChatThreads': maypoleChatThreads.map((e) => e.toMap()).toList(),
       'blockedUsers': blockedUsers.map((e) => e.toMap()).toList(),
       'fcmToken': fcmToken,
+      'emailVerified': emailVerified,
     };
   }
 
@@ -44,6 +47,7 @@ class DomainUser {
       blockedUsers: List<BlockedUser>.from(
           map['blockedUsers']?.map((x) => BlockedUser.fromMap(x)) ?? []),
       fcmToken: map['fcmToken'] as String?,
+      emailVerified: map['emailVerified'] ?? false,
     );
   }
 }

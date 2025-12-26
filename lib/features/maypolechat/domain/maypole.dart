@@ -35,16 +35,19 @@ class Maypole {
 class MaypoleMetaData {
   final String id;
   final String name;
+  final String address;
 
   const MaypoleMetaData({
     required this.id,
     required this.name,
+    this.address = '',
   });
 
   factory MaypoleMetaData.fromMap(Map<String, dynamic> map) {
     return MaypoleMetaData(
       id: map['id'] ?? '',
       name: map['name'] ?? '',
+      address: map['address'] ?? '',
     );
   }
 
@@ -52,6 +55,7 @@ class MaypoleMetaData {
     return {
       'id': id,
       'name': name,
+      'address': address,
     };
   }
 }

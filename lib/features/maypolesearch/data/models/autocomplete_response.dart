@@ -22,11 +22,13 @@ class PlacePrediction {
   final String place; // Full text (business name + address) for display in search
   final String placeName; // Just the business name for the chat screen
   final String placeId;
+  final String address; // Secondary text (address) from structured format
 
   PlacePrediction({
     required this.place,
     required this.placeName,
     required this.placeId,
+    this.address = '',
   });
 
   factory PlacePrediction.fromMap(Map<String, dynamic> map) {
@@ -40,6 +42,7 @@ class PlacePrediction {
           structuredFormat?['mainText']?['text'] as String? ??
           prediction?['text']?['text'] as String? ?? '',
       placeId: prediction?['placeId'] as String? ?? '',
+      address: structuredFormat?['secondaryText']?['text'] as String? ?? '',
     );
   }
 

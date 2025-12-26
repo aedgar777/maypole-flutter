@@ -6,6 +6,7 @@ import '../features/maypolesearch/presentation/screens/maypole_search_screen.dar
 import '../features/maypolechat/presentation/screens/maypole_chat_screen.dart';
 import '../features/identity/presentation/login_screen.dart';
 import '../features/identity/presentation/registration_screen.dart';
+import '../features/identity/presentation/email_verified_screen.dart';
 import '../features/identity/presentation/screens/user_profile_screen.dart';
 import '../features/home/presentation/screens/home_screen.dart';
 import '../features/directmessages/presentation/screens/dm_screen.dart';
@@ -29,7 +30,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final currentPath = state.matchedLocation;
       
       // Define public routes that don't require authentication
-      final publicRoutes = ['/login', '/register', '/privacy-policy'];
+      final publicRoutes = ['/login', '/register', '/privacy-policy', '/email-verified'];
       final isPublicRoute = publicRoutes.contains(currentPath);
       
       // If user is not authenticated and trying to access a protected route
@@ -53,6 +54,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RegistrationScreen(),
       ),
       GoRoute(
+        path: '/email-verified',
+        builder: (context, state) => const EmailVerifiedScreen(),
+      ),
+      GoRoute(
         path: '/home',
         builder: (context, state) => const HomeScreen(),
       ),
@@ -67,10 +72,23 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/chat/:threadId',
         builder: (context, state) {
           final threadId = state.pathParameters['threadId']!;
-          final maypoleName = state.extra as String? ?? 'Unknown';
+          // Handle both legacy String format and new Map format
+          final extra = state.extra;
+          final String maypoleName;
+          final String? address;
+          
+          if (extra is Map<String, dynamic>) {
+            maypoleName = extra['name'] as String? ?? 'Unknown';
+            address = extra['address'] as String?;
+          } else {
+            maypoleName = extra as String? ?? 'Unknown';
+            address = null;
+          }
+          
           return MaypoleChatScreen(
             threadId: threadId,
             maypoleName: maypoleName,
+            address: address,
           );
         },
       ),
