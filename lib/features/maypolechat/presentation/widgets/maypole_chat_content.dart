@@ -299,7 +299,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                 ),
               ListTile(
                 leading: const Icon(Icons.cancel),
-                title: const Text('Cancel'),
+                title: Text(AppLocalizations.of(context)!.cancel),
                 onTap: () {
                   Navigator.pop(context);
                 },
@@ -323,9 +323,10 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       );
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error deleting message: $e'),
+            content: Text(l10n.errorDeletingMessage(e.toString())),
             backgroundColor: Colors.red,
           ),
         );

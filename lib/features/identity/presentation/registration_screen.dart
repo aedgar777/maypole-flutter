@@ -60,7 +60,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   maxLength: StringUtils.maxUsernameLength,
                   onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
                       _handleRegistration() : null,
-                  validator: StringUtils.validateUsername
+                  validator: (value) => StringUtils.validateUsername(value, l10n)
               ),
               const SizedBox(height: 20),
               AuthFormField(
@@ -70,7 +70,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   maxLength: StringUtils.maxEmailLength,
                   onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
                       _handleRegistration() : null,
-                  validator: StringUtils.validateEmail
+                  validator: (value) => StringUtils.validateEmail(value, l10n)
               ),
               const SizedBox(height: 20),
               AuthFormField(
@@ -80,7 +80,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   maxLength: StringUtils.maxPasswordLength,
                   onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
                       _handleRegistration() : null,
-                  validator: StringUtils.validatePassword
+                  validator: (value) => StringUtils.validatePassword(value, l10n)
               ),
               const SizedBox(height: 20),
               AuthFormField(
@@ -92,7 +92,8 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                       _handleRegistration() : null,
                   validator: (value) => StringUtils.validateConfirmPassword(
                     value,
-                    _passwordController.text
+                    _passwordController.text,
+                    l10n
                   )
               ),
               const SizedBox(height: 30),

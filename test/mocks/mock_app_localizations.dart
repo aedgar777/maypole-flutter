@@ -1,13 +1,50 @@
-// ignore: unused_import
-import 'package:intl/intl.dart' as intl;
-import 'app_localizations.dart';
+import 'package:maypole/l10n/generated/app_localizations.dart';
 
-// ignore_for_file: type=lint
+/// Mock implementation of AppLocalizations for testing
+class MockAppLocalizations extends AppLocalizations {
+  MockAppLocalizations() : super('en');
 
-/// The translations for English (`en`).
-class AppLocalizationsEn extends AppLocalizations {
-  AppLocalizationsEn([String locale = 'en']) : super(locale);
+  @override
+  String get pleaseEnterUsername => 'Please enter a username';
 
+  @override
+  String get usernameMinLength => 'Username must be at least 3 characters';
+
+  @override
+  String usernameMaxLength(int maxLength) =>
+      'Username must be no more than $maxLength characters';
+
+  @override
+  String get usernameInvalidCharacters =>
+      'Username can only contain letters, numbers, and underscores';
+
+  @override
+  String get pleaseEnterEmail => 'Please enter your email';
+
+  @override
+  String emailMaxLength(int maxLength) =>
+      'Email must be no more than $maxLength characters';
+
+  @override
+  String get pleaseEnterValidEmail => 'Please enter a valid email';
+
+  @override
+  String get pleaseEnterPassword => 'Please enter a password';
+
+  @override
+  String get passwordMinLength => 'Password must be at least 6 characters';
+
+  @override
+  String passwordMaxLength(int maxLength) =>
+      'Password must be no more than $maxLength characters';
+
+  @override
+  String get pleaseConfirmPassword => 'Please confirm your password';
+
+  @override
+  String get passwordsDoNotMatch => 'Passwords do not match';
+
+  // Add stubs for other required getters (these won't be used in StringUtils tests)
   @override
   String get appTitle => 'Maypole';
 
@@ -30,14 +67,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noDirectMessages => 'No direct messages yet.';
 
   @override
-  String lastMessage(String time) {
-    return 'Last message: $time';
-  }
+  String lastMessage(String time) => 'Last message: $time';
 
   @override
-  String error(String message) {
-    return 'Error: $message';
-  }
+  String error(String message) => 'Error: $message';
 
   @override
   String get signIn => 'Sign In';
@@ -59,49 +92,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get alreadyHaveAccount => 'Already have an account? Login';
-
-  @override
-  String get pleaseEnterEmail => 'Please enter your email';
-
-  @override
-  String get pleaseEnterValidEmail => 'Please enter a valid email';
-
-  @override
-  String get pleaseEnterPassword => 'Please enter your password';
-
-  @override
-  String get passwordMinLength => 'Password must be at least 6 characters';
-
-  @override
-  String get pleaseEnterUsername => 'Please enter a username';
-
-  @override
-  String get usernameMinLength => 'Username must be at least 3 characters';
-
-  @override
-  String usernameMaxLength(int maxLength) {
-    return 'Username must be no more than $maxLength characters';
-  }
-
-  @override
-  String get usernameInvalidCharacters =>
-      'Username can only contain letters, numbers, and underscores';
-
-  @override
-  String emailMaxLength(int maxLength) {
-    return 'Email must be no more than $maxLength characters';
-  }
-
-  @override
-  String passwordMaxLength(int maxLength) {
-    return 'Password must be no more than $maxLength characters';
-  }
-
-  @override
-  String get pleaseConfirmPassword => 'Please confirm your password';
-
-  @override
-  String get passwordsDoNotMatch => 'Passwords do not match';
 
   @override
   String get searchMaypoles => 'Search Maypoles';
@@ -164,14 +154,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get justNow => 'Just now';
 
   @override
-  String minutesAgo(int minutes) {
-    return '${minutes}m ago';
-  }
+  String minutesAgo(int minutes) => '${minutes}m ago';
 
   @override
-  String hoursAgo(int hours) {
-    return '${hours}h ago';
-  }
+  String hoursAgo(int hours) => '${hours}h ago';
 
   @override
   String get at => 'at';
@@ -268,20 +254,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get blockUser => 'Block User';
 
   @override
-  String blockUserConfirmation(String username) {
-    return 'Are you sure you want to block $username? You will no longer see their messages.';
-  }
+  String blockUserConfirmation(String username) =>
+      'Are you sure you want to block $username? You will no longer see their messages.';
 
   @override
-  String userBlocked(String username) {
-    return '$username has been blocked';
-  }
+  String userBlocked(String username) => '$username has been blocked';
 
   @override
   String get blockedUsers => 'Blocked Users';
 
   @override
-  String get noBlockedUsers => 'You haven\'t blocked any users';
+  String get noBlockedUsers => "You haven't blocked any users";
 
   @override
   String get unblock => 'Unblock';
@@ -290,14 +273,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unblockUser => 'Unblock User';
 
   @override
-  String unblockUserConfirmation(String username) {
-    return 'Are you sure you want to unblock $username?';
-  }
+  String unblockUserConfirmation(String username) =>
+      'Are you sure you want to unblock $username?';
 
   @override
-  String userUnblocked(String username) {
-    return '$username has been unblocked';
-  }
+  String userUnblocked(String username) => '$username has been unblocked';
 
   @override
   String get errorOpeningEmail => 'Could not open email client';
@@ -309,9 +289,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteMessage => 'Delete';
 
   @override
-  String tagUser(String name) {
-    return 'Tag $name';
-  }
+  String tagUser(String name) => 'Tag $name';
 
   @override
   String get viewProfile => 'View Profile';
@@ -329,12 +307,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get conversationDeleted => 'Conversation deleted';
 
   @override
-  String errorDeletingMessage(String error) {
-    return 'Error deleting message: $error';
-  }
+  String errorDeletingMessage(String error) => 'Error deleting message: $error';
 
   @override
-  String errorDeletingConversation(String error) {
-    return 'Error deleting conversation: $error';
-  }
+  String errorDeletingConversation(String error) =>
+      'Error deleting conversation: $error';
 }

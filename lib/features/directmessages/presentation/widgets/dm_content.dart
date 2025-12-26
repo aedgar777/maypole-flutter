@@ -10,6 +10,7 @@ import 'package:maypole/core/widgets/cached_profile_avatar.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/core/ads/widgets/banner_ad_widget.dart';
 import 'package:maypole/core/ads/ad_config.dart';
+import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../../domain/direct_message.dart';
 import '../../domain/dm_thread.dart';
 import '../dm_providers.dart';
@@ -197,7 +198,7 @@ class _DmContentState extends ConsumerState<DmContent> {
                   ],
                 ),
               )
-            : const Text('Direct Message'),
+            : Text(AppLocalizations.of(context)!.directMessage),
       ),
       body: body,
       bottomNavigationBar: AdConfig.adsEnabled
@@ -314,7 +315,7 @@ class _DmContentState extends ConsumerState<DmContent> {
                 ),
               ListTile(
                 leading: const Icon(Icons.cancel),
-                title: const Text('Cancel'),
+                title: Text(AppLocalizations.of(context)!.cancel),
                 onTap: () {
                   Navigator.pop(context);
                 },
@@ -339,9 +340,10 @@ class _DmContentState extends ConsumerState<DmContent> {
       );
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error deleting message: $e'),
+            content: Text(l10n.errorDeletingMessage(e.toString())),
             backgroundColor: Colors.red,
           ),
         );

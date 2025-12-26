@@ -91,6 +91,53 @@
   "@passwordMinLength": {
     "description": "Validation message for password minimum length"
   },
+  "pleaseEnterUsername": "Please enter a username",
+  "@pleaseEnterUsername": {
+    "description": "Validation message for empty username"
+  },
+  "usernameMinLength": "Username must be at least 3 characters",
+  "@usernameMinLength": {
+    "description": "Validation message for username minimum length"
+  },
+  "usernameMaxLength": "Username must be no more than {maxLength} characters",
+  "@usernameMaxLength": {
+    "description": "Validation message for username maximum length",
+    "placeholders": {
+      "maxLength": {
+        "type": "int"
+      }
+    }
+  },
+  "usernameInvalidCharacters": "Username can only contain letters, numbers, and underscores",
+  "@usernameInvalidCharacters": {
+    "description": "Validation message for invalid username characters"
+  },
+  "emailMaxLength": "Email must be no more than {maxLength} characters",
+  "@emailMaxLength": {
+    "description": "Validation message for email maximum length",
+    "placeholders": {
+      "maxLength": {
+        "type": "int"
+      }
+    }
+  },
+  "passwordMaxLength": "Password must be no more than {maxLength} characters",
+  "@passwordMaxLength": {
+    "description": "Validation message for password maximum length",
+    "placeholders": {
+      "maxLength": {
+        "type": "int"
+      }
+    }
+  },
+  "pleaseConfirmPassword": "Please confirm your password",
+  "@pleaseConfirmPassword": {
+    "description": "Validation message for empty password confirmation"
+  },
+  "passwordsDoNotMatch": "Passwords do not match",
+  "@passwordsDoNotMatch": {
+    "description": "Validation message when passwords don't match"
+  },
   "searchMaypoles": "Search Maypoles",
   "@searchMaypoles": {
     "description": "Title for the search screen"
@@ -360,5 +407,60 @@
   "errorOpeningEmail": "Could not open email client",
   "@errorOpeningEmail": {
     "description": "Error message when email client cannot be opened"
+  },
+  "unknownError": "An unknown error occurred",
+  "@unknownError": {
+    "description": "Generic message for unknown errors"
+  },
+  "deleteMessage": "Delete",
+  "@deleteMessage": {
+    "description": "Delete message option in context menu"
+  },
+  "tagUser": "Tag {name}",
+  "@tagUser": {
+    "description": "Tag user option in context menu",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "viewProfile": "View Profile",
+  "@viewProfile": {
+    "description": "View profile option in context menu"
+  },
+  "userNotFound": "User not found",
+  "@userNotFound": {
+    "description": "Error message when user cannot be found"
+  },
+  "messageDeleted": "Message deleted",
+  "@messageDeleted": {
+    "description": "Success message after deleting a message"
+  },
+  "deletionCancelled": "Deletion cancelled",
+  "@deletionCancelled": {
+    "description": "Message when deletion is cancelled"
+  },
+  "conversationDeleted": "Conversation deleted",
+  "@conversationDeleted": {
+    "description": "Success message after deleting a conversation"
+  },
+  "errorDeletingMessage": "Error deleting message: {error}",
+  "@errorDeletingMessage": {
+    "description": "Error message when message deletion fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorDeletingConversation": "Error deleting conversation: {error}",
+  "@errorDeletingConversation": {
+    "description": "Error message when conversation deletion fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   }
 }

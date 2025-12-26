@@ -352,6 +352,7 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
+        final l10n = AppLocalizations.of(context)!;
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -373,7 +374,7 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
               ),
               ListTile(
                 leading: const Icon(Icons.cancel),
-                title: const Text('Cancel'),
+                title: Text(l10n.cancel),
                 onTap: () {
                   Navigator.pop(context);
                 },
@@ -419,9 +420,10 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
         scaffoldMessenger.hideCurrentSnackBar();
         
         if (context.mounted) {
+          final l10n = AppLocalizations.of(context)!;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error deleting message: $e'),
+              content: Text(l10n.errorDeletingMessage(e.toString())),
               backgroundColor: Colors.red,
             ),
           );
@@ -438,9 +440,10 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
     
     _deletionTimers[threadMetadata.id] = timer;
 
+    final l10n = AppLocalizations.of(context)!;
     scaffoldMessenger.showSnackBar(
       SnackBar(
-        content: const Text('Message deleted'),
+        content: Text(l10n.messageDeleted),
         duration: const Duration(seconds: 3),
         action: SnackBarAction(
           label: 'UNDO',
@@ -456,9 +459,9 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
             
             // Show confirmation
             scaffoldMessenger.showSnackBar(
-              const SnackBar(
-                content: Text('Deletion cancelled'),
-                duration: Duration(seconds: 2),
+              SnackBar(
+                content: Text(l10n.deletionCancelled),
+                duration: const Duration(seconds: 2),
               ),
             );
           },
@@ -475,6 +478,7 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
+        final l10n = AppLocalizations.of(context)!;
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -496,7 +500,7 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
               ),
               ListTile(
                 leading: const Icon(Icons.cancel),
-                title: const Text('Cancel'),
+                title: Text(l10n.cancel),
                 onTap: () {
                   Navigator.pop(context);
                 },
@@ -542,9 +546,10 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
         scaffoldMessenger.hideCurrentSnackBar();
         
         if (context.mounted) {
+          final l10n = AppLocalizations.of(context)!;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error deleting conversation: $e'),
+              content: Text(l10n.errorDeletingConversation(e.toString())),
               backgroundColor: Colors.red,
             ),
           );
@@ -561,9 +566,10 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
     
     _deletionTimers[threadMetadata.id] = timer;
 
+    final l10n = AppLocalizations.of(context)!;
     scaffoldMessenger.showSnackBar(
       SnackBar(
-        content: const Text('Conversation deleted'),
+        content: Text(l10n.conversationDeleted),
         duration: const Duration(seconds: 3),
         action: SnackBarAction(
           label: 'UNDO',
@@ -579,9 +585,9 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
             
             // Show confirmation
             scaffoldMessenger.showSnackBar(
-              const SnackBar(
-                content: Text('Deletion cancelled'),
-                duration: Duration(seconds: 2),
+              SnackBar(
+                content: Text(l10n.deletionCancelled),
+                duration: const Duration(seconds: 2),
               ),
             );
           },
