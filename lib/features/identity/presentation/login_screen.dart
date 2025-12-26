@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_config.dart';
+import 'package:maypole/core/utils/string_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
@@ -71,34 +72,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     controller: _emailController,
                     labelText: l10n.email,
                     keyboardType: TextInputType.emailAddress,
+                    maxLength: StringUtils.maxEmailLength,
                     onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
                         _handleSignIn() : null,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return l10n.pleaseEnterEmail;
-                      }
-                      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                        return l10n.pleaseEnterValidEmail;
-                      }
-                      return null;
-                    },
+                    validator: (value) => StringUtils.validateEmail(value, l10n),
                   ),
                   const SizedBox(height: 20),
                   AuthFormField(
                     controller: _passwordController,
                     labelText: l10n.password,
                     obscureText: true,
+                    maxLength: StringUtils.maxPasswordLength,
                     onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
                         _handleSignIn() : null,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return l10n.pleaseEnterPassword;
-                      }
-                      if (value.length < 6) {
-                        return l10n.passwordMinLength;
-                      }
-                      return null;
-                    },
+                    validator: (value) => StringUtils.validatePassword(value, l10n),
                   ),
                   const SizedBox(height: 30),
                   if (loginState.isLoading)

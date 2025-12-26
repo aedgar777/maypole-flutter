@@ -283,6 +283,7 @@ class DMThreadService {
             partnerName: partner.username,
             partnerId: partner.id,
             partnerProfpic: partner.profilePicUrl,
+            lastMessageBody: dmThread.lastMessage?.body,
           );
         } catch (e) {
           debugPrint('Error processing DM thread ${doc.id}: $e');

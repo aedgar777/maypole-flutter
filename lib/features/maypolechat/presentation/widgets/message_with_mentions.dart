@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/maypolechat/data/user_search_service.dart';
+import 'package:maypole/l10n/generated/app_localizations.dart';
 
 /// A widget that displays a message with @ mentions highlighted
 class MessageWithMentions extends StatelessWidget {
@@ -81,6 +82,7 @@ class MessageWithMentions extends StatelessWidget {
   }
 
   void _showContextMenu(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final timeString = _formatTimestamp(timestamp);
     
     showModalBottomSheet(
@@ -102,7 +104,7 @@ class MessageWithMentions extends StatelessWidget {
               // Own message: Delete option
               ListTile(
                 leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text('Delete', style: TextStyle(color: Colors.red)),
+                title: Text(l10n.deleteMessage, style: const TextStyle(color: Colors.red)),
                 onTap: () {
                   Navigator.pop(context);
                   onDelete?.call();
@@ -113,7 +115,7 @@ class MessageWithMentions extends StatelessWidget {
               if (onTagUser != null)
                 ListTile(
                   leading: const Icon(Icons.alternate_email),
-                  title: Text('Tag $senderName'),
+                  title: Text(l10n.tagUser(senderName)),
                   onTap: () {
                     Navigator.pop(context);
                     onTagUser?.call();
@@ -121,7 +123,7 @@ class MessageWithMentions extends StatelessWidget {
                 ),
               ListTile(
                 leading: const Icon(Icons.person),
-                title: const Text('View Profile'),
+                title: Text(l10n.viewProfile),
                 onTap: () async {
                   Navigator.pop(context);
                   await _navigateToProfile(context);
@@ -133,7 +135,7 @@ class MessageWithMentions extends StatelessWidget {
             Divider(height: 1, color: Colors.grey.withValues(alpha: 0.2)),
             ListTile(
               leading: const Icon(Icons.cancel),
-              title: const Text('Cancel'),
+              title: Text(l10n.cancel),
               onTap: () => Navigator.pop(context),
             ),
           ],
@@ -208,8 +210,9 @@ class MessageWithMentions extends StatelessWidget {
         );
       } else {
         // Show error if user not found
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('User not found')),
+          SnackBar(content: Text(l10n.userNotFound)),
         );
       }
     } catch (e) {

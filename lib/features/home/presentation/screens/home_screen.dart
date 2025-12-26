@@ -76,6 +76,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _requestNotificationPermissionsIfNeeded();
       _initializeFcm();
       _prefetchUserDataIfNeeded();
+      _checkEmailVerificationIfNeeded();
     });
   }
 
@@ -120,6 +121,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       });
     } catch (e) {
       debugPrint('⚠️ Error starting prefetch: $e');
+    }
+  }
+
+  /// Check email verification status when the app starts
+  /// This ensures the verification status is up-to-date
+  Future<void> _checkEmailVerificationIfNeeded() async {
+    try {
+      final authService = ref.read(authServiceProvider);
+      // Run in background to check and update verification status
+      authService.checkEmailVerificationStatus().catchError((e) {
+        debugPrint('⚠️ Email verification check failed (non-critical): $e');
+      });
+    } catch (e) {
+      debugPrint('⚠️ Error checking email verification: $e');
     }
   }
 

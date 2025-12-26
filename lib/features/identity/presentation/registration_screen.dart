@@ -21,22 +21,59 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _usernameController = TextEditingController();
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _usernameController.dispose();
     super.dispose();
   }
 
-  void _navigateToHome(BuildContext context) {
-    // Automatically navigate to home when user is registered and logged in
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        context.go('/home');
-      }
+  void _showSuccessDialogAndNavigate(BuildContext context) {
+    // Show success dialog informing user about verification email
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      
+      final l10n = AppLocalizations.of(context)!;
+      final email = _emailController.text.trim();
+      
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                Icons.check_circle_outline,
+                color: Colors.green,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(l10n.registrationSuccessTitle),
+              ),
+            ],
+          ),
+          content: Text(
+            l10n.registrationSuccessMessage(email),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                if (mounted) {
+                  context.go('/home');
+                }
+              },
+              child: Text(l10n.gotIt),
+            ),
+          ],
+        ),
+      );
     });
   }
 
@@ -55,27 +92,44 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
               AuthFormField(
                   controller: _usernameController,
                   labelText: l10n.username,
+                  maxLength: StringUtils.maxUsernameLength,
                   onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
                       _handleRegistration() : null,
-                  validator: StringUtils.validateUsername
+                  validator: (value) => StringUtils.validateUsername(value, l10n)
               ),
               const SizedBox(height: 20),
               AuthFormField(
                   controller: _emailController,
                   labelText: l10n.email,
                   keyboardType: TextInputType.emailAddress,
+                  maxLength: StringUtils.maxEmailLength,
                   onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
                       _handleRegistration() : null,
-                  validator: StringUtils.validateEmail
+                  validator: (value) => StringUtils.validateEmail(value, l10n)
               ),
               const SizedBox(height: 20),
               AuthFormField(
                   controller: _passwordController,
                   labelText: l10n.password,
                   obscureText: true,
+                  maxLength: StringUtils.maxPasswordLength,
                   onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
                       _handleRegistration() : null,
-                  validator: StringUtils.validatePassword
+                  validator: (value) => StringUtils.validatePassword(value, l10n)
+              ),
+              const SizedBox(height: 20),
+              AuthFormField(
+                  controller: _confirmPasswordController,
+                  labelText: l10n.confirmPassword,
+                  obscureText: true,
+                  maxLength: StringUtils.maxPasswordLength,
+                  onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
+                      _handleRegistration() : null,
+                  validator: (value) => StringUtils.validateConfirmPassword(
+                    value,
+                    _passwordController.text,
+                    l10n
+                  )
               ),
               const SizedBox(height: 30),
               if (registrationState.isLoading)
@@ -130,7 +184,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       body: ref.watch(authStateProvider).when(
         data: (user) {
           if (user != null) {
-            _navigateToHome(context);
+            _showSuccessDialogAndNavigate(context);
             return const Center(child: CircularProgressIndicator());
           }
           return _buildRegistrationForm(registrationState, context);

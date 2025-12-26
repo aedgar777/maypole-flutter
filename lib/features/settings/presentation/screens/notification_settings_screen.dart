@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/features/settings/presentation/viewmodels/notification_settings_viewmodel.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 
@@ -46,12 +47,9 @@ class _NotificationSettingsScreenState
     if (!mounted) return;
 
     if (granted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              AppLocalizations.of(context)!.notificationPermissionGranted),
-          backgroundColor: Colors.green,
-        ),
+      AppToast.showSuccess(
+        context,
+        AppLocalizations.of(context)!.notificationPermissionGranted,
       );
     } else {
       // Show dialog explaining how to enable in settings

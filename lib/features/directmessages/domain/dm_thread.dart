@@ -96,6 +96,7 @@ class DMThreadMetaData {
   final String partnerName;
   final String partnerId;
   final String partnerProfpic;
+  final String? lastMessageBody;
 
   const DMThreadMetaData({
     required this.id,
@@ -104,6 +105,7 @@ class DMThreadMetaData {
     required this.partnerName,
     required this.partnerId,
     required this.partnerProfpic,
+    this.lastMessageBody,
   });
 
   factory DMThreadMetaData.fromMap(Map<String, dynamic> map) {
@@ -114,6 +116,7 @@ class DMThreadMetaData {
       partnerName: map['partnerName'] ?? '',
       partnerId: map['partnerId'] ?? '',
       partnerProfpic: map['partnerProfpic'] ?? '',
+      lastMessageBody: map['lastMessageBody'],
     );
   }
 
@@ -125,6 +128,7 @@ class DMThreadMetaData {
       'partnerName': partnerName,
       'partnerId': partnerId,
       'partnerProfpic': partnerProfpic,
+      'lastMessageBody': lastMessageBody,
     };
   }
 }
