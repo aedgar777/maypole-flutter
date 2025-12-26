@@ -685,6 +685,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Error deleting conversation: {error}'**
   String errorDeletingConversation(String error);
+
+  /// Label for email address display
+  ///
+  /// In en, this message translates to:
+  /// **'Email Address'**
+  String get emailAddress;
+
+  /// Status text when email is verified
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get validated;
+
+  /// Status text when email is not verified
+  ///
+  /// In en, this message translates to:
+  /// **'Not Verified'**
+  String get notValidated;
+
+  /// Button text to verify email
+  ///
+  /// In en, this message translates to:
+  /// **'Verify Email'**
+  String get verifyEmail;
+
+  /// Button text to resend verification email
+  ///
+  /// In en, this message translates to:
+  /// **'Resend Verification'**
+  String get resendVerification;
+
+  /// Success message after sending verification email
+  ///
+  /// In en, this message translates to:
+  /// **'Verification email sent! Please check your inbox.'**
+  String get verificationEmailSent;
+
+  /// Title for registration success dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to Maypole!'**
+  String get registrationSuccessTitle;
+
+  /// Message shown after successful registration
+  ///
+  /// In en, this message translates to:
+  /// **'Your account has been created successfully. We\'ve sent a verification email to {email}. Please check your inbox and click the verification link to activate all features.'**
+  String registrationSuccessMessage(String email);
+
+  /// Button text to acknowledge a message
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get gotIt;
 }
 
 class _AppLocalizationsDelegate

@@ -7,7 +7,9 @@ import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
 import 'package:maypole/core/widgets/cached_profile_avatar.dart';
+import 'package:maypole/core/widgets/lazy_profile_avatar.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
+import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/core/ads/widgets/banner_ad_widget.dart';
 import 'package:maypole/core/ads/ad_config.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
@@ -192,7 +194,10 @@ class _DmContentState extends ConsumerState<DmContent> {
                 },
                 child: Row(
                   children: [
-                    CachedProfileAvatar(imageUrl: partner.profilePicUrl),
+                    LazyProfileAvatar(
+                      userId: partner.id,
+                      initialProfilePictureUrl: partner.profilePicUrl,
+                    ),
                     const SizedBox(width: 8),
                     Text(partner.username),
                   ],
@@ -341,12 +346,7 @@ class _DmContentState extends ConsumerState<DmContent> {
     } catch (e) {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.errorDeletingMessage(e.toString())),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppToast.showError(context, l10n.errorDeletingMessage(e.toString()));
       }
     }
   }

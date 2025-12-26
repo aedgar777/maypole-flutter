@@ -5,6 +5,7 @@ import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
+import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/domain/maypole_message.dart';
 import 'package:maypole/features/maypolechat/domain/user_mention.dart';
@@ -324,12 +325,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     } catch (e) {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.errorDeletingMessage(e.toString())),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppToast.showError(context, l10n.errorDeletingMessage(e.toString()));
       }
     }
   }

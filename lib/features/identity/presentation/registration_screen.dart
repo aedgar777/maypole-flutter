@@ -33,12 +33,47 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
     super.dispose();
   }
 
-  void _navigateToHome(BuildContext context) {
-    // Automatically navigate to home when user is registered and logged in
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        context.go('/home');
-      }
+  void _showSuccessDialogAndNavigate(BuildContext context) {
+    // Show success dialog informing user about verification email
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      
+      final l10n = AppLocalizations.of(context)!;
+      final email = _emailController.text.trim();
+      
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                Icons.check_circle_outline,
+                color: Colors.green,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(l10n.registrationSuccessTitle),
+              ),
+            ],
+          ),
+          content: Text(
+            l10n.registrationSuccessMessage(email),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                if (mounted) {
+                  context.go('/home');
+                }
+              },
+              child: Text(l10n.gotIt),
+            ),
+          ],
+        ),
+      );
     });
   }
 
@@ -149,7 +184,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       body: ref.watch(authStateProvider).when(
         data: (user) {
           if (user != null) {
-            _navigateToHome(context);
+            _showSuccessDialogAndNavigate(context);
             return const Center(child: CircularProgressIndicator());
           }
           return _buildRegistrationForm(registrationState, context);

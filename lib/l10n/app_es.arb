@@ -97,5 +97,14 @@
   "deletionCancelled": "Eliminación cancelada",
   "conversationDeleted": "Conversación eliminada",
   "errorDeletingMessage": "Error al eliminar mensaje: {error}",
-  "errorDeletingConversation": "Error al eliminar conversación: {error}"
+  "errorDeletingConversation": "Error al eliminar conversación: {error}",
+  "emailAddress": "Dirección de correo electrónico",
+  "validated": "Verificado",
+  "notValidated": "No verificado",
+  "verifyEmail": "Verificar correo electrónico",
+  "resendVerification": "Reenviar verificación",
+  "verificationEmailSent": "¡Correo de verificación enviado! Por favor revise su bandeja de entrada.",
+  "registrationSuccessTitle": "¡Bienvenido a Maypole!",
+  "registrationSuccessMessage": "Su cuenta ha sido creada exitosamente. Hemos enviado un correo de verificación a {email}. Por favor revise su bandeja de entrada y haga clic en el enlace de verificación para activar todas las funciones.",
+  "gotIt": "Entendido"
 }

@@ -145,6 +145,11 @@ class AuthService {
         password: password,
       );
 
+      // Set display name on Firebase Auth user profile
+      // This enables the %DISPLAY_NAME% variable in email templates
+      await result.user!.updateDisplayName(username);
+      debugPrint('✓ Set display name to: $username');
+
       // Create domain user
 
       final DomainUser user = DomainUser(
@@ -170,6 +175,15 @@ class AuthService {
         'taken': true,
         'owner': result.user!.uid,
       });
+
+      // Send email verification immediately after registration
+      try {
+        await sendEmailVerification();
+        debugPrint('✓ Verification email sent to new user');
+      } catch (e) {
+        debugPrint('⚠️ Failed to send verification email (non-critical): $e');
+        // Don't fail registration if email sending fails
+      }
 
       // Setup FCM for new user
       try {
@@ -202,6 +216,9 @@ class AuthService {
       // Fetch and set domain user
       if (result.user != null) {
         await _fetchAndSetDomainUser(result.user!.uid);
+        
+        // Check and update email verification status
+        await checkEmailVerificationStatus();
         
         // Setup FCM for returning user
         try {
@@ -350,6 +367,80 @@ class AuthService {
       }
       rethrow;
     } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> sendEmailVerification() async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) {
+        throw Exception('No user is currently signed in');
+      }
+
+      if (user.emailVerified) {
+        // If Firebase Auth already shows verified, update Firestore
+        await _updateEmailVerificationStatus(true);
+        throw Exception('Email is already verified');
+      }
+
+      // Send verification email with default Firebase settings
+      // To add a custom redirect URL, you need to:
+      // 1. Add the domain to Firebase Console → Authentication → Settings → Authorized domains
+      // 2. Then uncomment and configure ActionCodeSettings below
+      await user.sendEmailVerification();
+      debugPrint('✓ Verification email sent to ${user.email}');
+    } on FirebaseAuthException {
+      rethrow;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> checkEmailVerificationStatus() async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) return;
+
+      // Reload user to get latest verification status
+      await user.reload();
+      final reloadedUser = _firebaseAuth.currentUser;
+      
+      if (reloadedUser != null && reloadedUser.emailVerified) {
+        // Update Firestore with verification status
+        await _updateEmailVerificationStatus(true);
+        debugPrint('✓ Email verification status updated in Firestore');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error checking email verification status: $e');
+    }
+  }
+
+  Future<void> _updateEmailVerificationStatus(bool isVerified) async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) return;
+
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .update({'emailVerified': isVerified});
+
+      // Update session
+      if (_session.currentUser != null) {
+        _session.currentUser = DomainUser(
+          username: _session.currentUser!.username,
+          email: _session.currentUser!.email,
+          firebaseID: _session.currentUser!.firebaseID,
+          profilePictureUrl: _session.currentUser!.profilePictureUrl,
+          maypoleChatThreads: _session.currentUser!.maypoleChatThreads,
+          blockedUsers: _session.currentUser!.blockedUsers,
+          fcmToken: _session.currentUser!.fcmToken,
+          emailVerified: isVerified,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error updating email verification status: $e');
       rethrow;
     }
   }

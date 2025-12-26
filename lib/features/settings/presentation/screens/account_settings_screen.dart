@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
+import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/features/identity/auth_providers.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 
@@ -78,9 +79,7 @@ class AccountSettingsScreen extends ConsumerWidget {
 
       // Show success message
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.accountDeleted)),
-      );
+      AppToast.showSuccess(context, l10n.accountDeleted);
 
       // Navigate to login screen
       if (!context.mounted) return;
@@ -96,9 +95,69 @@ class AccountSettingsScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _handleResendVerification(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
+
+    try {
+      await ref.read(authServiceProvider).sendEmailVerification();
+
+      if (!context.mounted) return;
+      AppToast.showSuccess(context, l10n.verificationEmailSent);
+    } catch (e) {
+      if (!context.mounted) return;
+      ErrorDialog.show(context, e);
+    }
+  }
+
+  Widget _buildEmailVerificationStatus(
+      BuildContext context, bool isVerified) {
+    final l10n = AppLocalizations.of(context)!;
+    
+    if (isVerified) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.check_circle,
+            color: Colors.green,
+            size: 16,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            l10n.validated,
+            style: const TextStyle(color: Colors.green, fontSize: 14),
+          ),
+        ],
+      );
+    } else {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.warning_outlined,
+            color: Colors.orange,
+            size: 16,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            l10n.notValidated,
+            style: const TextStyle(color: Colors.orange, fontSize: 14),
+          ),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.chevron_right,
+            color: Colors.orange,
+            size: 16,
+          ),
+        ],
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    final authState = ref.watch(authStateProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -108,31 +167,47 @@ class AccountSettingsScreen extends ConsumerWidget {
           onPressed: () => context.pop(),
         ),
       ),
-      body: Column(
-        children: [
-          const SizedBox(height: 32),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          ),
-          const SizedBox(height: 32),
-          ListTile(
-            leading: const Icon(Icons.block),
-            title: Text(l10n.blockedUsers),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/settings/blocked-users'),
-          ),
-          Divider(color: Colors.white.withValues(alpha: 0.1)),
-          ListTile(
-            leading: const Icon(Icons.delete_forever, color: Colors.red),
-            title: Text(
-              l10n.deleteAccount,
-              style: const TextStyle(color: Colors.red),
-            ),
-            trailing: const Icon(Icons.chevron_right, color: Colors.red),
-            onTap: () => _confirmDeleteAccount(context, ref),
-          ),
-          Divider(color: Colors.white.withValues(alpha: 0.1)),
-        ],
+      body: authState.when(
+        data: (user) {
+          if (user == null) return const SizedBox.shrink();
+
+          return Column(
+            children: [
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.email),
+                title: Text(l10n.emailAddress),
+                subtitle: Text(user.email),
+                trailing: _buildEmailVerificationStatus(
+                    context, user.emailVerified),
+                onTap: user.emailVerified
+                    ? null
+                    : () => _handleResendVerification(context, ref),
+              ),
+              Divider(color: Colors.white.withValues(alpha: 0.1)),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.block),
+                title: Text(l10n.blockedUsers),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/settings/blocked-users'),
+              ),
+              Divider(color: Colors.white.withValues(alpha: 0.1)),
+              ListTile(
+                leading: const Icon(Icons.delete_forever, color: Colors.red),
+                title: Text(
+                  l10n.deleteAccount,
+                  style: const TextStyle(color: Colors.red),
+                ),
+                trailing: const Icon(Icons.chevron_right, color: Colors.red),
+                onTap: () => _confirmDeleteAccount(context, ref),
+              ),
+              Divider(color: Colors.white.withValues(alpha: 0.1)),
+            ],
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Error: $err')),
       ),
     );
   }

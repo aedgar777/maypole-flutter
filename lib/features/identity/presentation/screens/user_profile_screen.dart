@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/widgets/cached_profile_avatar.dart';
+import 'package:maypole/core/widgets/lazy_profile_avatar.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
+import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/features/identity/auth_providers.dart';
 import 'package:maypole/features/identity/domain/blocked_user.dart';
 import 'package:maypole/features/directmessages/presentation/dm_providers.dart';
@@ -68,9 +70,7 @@ class UserProfileScreen extends ConsumerWidget {
         await ref.read(authServiceProvider).updateUserData(currentUser);
 
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.userBlocked(username))),
-          );
+          AppToast.showSuccess(context, l10n.userBlocked(username));
           context.pop();
         }
       } catch (e) {
@@ -156,8 +156,9 @@ class UserProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 32),
                 // Profile Picture Section (non-editable)
                 Center(
-                  child: CachedProfileAvatar(
-                    imageUrl: profilePictureUrl,
+                  child: LazyProfileAvatar(
+                    userId: firebaseId,
+                    initialProfilePictureUrl: profilePictureUrl,
                     radius: 80,
                   ),
                 ),

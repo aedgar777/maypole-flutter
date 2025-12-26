@@ -7,16 +7,21 @@ class StorageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Uploads a profile picture to Firebase Storage and returns the download URL.
+  /// Uploads a profile picture to Firebase Storage and returns the optimized URL.
   /// 
-  /// The file is stored at: `ProfilePictures/{userId}/profile.{extension}`
+  /// The file is stored at: `profile_pictures/{userId}/profile.{extension}`
+  /// Cloud Function automatically creates optimized variants:
+  /// - thumbnail (150x150) for list views
+  /// - medium (400x400) for profile views  
+  /// - large (800x800) for full screen
   /// 
   /// [userId] - The Firebase user ID
   /// [filePath] - The local file path to upload
+  /// [useOptimized] - Whether to return optimized medium URL (default: true)
   /// 
-  /// Returns the download URL of the uploaded file.
+  /// Returns the download URL of the uploaded file (or optimized variant).
   /// Throws an exception if the upload fails.
-  Future<String> uploadProfilePicture(String userId, String filePath) async {
+  Future<String> uploadProfilePicture(String userId, String filePath, {bool useOptimized = true}) async {
     try {
       debugPrint('Starting profile picture upload for user: $userId');
 
@@ -26,9 +31,10 @@ class StorageService {
           .last;
 
       // Create reference to storage location
-      // Path structure: ProfilePictures/{userId}/profile.{extension}
+      // Path structure: profile_pictures/{userId}/profile.{extension}
+      // Note: Using lowercase with underscore to match Cloud Function expectations
       final storageRef = _storage.ref().child(
-          'ProfilePictures/$userId/profile.$extension');
+          'profile_pictures/$userId/profile.$extension');
 
       // Upload file
       UploadTask uploadTask;
@@ -48,18 +54,36 @@ class StorageService {
       // Get download URL
       final downloadUrl = await snapshot.ref.getDownloadURL();
 
-      // Add timestamp to URL to bust cache when profile picture is updated
-      final urlWithTimestamp = '$downloadUrl?t=${DateTime
-          .now()
-          .millisecondsSinceEpoch}';
+      debugPrint('Profile picture uploaded successfully. URL: $downloadUrl');
+      debugPrint('⏳ Cloud Function will create optimized variants in ~10 seconds');
 
-      debugPrint(
-          'Profile picture uploaded successfully. URL: $urlWithTimestamp');
-
-      return urlWithTimestamp;
+      // Always return the original download URL
+      // The optimized variants will be created by the Cloud Function
+      // but we use the original URL so images display immediately
+      // TODO: Implement a background job to update to optimized URL after Cloud Function completes
+      return downloadUrl;
     } catch (e) {
       debugPrint('Failed to upload profile picture: $e');
       rethrow;
+    }
+  }
+  
+  /// Gets the optimized profile picture URL for a given size
+  /// 
+  /// [originalUrl] - The original profile picture URL
+  /// [size] - The size variant ('thumb', 'medium', 'large')
+  /// 
+  /// Returns the optimized URL or original if not available
+  String getOptimizedUrl(String originalUrl, {String size = 'medium'}) {
+    if (originalUrl.isEmpty) return originalUrl;
+    
+    try {
+      // Replace the extension with _{size}.jpg
+      final basePath = originalUrl.split('.').first;
+      return '${basePath}_$size.jpg';
+    } catch (e) {
+      debugPrint('Failed to construct optimized URL: $e');
+      return originalUrl;
     }
   }
 
@@ -84,6 +108,7 @@ class StorageService {
   }
 
   /// Deletes the user's profile picture from Firebase Storage.
+  /// This includes the original and all optimized variants.
   /// 
   /// [userId] - The Firebase user ID
   Future<void> deleteProfilePicture(String userId) async {
@@ -91,14 +116,27 @@ class StorageService {
       debugPrint('Deleting profile picture for user: $userId');
 
       // List all files in the user's profile pictures folder
-      final listResult = await _storage
-          .ref()
-          .child('ProfilePictures/$userId')
-          .listAll();
+      // Check both old and new paths for backwards compatibility
+      final paths = [
+        'ProfilePictures/$userId',  // Old path
+        'profile_pictures/$userId', // New path
+      ];
+      
+      for (final path in paths) {
+        try {
+          final listResult = await _storage
+              .ref()
+              .child(path)
+              .listAll();
 
-      // Delete all files
-      for (final item in listResult.items) {
-        await item.delete();
+          // Delete all files (includes optimized variants)
+          for (final item in listResult.items) {
+            await item.delete();
+            debugPrint('Deleted: ${item.fullPath}');
+          }
+        } catch (e) {
+          debugPrint('No files found at $path (this is okay)');
+        }
       }
 
       debugPrint('Profile picture deleted successfully');

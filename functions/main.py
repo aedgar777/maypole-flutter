@@ -1,14 +1,30 @@
 # Cloud Functions for Firebase for Python
 # Deploy with `firebase deploy --only functions`
 
-from firebase_functions import https_fn, options, firestore_fn
-from firebase_admin import initialize_app, firestore, messaging
+import sys
+print(f"Python version: {sys.version}", flush=True)
+
+from firebase_functions import https_fn, options, firestore_fn, storage_fn
+print("Loaded firebase_functions", flush=True)
+
+from firebase_admin import initialize_app, firestore, messaging, storage
+print("Loaded firebase_admin", flush=True)
+
 import requests
 import json
 import os
+import io
+
+print("All imports successful", flush=True)
+
+# Lazy import PIL only when needed (it's slow to load)
+def _get_pil_image():
+    from PIL import Image
+    return Image
 
 # Initialize Firebase Admin
 initialize_app()
+print("Firebase Admin initialized", flush=True)
 
 # CORS configuration
 CORS_HEADERS = {
@@ -250,3 +266,129 @@ def send_notification(event: firestore_fn.Event[firestore_fn.DocumentSnapshot]) 
     except Exception as e:
         print(f"Error sending notification: {str(e)}")
         # Don't raise - we don't want to fail the function
+
+
+@storage_fn.on_object_finalized(
+    max_instances=10,
+    memory=options.MemoryOption.MB_512,
+    timeout_sec=300
+)
+def optimize_profile_picture(event: storage_fn.CloudEvent[storage_fn.StorageObjectData]):
+    """
+    Automatically optimizes profile pictures when uploaded to Firebase Storage.
+    Creates multiple sized variants:
+    - thumbnail (150x150) - for list views
+    - medium (400x400) - for profile views
+    - large (800x800) - for full screen
+    
+    All images are compressed to reduce bandwidth and improve loading times.
+    """
+    
+    # Get the storage object data
+    data = event.data
+    bucket_name = data.bucket
+    file_path = data.name
+    content_type = data.content_type
+    
+    print(f"Processing file: {file_path}")
+    
+    # Only process images in the profile_pictures folder
+    if not file_path or 'profile_pictures/' not in file_path:
+        print(f"Skipping non-profile picture: {file_path}")
+        return
+    
+    # Only process image files
+    if not content_type or not content_type.startswith('image/'):
+        print(f"Skipping non-image file: {file_path}")
+        return
+    
+    # Don't reprocess already optimized images
+    if '_thumb' in file_path or '_medium' in file_path or '_large' in file_path:
+        print(f"Skipping already optimized image: {file_path}")
+        return
+    
+    try:
+        # Lazy import PIL for better cold start performance
+        Image = _get_pil_image()
+        
+        # Get storage bucket
+        bucket = storage.bucket(bucket_name)
+        blob = bucket.blob(file_path)
+        
+        # Download image to memory
+        image_bytes = blob.download_as_bytes()
+        img = Image.open(io.BytesIO(image_bytes))
+        
+        # Convert to RGB if necessary (handles PNG with alpha, RGBA, etc.)
+        if img.mode not in ('RGB', 'L'):
+            img = img.convert('RGB')
+        
+        # Get original filename without extension
+        file_name = os.path.splitext(file_path)[0]
+        
+        # Define sizes and quality settings
+        sizes = {
+            'thumb': (150, 150, 85),    # size: 150x150, quality: 85%
+            'medium': (400, 400, 90),   # size: 400x400, quality: 90%
+            'large': (800, 800, 92),    # size: 800x800, quality: 92%
+        }
+        
+        uploaded_variants = []
+        
+        for suffix, (width, height, quality) in sizes.items():
+            # Create a copy of the image
+            img_copy = img.copy()
+            
+            # Resize with high-quality downsampling
+            img_copy.thumbnail((width, height), Image.Resampling.LANCZOS)
+            
+            # Save to bytes buffer
+            output_buffer = io.BytesIO()
+            img_copy.save(
+                output_buffer,
+                format='JPEG',
+                quality=quality,
+                optimize=True,
+                progressive=True  # Progressive JPEG for better UX
+            )
+            output_buffer.seek(0)
+            
+            # Upload optimized image
+            optimized_path = f"{file_name}_{suffix}.jpg"
+            optimized_blob = bucket.blob(optimized_path)
+            optimized_blob.upload_from_file(
+                output_buffer,
+                content_type='image/jpeg'
+            )
+            
+            # Make the file publicly accessible
+            optimized_blob.make_public()
+            
+            uploaded_variants.append({
+                'size': suffix,
+                'path': optimized_path,
+                'url': optimized_blob.public_url,
+                'dimensions': f"{img_copy.width}x{img_copy.height}"
+            })
+            
+            print(f"Created {suffix} variant: {optimized_path} ({img_copy.width}x{img_copy.height})")
+        
+        # Optionally: Update Firestore with optimized URLs
+        # Extract user ID from path if needed (e.g., profile_pictures/userId/image.jpg)
+        path_parts = file_path.split('/')
+        if len(path_parts) >= 2:
+            # Try to find the user document and update with optimized URLs
+            # This is optional - we can also just use URL patterns on the client
+            pass
+        
+        print(f"✓ Successfully optimized profile picture: {file_path}")
+        print(f"✓ Created {len(uploaded_variants)} variants")
+        
+        # Optionally: Delete the original large file to save storage costs
+        # Uncomment if you want to keep only optimized versions
+        # blob.delete()
+        # print(f"✓ Deleted original file to save storage")
+        
+    except Exception as e:
+        print(f"❌ Error optimizing image {file_path}: {str(e)}")
+        # Don't raise - we don't want to fail the upload

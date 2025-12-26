@@ -4,8 +4,9 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Users collection rules
     match /users/{userId} {
-      // Allow users to read their own document
-      allow read: if request.auth != null && request.auth.uid == userId;
+      // Allow authenticated users to read any user's public profile data
+      // This is needed for displaying usernames, profile pictures, etc.
+      allow read: if request.auth != null;
       
       // Allow users to create their own document when registering
       // The document ID must match their Firebase UID

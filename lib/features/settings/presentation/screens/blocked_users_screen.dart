@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
+import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/features/identity/auth_providers.dart';
 import 'package:maypole/features/identity/domain/blocked_user.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
@@ -49,9 +50,7 @@ class BlockedUsersScreen extends ConsumerWidget {
       await ref.read(authServiceProvider).updateUserData(currentUser);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.userUnblocked(blockedUser.username))),
-        );
+        AppToast.showSuccess(context, l10n.userUnblocked(blockedUser.username));
       }
     } catch (e) {
       if (context.mounted) {

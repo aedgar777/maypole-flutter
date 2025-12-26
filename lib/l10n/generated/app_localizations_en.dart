@@ -337,4 +337,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String errorDeletingConversation(String error) {
     return 'Error deleting conversation: $error';
   }
+
+  @override
+  String get emailAddress => 'Email Address';
+
+  @override
+  String get validated => 'Verified';
+
+  @override
+  String get notValidated => 'Not Verified';
+
+  @override
+  String get verifyEmail => 'Verify Email';
+
+  @override
+  String get resendVerification => 'Resend Verification';
+
+  @override
+  String get verificationEmailSent =>
+      'Verification email sent! Please check your inbox.';
+
+  @override
+  String get registrationSuccessTitle => 'Welcome to Maypole!';
+
+  @override
+  String registrationSuccessMessage(String email) {
+    return 'Your account has been created successfully. We\'ve sent a verification email to $email. Please check your inbox and click the verification link to activate all features.';
+  }
+
+  @override
+  String get gotIt => 'Got it';
 }
