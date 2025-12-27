@@ -1,0 +1,110 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#     https://docs.fastlane.tools/plugins/available-plugins
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Sync development certificates and provisioning profiles"
+  lane :sync_dev_signing do
+    match(
+      type: "appstore",
+      app_identifier: ENV["IOS_BUNDLE_ID"],
+      readonly: true,
+      verbose: true
+    )
+  end
+
+  desc "Sync production certificates and provisioning profiles"
+  lane :sync_prod_signing do
+    match(
+      type: "appstore",
+      app_identifier: ENV["IOS_BUNDLE_ID"],
+      readonly: true,
+      verbose: true
+    )
+  end
+
+  desc "Build and upload development to TestFlight"
+  lane :deploy_dev do
+    # Sync certificates
+    sync_dev_signing
+
+    # Build the app
+    build_app(
+      workspace: "Runner.xcworkspace",
+      scheme: "dev",
+      export_method: "app-store",
+      export_options: {
+        method: "app-store",
+        provisioningProfiles: {
+          ENV["IOS_BUNDLE_ID"] => "match AppStore #{ENV['IOS_BUNDLE_ID']}"
+        }
+      }
+    )
+
+    # Upload to TestFlight
+    upload_to_testflight(
+      api_key_path: "AuthKey.json",
+      skip_waiting_for_build_processing: true,
+      distribute_external: false
+    )
+  end
+
+  desc "Build and upload beta to TestFlight"
+  lane :deploy_beta do
+    # Sync certificates
+    sync_prod_signing
+
+    # Build the app
+    build_app(
+      workspace: "Runner.xcworkspace",
+      scheme: "prod",
+      export_method: "app-store",
+      export_options: {
+        method: "app-store",
+        provisioningProfiles: {
+          ENV["IOS_BUNDLE_ID"] => "match AppStore #{ENV['IOS_BUNDLE_ID']}"
+        }
+      }
+    )
+
+    # Upload to TestFlight (beta group)
+    upload_to_testflight(
+      api_key_path: "AuthKey.json",
+      skip_waiting_for_build_processing: true,
+      distribute_external: true,
+      groups: ["Beta Testers"]
+    )
+  end
+
+  desc "Build and upload production to TestFlight/App Store"
+  lane :deploy_prod do
+    # Sync certificates
+    sync_prod_signing
+
+    # Build the app
+    build_app(
+      workspace: "Runner.xcworkspace",
+      scheme: "prod",
+      export_method: "app-store",
+      export_options: {
+        method: "app-store",
+        provisioningProfiles: {
+          ENV["IOS_BUNDLE_ID"] => "match AppStore #{ENV['IOS_BUNDLE_ID']}"
+        }
+      }
+    )
+
+    # Upload to App Store
+    upload_to_testflight(
+      api_key_path: "AuthKey.json",
+      skip_waiting_for_build_processing: true
+    )
+  end
+end
