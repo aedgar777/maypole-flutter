@@ -315,7 +315,7 @@ jobs:
           bundle install
 
       - name: Build Flutter for iOS
-        run: flutter build ios --release --flavor dev --no-codesign
+        run: flutter build ios --release --no-codesign
 
       - name: Deploy to TestFlight with Fastlane
         working-directory: ios
