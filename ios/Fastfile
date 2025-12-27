@@ -38,7 +38,7 @@ platform :ios do
     # Build the app
     build_app(
       workspace: "Runner.xcworkspace",
-      scheme: "dev",
+      scheme: "Runner",
       export_method: "app-store",
       export_options: {
         method: "app-store",
@@ -64,7 +64,7 @@ platform :ios do
     # Build the app
     build_app(
       workspace: "Runner.xcworkspace",
-      scheme: "prod",
+      scheme: "Runner",
       export_method: "app-store",
       export_options: {
         method: "app-store",
@@ -91,7 +91,7 @@ platform :ios do
     # Build the app
     build_app(
       workspace: "Runner.xcworkspace",
-      scheme: "prod",
+      scheme: "Runner",
       export_method: "app-store",
       export_options: {
         method: "app-store",
