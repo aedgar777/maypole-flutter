@@ -118,242 +118,65 @@ jobs:
           projectId: maypole-flutter-dev
           channelId: live
 
-  build_android:
-    name: Build and Deploy Android (Dev Internal)
-    needs: test
-    runs-on: ubuntu-latest
-    environment: development
-    permissions:
-      contents: write  # Required to push version bump commits
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-
-      - name: Auto-Bump Build Number
-        run: |
-          chmod +x scripts/auto-bump-build.sh scripts/get-version.sh
-          
-          # Configure git first
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Pull latest changes BEFORE making any modifications
-          echo "🔄 Pulling latest changes from develop..."
-          git pull --rebase origin develop || {
-            echo "⚠️ Pull failed, but continuing with version bump..."
-          }
-          
-          echo "📱 Current version:"
-          ./scripts/get-version.sh
-          echo ""
-          echo "🔄 Auto-bumping build number..."
-          ./scripts/auto-bump-build.sh
-          echo ""
-          echo "✅ New version:"
-          ./scripts/get-version.sh
-          
-          # Check if there are actually changes to commit
-          if git diff --quiet pubspec.yaml; then
-            echo "ℹ️ No version changes detected, skipping commit"
-            exit 0
-          fi
-          
-          # Commit and push the version bump
-          git add pubspec.yaml
-          git commit -m "chore: auto-bump build number to $(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ') [skip ci]"
-          
-          # Push with retry logic in case of race condition
-          for i in {1..3}; do
-            if git push origin develop; then
-              echo "✅ Successfully pushed version bump"
-              exit 0
-            else
-              echo "⚠️ Push failed (attempt $i/3), pulling and retrying..."
-              git pull --rebase origin develop
-            fi
-          done
-          
-          echo "❌ Failed to push after 3 attempts"
-          exit 1
-
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Cache Gradle
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.32.0'
-          channel: 'stable'
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Create .env file from secrets
-        run: |
-          cat > .env << EOF
-          ENVIRONMENT=dev
-          FIREBASE_DEV_WEB_API_KEY=${{ secrets.FIREBASE_DEV_WEB_API_KEY }}
-          FIREBASE_DEV_WEB_APP_ID=${{ secrets.FIREBASE_DEV_WEB_APP_ID }}
-          FIREBASE_DEV_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_DEV_WEB_MEASUREMENT_ID }}
-          FIREBASE_DEV_ANDROID_API_KEY=${{ secrets.FIREBASE_DEV_ANDROID_API_KEY }}
-          FIREBASE_DEV_ANDROID_APP_ID=${{ secrets.FIREBASE_DEV_ANDROID_APP_ID }}
-          FIREBASE_DEV_IOS_API_KEY=${{ secrets.FIREBASE_DEV_IOS_API_KEY }}
-          FIREBASE_DEV_IOS_APP_ID=${{ secrets.FIREBASE_DEV_IOS_APP_ID }}
-          FIREBASE_DEV_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_DEV_MESSAGING_SENDER_ID }}
-          FIREBASE_DEV_PROJECT_ID=${{ secrets.FIREBASE_DEV_PROJECT_ID }}
-          FIREBASE_DEV_AUTH_DOMAIN=${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }}
-          FIREBASE_DEV_STORAGE_BUCKET=${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }}
-          IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
-          EOF
-
-      - name: Create google-services.json for dev flavor
-        env:
-          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON_DEV }}
-        run: |
-          mkdir -p android/app/src/dev
-          
-          # Write the secret to file using environment variable (safer than command substitution)
-          echo "$GOOGLE_SERVICES_JSON" > android/app/src/dev/google-services.json
-          
-          # Debug: Show file info
-          echo "Debug: File size: $(wc -c < android/app/src/dev/google-services.json) bytes"
-          echo "Debug: First 100 chars:"
-          head -c 100 android/app/src/dev/google-services.json
-          echo ""
-          echo "Debug: Last 100 chars:"
-          tail -c 100 android/app/src/dev/google-services.json
-          echo ""
-          
-          # Validate the JSON is well-formed
-          echo "Validating JSON..."
-          if ! python3 -m json.tool android/app/src/dev/google-services.json > /dev/null 2>&1; then
-            echo "❌ Error: google-services.json is not valid JSON"
-            echo ""
-            echo "Full file contents:"
-            cat android/app/src/dev/google-services.json
-            echo ""
-            echo "JSON parsing error:"
-            python3 -m json.tool android/app/src/dev/google-services.json 2>&1 || true
-            echo ""
-            echo "💡 Tip: Your GOOGLE_SERVICES_JSON_DEV secret might:"
-            echo "  - Have extra quotes around the entire JSON"
-            echo "  - Be stored as a string instead of raw JSON"
-            echo "  - Have escape characters that need to be removed"
-            echo ""
-            echo "To fix: Copy the ENTIRE contents of your google-services.json file"
-            echo "and paste it directly into the GitHub secret (no extra quotes)"
-            exit 1
-          fi
-          
-          echo "✅ google-services.json created and validated successfully"
-
-      # TODO: Setup Android Signing with Google Play App Signing
-      # This uses an upload keystore that signs your AAB before upload to Play Store.
-      # Google Play then re-signs with the app signing key before distribution.
-      # 
-      # Setup steps (see DEPLOYMENT_SETUP.md for details):
-      # 1. Create upload keystore: keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
-      # 2. Enable Play App Signing in Play Console (done automatically on first AAB upload)
-      # 3. Base64 encode keystore: base64 -i upload-keystore.jks | tr -d '\n' > keystore_base64.txt
-      # 4. Add these secrets to GitHub (Repository Settings → Secrets → Actions):
-      #    - ANDROID_KEYSTORE_BASE64: Content of keystore_base64.txt
-      #    - ANDROID_KEY_ALIAS: "upload" (or your chosen alias)
-      #    - ANDROID_KEY_PASSWORD: Your key password
-      #    - ANDROID_STORE_PASSWORD: Your keystore password (usually same as key password)
-      - name: Debug Android Signing Secrets
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          echo "Checking ANDROID_KEYSTORE_BASE64 secret..."
-          echo "Secret length: $(echo -n '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' | wc -c)"
-          echo "First 50 chars: $(echo -n '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' | head -c 50)"
-          echo "Last 50 chars: $(echo -n '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' | tail -c 50)"
-          echo "Checking for newlines: $(echo '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' | wc -l)"
-          echo "Checking for spaces: $(echo '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' | grep -c ' ' || echo 0)"
-
-      - name: Setup Android Signing
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          # Remove any whitespace/newlines and decode
-          echo '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' | tr -d '\n\r ' | base64 -d > android/app/upload-keystore.jks
-          
-          # Verify the keystore was created successfully
-          if [ ! -f android/app/upload-keystore.jks ]; then
-            echo "Error: Failed to create keystore file"
-            exit 1
-          fi
-          
-          FILESIZE=$(stat -f%z android/app/upload-keystore.jks 2>/dev/null || stat -c%s android/app/upload-keystore.jks 2>/dev/null)
-          echo "Keystore file created successfully (size: $FILESIZE bytes)"
-          
-          # Create key.properties with proper escaping for special characters
-          cat > android/key.properties << 'KEYSTORE_EOF'
-          storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
-          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-          storeFile=upload-keystore.jks
-          KEYSTORE_EOF
-          
-          echo "✅ key.properties created"
-
-      - name: Build Android App Bundle (devRelease)
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: flutter build appbundle --release --flavor dev
-
-      - name: Build Android APK (devRelease) - unsigned
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 == '' }}
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: flutter build apk --release --flavor dev
-
-      # Deploy to Play Store Internal Testing Track
-      # For apps in draft status (not yet published), this uploads as a draft.
-      # Once your app is published, you can change status: draft to status: completed
-      # to automatically release to internal testers.
-      # Internal testing track supports up to 100 testers.
-      # The secrets should already be configured in GitHub repository settings.
-      - name: Deploy to Play Store Internal Testing (Draft)
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' && env.PLAY_STORE_SERVICE_ACCOUNT_JSON != '' }}
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          PLAY_STORE_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
-          packageName: app.maypole.maypole
-          releaseFiles: build/app/outputs/bundle/devRelease/app-dev-release.aab
-          track: internal
-          status: draft
-
-  # TODO: Uncomment iOS deployment when Apple Developer credentials are available
-  # build_ios:
-  #   name: Build and Deploy iOS (Dev TestFlight)
+  # Android deployment complete - commented out to focus on iOS setup
+  # build_android:
+  #   name: Build and Deploy Android (Dev Internal)
   #   needs: test
-  #   runs-on: macos-latest
+  #   runs-on: ubuntu-latest
+  #   environment: development
+  #   permissions:
+  #     contents: write  # Required to push version bump commits
   #   steps:
   #     - name: Checkout repository
   #       uses: actions/checkout@v3
+  #       with:
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         fetch-depth: 0
+  #
+  #     - name: Auto-Bump Build Number
+  #       run: |
+  #         chmod +x scripts/auto-bump-build.sh scripts/get-version.sh
+  #         git config user.name "github-actions[bot]"
+  #         git config user.email "github-actions[bot]@users.noreply.github.com"
+  #         git pull --rebase origin develop || echo "⚠️ Pull failed, but continuing..."
+  #         echo "📱 Current version:"
+  #         ./scripts/get-version.sh
+  #         ./scripts/auto-bump-build.sh
+  #         echo "✅ New version:"
+  #         ./scripts/get-version.sh
+  #         if git diff --quiet pubspec.yaml; then
+  #           echo "ℹ️ No version changes detected, skipping commit"
+  #           exit 0
+  #         fi
+  #         git add pubspec.yaml
+  #         git commit -m "chore: auto-bump build number to $(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ') [skip ci]"
+  #         for i in {1..3}; do
+  #           if git push origin develop; then
+  #             echo "✅ Successfully pushed version bump"
+  #             exit 0
+  #           else
+  #             echo "⚠️ Push failed (attempt $i/3), pulling and retrying..."
+  #             git pull --rebase origin develop
+  #           fi
+  #         done
+  #         echo "❌ Failed to push after 3 attempts"
+  #         exit 1
+  #
+  #     - name: Setup Java
+  #       uses: actions/setup-java@v3
+  #       with:
+  #         distribution: 'temurin'
+  #         java-version: '17'
+  #
+  #     - name: Cache Gradle
+  #       uses: actions/cache@v3
+  #       with:
+  #         path: |
+  #           ~/.gradle/caches
+  #           ~/.gradle/wrapper
+  #         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-gradle-
   #
   #     - name: Setup Flutter
   #       uses: subosito/flutter-action@v2
@@ -382,90 +205,130 @@ jobs:
   #         IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
   #         EOF
   #
-  #     - name: Create GoogleService-Info.plist for dev
-  #       run: |
-  #         mkdir -p ios/Runner
-  #         echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_DEV }}" > ios/Runner/GoogleService-Info.plist
-  #         
-  #         # Validate the plist is well-formed
-  #         if ! plutil -lint ios/Runner/GoogleService-Info.plist > /dev/null 2>&1; then
-  #           echo "Error: GoogleService-Info.plist is not valid"
-  #           cat ios/Runner/GoogleService-Info.plist
-  #           exit 1
-  #         fi
-  #         
-  #         echo "GoogleService-Info.plist created successfully"
-  #
-  #     # TODO: Configure iOS code signing
-  #     # You will need to:
-  #     # 1. Create certificates and provisioning profiles in Apple Developer Console
-  #     # 2. Export them and add to GitHub Secrets (see DEPLOYMENT_SETUP.md)
-  #     # 3. Add IOS_CERTIFICATE_BASE64 to GitHub Secrets
-  #     # 4. Add IOS_CERTIFICATE_PASSWORD to GitHub Secrets
-  #     # 5. Add IOS_PROVISIONING_PROFILE_BASE64 to GitHub Secrets
-  #     # 6. Add KEYCHAIN_PASSWORD to GitHub Secrets
-  #     - name: Setup iOS Signing
-  #       if: ${{ env.IOS_CERTIFICATE_BASE64 != '' }}
+  #     - name: Create google-services.json for dev flavor
   #       env:
-  #         IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+  #         GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON_DEV }}
   #       run: |
-  #         # Decode certificate and provisioning profile
-  #         echo "${{ secrets.IOS_CERTIFICATE_BASE64 }}" | base64 -d > certificate.p12
-  #         echo "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" | base64 -d > provisioning.mobileprovision
-  #         
-  #         # Create temporary keychain
-  #         security create-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
-  #         security default-keychain -s build.keychain
-  #         security unlock-keychain -p "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
-  #         security set-keychain-settings -t 3600 -u build.keychain
-  #         
-  #         # Import certificate
-  #         security import certificate.p12 -k build.keychain -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
-  #         security set-key-partition-list -S apple-tool:,apple: -s -k "${{ secrets.KEYCHAIN_PASSWORD }}" build.keychain
-  #         
-  #         # Install provisioning profile
-  #         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-  #         cp provisioning.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+  #         mkdir -p android/app/src/dev
+  #         echo "$GOOGLE_SERVICES_JSON" > android/app/src/dev/google-services.json
+  #         python3 -m json.tool android/app/src/dev/google-services.json > /dev/null 2>&1 || { echo "❌ Error: Invalid JSON"; exit 1; }
+  #         echo "✅ google-services.json created and validated successfully"
   #
-  #     - name: Build iOS IPA (devRelease) - signed
-  #       if: ${{ env.IOS_CERTIFICATE_BASE64 != '' }}
-  #       env:
-  #         IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+  #     - name: Setup Android Signing
   #       run: |
-  #         flutter build ipa --release --flavor dev --export-options-plist=ios/ExportOptions.plist
+  #         echo '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' | tr -d '\n\r ' | base64 -d > android/app/upload-keystore.jks
+  #         cat > android/key.properties << 'KEYSTORE_EOF'
+  #         storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
+  #         keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+  #         keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+  #         storeFile=upload-keystore.jks
+  #         KEYSTORE_EOF
   #
-  #     - name: Build iOS (devRelease) - unsigned
-  #       if: ${{ env.IOS_CERTIFICATE_BASE64 == '' }}
-  #       env:
-  #         IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
-  #       run: |
-  #         flutter build ios --release --flavor dev --no-codesign
+  #     - name: Build Android App Bundle (devRelease)
+  #       run: flutter build appbundle --release --flavor dev
   #
-  #     # TODO: Configure App Store Connect API
-  #     # You will need to:
-  #     # 1. Create an App Store Connect API Key (see DEPLOYMENT_SETUP.md)
-  #     # 2. Add APP_STORE_CONNECT_API_KEY_ID to GitHub Secrets
-  #     # 3. Add APP_STORE_CONNECT_API_ISSUER_ID to GitHub Secrets
-  #     # 4. Add APP_STORE_CONNECT_API_KEY_CONTENT to GitHub Secrets (base64 encoded .p8 file)
-  #     - name: Upload to TestFlight
-  #       if: ${{ env.IOS_CERTIFICATE_BASE64 != '' && env.APP_STORE_CONNECT_API_KEY_CONTENT != '' }}
-  #       env:
-  #         IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
-  #         APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
-  #       run: |
-  #         # Decode API key
-  #         echo "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}" | base64 -d > AuthKey.p8
-  #         
-  #         # Upload to TestFlight using xcrun altool
-  #         xcrun altool --upload-app \
-  #           --type ios \
-  #           --file build/ios/ipa/*.ipa \
-  #           --apiKey ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
-  #           --apiIssuer ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
-  #
-  #     - name: Cleanup keychain
-  #       if: always() && env.IOS_CERTIFICATE_BASE64 != ''
-  #       env:
-  #         IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
-  #       run: |
-  #         security delete-keychain build.keychain || true
+  #     - name: Deploy to Play Store Internal Testing (Draft)
+  #       uses: r0adkll/upload-google-play@v1
+  #       with:
+  #         serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
+  #         packageName: app.maypole.maypole
+  #         releaseFiles: build/app/outputs/bundle/devRelease/app-dev-release.aab
+  #         track: internal
+  #         status: draft
+
+  build_ios:
+    name: Build and Deploy iOS (Dev TestFlight)
+    needs: test
+    runs-on: macos-latest
+    environment: development
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: ios
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.0'
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Create .env file from secrets
+        run: |
+          cat > .env << EOF
+          ENVIRONMENT=dev
+          FIREBASE_DEV_WEB_API_KEY=${{ secrets.FIREBASE_DEV_WEB_API_KEY }}
+          FIREBASE_DEV_WEB_APP_ID=${{ secrets.FIREBASE_DEV_WEB_APP_ID }}
+          FIREBASE_DEV_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_DEV_WEB_MEASUREMENT_ID }}
+          FIREBASE_DEV_ANDROID_API_KEY=${{ secrets.FIREBASE_DEV_ANDROID_API_KEY }}
+          FIREBASE_DEV_ANDROID_APP_ID=${{ secrets.FIREBASE_DEV_ANDROID_APP_ID }}
+          FIREBASE_DEV_IOS_API_KEY=${{ secrets.FIREBASE_DEV_IOS_API_KEY }}
+          FIREBASE_DEV_IOS_APP_ID=${{ secrets.FIREBASE_DEV_IOS_APP_ID }}
+          FIREBASE_DEV_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_DEV_MESSAGING_SENDER_ID }}
+          FIREBASE_DEV_PROJECT_ID=${{ secrets.FIREBASE_DEV_PROJECT_ID }}
+          FIREBASE_DEV_AUTH_DOMAIN=${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }}
+          FIREBASE_DEV_STORAGE_BUCKET=${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }}
+          IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
+          EOF
+
+      - name: Create GoogleService-Info.plist for dev
+        run: |
+          mkdir -p ios/Runner
+          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_DEV }}" > ios/Runner/GoogleService-Info.plist
+          
+          # Validate the plist is well-formed
+          if ! plutil -lint ios/Runner/GoogleService-Info.plist > /dev/null 2>&1; then
+            echo "Error: GoogleService-Info.plist is not valid"
+            cat ios/Runner/GoogleService-Info.plist
+            exit 1
+          fi
+          
+          echo "GoogleService-Info.plist created successfully"
+
+      - name: Setup Google Cloud credentials for Match
+        run: |
+          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > $HOME/gcp-key.json
+          export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcp-key.json
+
+      - name: Setup App Store Connect API Key
+        run: |
+          mkdir -p ios
+          cat > ios/AuthKey.json << EOF
+          {
+            "key_id": "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}",
+            "issuer_id": "${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}",
+            "key": "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}"
+          }
+          EOF
+
+      - name: Install Fastlane
+        working-directory: ios
+        run: |
+          bundle config set --local path 'vendor/bundle'
+          bundle install
+
+      - name: Build Flutter for iOS
+        run: flutter build ios --release --flavor dev --no-codesign
+
+      - name: Deploy to TestFlight with Fastlane
+        working-directory: ios
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/../gcp-key.json
+          MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
+          MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
+        run: |
+          export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcp-key.json
+          bundle exec fastlane deploy_dev

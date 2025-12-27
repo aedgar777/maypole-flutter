@@ -35,46 +35,8 @@ When you merge `beta` → `master`, the workflow uploads the AAB to the Play Con
 
 ## Pre-requisites
 
-- [] Apple Developer Program membership is approved ($99/year)
-- [X] Google Play Developer account is active ($25 one-time)
+- [X] Apple Developer Program membership is approved ($99/year)
 - [X] Firebase projects exist: `maypole-flutter-dev` and `maypole-flutter`
-
----
-
-## Android Setup
-
-### Upload Keystore (for Google Play App Signing)
-- [X] Generate upload keystore: `keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`
-- [X] Save keystore passwords securely
-- [X] Convert keystore to base64: `base64 -i upload-keystore.jks | tr -d '\n' > keystore_base64.txt`
-- [X] Verify `android/app/build.gradle.kts` has signing config (✅ Already done)
-- [X] Test local signing works: `flutter build appbundle --release --flavor prod`
-
-### Play Console Setup
-- [X] Create app in Play Console (or navigate to existing app)
-- [X] Navigate to **Setup** → **App signing**
-- [X] Choose to let Google create and manage your app signing key
-- [X] Build and manually upload your first AAB to enable Play App Signing
-- [X] Download and save your app signing certificate (for reference)
-- [X] Create internal testing track and add test users
-- [X] Create closed testing track (beta) and add beta testers
-- [X] Verify production track is accessible
-
-### Service Account for API Access
-- [ ] Create service account in Google Cloud Console
-- [ ] Download service account JSON key
-- [ ] Link service account in Play Console (**Setup** → **API access**)
-- [ ] Grant permissions: "View app info", "Release to testing tracks", "Release to production"
-- [ ] Verify service account has access to your app
-
-### GitHub Secrets - Android
-- [ ] Add `ANDROID_KEYSTORE_BASE64` (content of keystore_base64.txt)
-- [ ] Add `ANDROID_KEY_ALIAS` (typically "upload")
-- [ ] Add `ANDROID_KEY_PASSWORD` (your key password)
-- [ ] Add `ANDROID_STORE_PASSWORD` (your keystore password)
-- [ ] Add `PLAY_STORE_SERVICE_ACCOUNT_JSON` (service account JSON content)
-- [ ] Add `GOOGLE_SERVICES_JSON_DEV` (dev flavor google-services.json content)
-- [ ] Add `GOOGLE_SERVICES_JSON_PROD` (prod flavor google-services.json content)
 
 ---
 
@@ -160,14 +122,12 @@ When you merge `beta` → `master`, the workflow uploads the AAB to the Play Con
 - [ ] Watch workflow run in GitHub Actions
 - [ ] Verify tests pass
 - [ ] Verify web deploys to Firebase Hosting dev
-- [ ] Verify Android builds and uploads to Play Store internal
 - [ ] Verify iOS builds and uploads to TestFlight internal
 - [ ] Check internal testing channels for new build
 
 ### Test Beta Workflow
 - [ ] Merge `develop` into `beta`
 - [ ] Watch workflow run in GitHub Actions
-- [ ] Verify Android uploads to Play Store beta track
 - [ ] Verify iOS uploads to TestFlight beta group
 - [ ] Check beta testing channels for new build
 
@@ -176,7 +136,6 @@ When you merge `beta` → `master`, the workflow uploads the AAB to the Play Con
 - [ ] Watch workflow run in GitHub Actions
 - [ ] Verify web deploys to Firebase Hosting production
 - [ ] Verify Firebase services deploy (rules, indexes)
-- [ ] Verify Android uploads to Play Store production
 - [ ] Verify iOS uploads to App Store
 - [ ] Check production tracks for new build
 
@@ -268,7 +227,6 @@ base64 -i file.mobileprovision | tr -d '\n' > file_base64.txt
 # Test local builds
 flutter test
 flutter build web --release --flavor dev
-flutter build appbundle --release --flavor prod
 flutter build ipa --release --flavor prod
 
 # Firebase deploy test
