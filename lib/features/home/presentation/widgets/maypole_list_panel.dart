@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
-import 'package:maypole/core/widgets/cached_profile_avatar.dart';
+import 'package:maypole/core/widgets/lazy_profile_avatar.dart';
+import 'package:maypole/core/widgets/app_toast.dart';
+import 'package:maypole/core/services/profile_picture_cache_service.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/directmessages/presentation/dm_providers.dart';
 import 'package:maypole/features/directmessages/domain/dm_thread.dart';
@@ -246,6 +248,11 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
           );
         }
 
+        // Prefetch profile pictures for all visible users in background
+        // This makes avatars load instantly as user scrolls
+        final partnerIds = filteredDmThreads.map((thread) => thread.partnerId).toList();
+        ref.read(profilePictureCacheServiceProvider).prefetchProfilePictures(partnerIds);
+
         // Calculate total items including ads (1 ad per 6 threads)
         final adCount = filteredDmThreads.length ~/ 6;
         final totalItems = filteredDmThreads.length + adCount;
@@ -272,19 +279,29 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
             final formattedTimestamp = DateTimeUtils.formatThreadTimestamp(
               threadMetadata.lastMessageTime,
             );
+            
+            // Build subtitle text with last message preview
+            final subtitleText = threadMetadata.lastMessageBody != null && threadMetadata.lastMessageBody!.isNotEmpty
+                ? '$formattedTimestamp • ${threadMetadata.lastMessageBody}'
+                : formattedTimestamp;
 
             return Material(
               color: Colors.transparent,
               child: ListTile(
                 selected: isSelected,
                 selectedTileColor: Colors.grey.withValues(alpha: 0.15),
-                leading: CachedProfileAvatar(imageUrl: threadMetadata.partnerProfpic),
+                leading: LazyProfileAvatar(
+                  userId: threadMetadata.partnerId,
+                  initialProfilePictureUrl: threadMetadata.partnerProfpic,
+                ),
                 title: Text(threadMetadata.partnerName),
                 subtitle: Text(
-                  formattedTimestamp,
+                  subtitleText,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.5),
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 onTap: () {
                   // Allow the ripple animation to complete before navigating
@@ -352,6 +369,7 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
+        final l10n = AppLocalizations.of(context)!;
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -373,7 +391,7 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
               ),
               ListTile(
                 leading: const Icon(Icons.cancel),
-                title: const Text('Cancel'),
+                title: Text(l10n.cancel),
                 onTap: () {
                   Navigator.pop(context);
                 },
@@ -419,12 +437,8 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
         scaffoldMessenger.hideCurrentSnackBar();
         
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error deleting message: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          final l10n = AppLocalizations.of(context)!;
+          AppToast.showError(context, l10n.errorDeletingMessage(e.toString()));
         }
       } finally {
         // Clean up pending deletion state after actual deletion
@@ -438,9 +452,10 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
     
     _deletionTimers[threadMetadata.id] = timer;
 
+    final l10n = AppLocalizations.of(context)!;
     scaffoldMessenger.showSnackBar(
       SnackBar(
-        content: const Text('Message deleted'),
+        content: Text(l10n.messageDeleted),
         duration: const Duration(seconds: 3),
         action: SnackBarAction(
           label: 'UNDO',
@@ -456,9 +471,9 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
             
             // Show confirmation
             scaffoldMessenger.showSnackBar(
-              const SnackBar(
-                content: Text('Deletion cancelled'),
-                duration: Duration(seconds: 2),
+              SnackBar(
+                content: Text(l10n.deletionCancelled),
+                duration: const Duration(seconds: 2),
               ),
             );
           },
@@ -475,6 +490,7 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
+        final l10n = AppLocalizations.of(context)!;
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -496,7 +512,7 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
               ),
               ListTile(
                 leading: const Icon(Icons.cancel),
-                title: const Text('Cancel'),
+                title: Text(l10n.cancel),
                 onTap: () {
                   Navigator.pop(context);
                 },
@@ -542,12 +558,8 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
         scaffoldMessenger.hideCurrentSnackBar();
         
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error deleting conversation: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          final l10n = AppLocalizations.of(context)!;
+          AppToast.showError(context, l10n.errorDeletingConversation(e.toString()));
         }
       } finally {
         // Clean up pending deletion state after actual deletion
@@ -561,9 +573,10 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
     
     _deletionTimers[threadMetadata.id] = timer;
 
+    final l10n = AppLocalizations.of(context)!;
     scaffoldMessenger.showSnackBar(
       SnackBar(
-        content: const Text('Conversation deleted'),
+        content: Text(l10n.conversationDeleted),
         duration: const Duration(seconds: 3),
         action: SnackBarAction(
           label: 'UNDO',
@@ -579,9 +592,9 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
             
             // Show confirmation
             scaffoldMessenger.showSnackBar(
-              const SnackBar(
-                content: Text('Deletion cancelled'),
-                duration: Duration(seconds: 2),
+              SnackBar(
+                content: Text(l10n.deletionCancelled),
+                duration: const Duration(seconds: 2),
               ),
             );
           },

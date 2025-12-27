@@ -41,20 +41,87 @@ class AuthService {
 
   Future<bool> isUsernameAvailable(String username) async {
     try {
-      debugPrint('Checking username: $username');
+      final normalizedUsername = username.toLowerCase();
+      debugPrint('=== USERNAME CHECK START ===');
+      debugPrint('Original username: $username');
+      debugPrint('Normalized username: $normalizedUsername');
 
       // Check the usernames collection instead of querying users
+      // Use GetOptions to force fetch from server and avoid cache issues
       final DocumentSnapshot result = await _firestore
           .collection('usernames')
-          .doc(username.toLowerCase()) // Use lowercase for consistency
-          .get();
+          .doc(normalizedUsername)
+          .get(const GetOptions(source: Source.server));
 
-      debugPrint('Query completed. Username exists: ${result.exists}');
-      return !result.exists; // Username is available if document doesn't exist
+      debugPrint('Username document exists: ${result.exists}');
+      
+      // If username document exists, check if it's orphaned
+      if (result.exists) {
+        final data = result.data() as Map<String, dynamic>?;
+        final ownerId = data?['owner'] as String?;
+        
+        debugPrint('Username document data: $data');
+        debugPrint('Owner ID from document: $ownerId');
+        
+        if (ownerId != null) {
+          // Check if the owner user still exists
+          debugPrint('Checking if owner user exists...');
+          final userDoc = await _firestore
+              .collection('users')
+              .doc(ownerId)
+              .get(const GetOptions(source: Source.server));
+          
+          debugPrint('Owner user exists: ${userDoc.exists}');
+          
+          if (!userDoc.exists) {
+            debugPrint('🧹 ORPHANED USERNAME DETECTED!');
+            debugPrint('Owner $ownerId does not exist in users collection');
+            debugPrint('Deleting orphaned username document...');
+            
+            // Clean up orphaned username
+            await _firestore
+                .collection('usernames')
+                .doc(normalizedUsername)
+                .delete();
+            
+            debugPrint('✅ Orphaned username cleaned up successfully');
+            debugPrint('=== USERNAME CHECK END - AVAILABLE (after cleanup) ===');
+            return true; // Username is now available
+          } else {
+            debugPrint('❌ Username is legitimately taken by existing user $ownerId');
+            debugPrint('=== USERNAME CHECK END - NOT AVAILABLE ===');
+            return false;
+          }
+        } else {
+          debugPrint('⚠️ Username document has no owner field - malformed!');
+          debugPrint('Deleting malformed username document...');
+          
+          // Clean up malformed username document
+          await _firestore
+              .collection('usernames')
+              .doc(normalizedUsername)
+              .delete();
+          
+          debugPrint('✅ Malformed username document cleaned up');
+          debugPrint('=== USERNAME CHECK END - AVAILABLE (after cleanup) ===');
+          return true;
+        }
+      }
+      
+      debugPrint('✅ Username document does not exist - available');
+      debugPrint('=== USERNAME CHECK END - AVAILABLE ===');
+      return true; // Username is available if document doesn't exist
     } catch (e) {
-      debugPrint('Username check failed: $e');
-      // Instead of throwing, return false to indicate username is not available
-      return false;
+      debugPrint('❌ USERNAME CHECK FAILED WITH ERROR: $e');
+      debugPrint('Error type: ${e.runtimeType}');
+      if (e is FirebaseException) {
+        debugPrint('Firebase error code: ${e.code}');
+        debugPrint('Firebase error message: ${e.message}');
+      }
+      debugPrint('=== USERNAME CHECK END - ERROR ===');
+      // Re-throw the error so it's clear there's a problem
+      // Don't silently return false as that makes it seem like username is taken
+      rethrow;
     }
   }
 
@@ -77,6 +144,11 @@ class AuthService {
         email: email,
         password: password,
       );
+
+      // Set display name on Firebase Auth user profile
+      // This enables the %DISPLAY_NAME% variable in email templates
+      await result.user!.updateDisplayName(username);
+      debugPrint('✓ Set display name to: $username');
 
       // Create domain user
 
@@ -103,6 +175,15 @@ class AuthService {
         'taken': true,
         'owner': result.user!.uid,
       });
+
+      // Send email verification immediately after registration
+      try {
+        await sendEmailVerification();
+        debugPrint('✓ Verification email sent to new user');
+      } catch (e) {
+        debugPrint('⚠️ Failed to send verification email (non-critical): $e');
+        // Don't fail registration if email sending fails
+      }
 
       // Setup FCM for new user
       try {
@@ -135,6 +216,9 @@ class AuthService {
       // Fetch and set domain user
       if (result.user != null) {
         await _fetchAndSetDomainUser(result.user!.uid);
+        
+        // Check and update email verification status
+        await checkEmailVerificationStatus();
         
         // Setup FCM for returning user
         try {
@@ -230,6 +314,27 @@ class AuthService {
 
       final username = currentUser.username;
 
+      // Delete notifications subcollection
+      // Firestore doesn't automatically delete subcollections, so we must do it manually
+      try {
+        final notificationsSnapshot = await _firestore
+            .collection('users')
+            .doc(uid)
+            .collection('notifications')
+            .get();
+
+        // Delete all notification documents in batch
+        final batch = _firestore.batch();
+        for (final doc in notificationsSnapshot.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+        debugPrint('✓ Deleted ${notificationsSnapshot.docs.length} notifications');
+      } catch (e) {
+        debugPrint('⚠️ Error deleting notifications subcollection: $e');
+        // Continue with deletion even if this fails
+      }
+
       // Delete user document from Firestore
       await _firestore.collection('users').doc(uid).delete();
 
@@ -262,6 +367,80 @@ class AuthService {
       }
       rethrow;
     } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> sendEmailVerification() async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) {
+        throw Exception('No user is currently signed in');
+      }
+
+      if (user.emailVerified) {
+        // If Firebase Auth already shows verified, update Firestore
+        await _updateEmailVerificationStatus(true);
+        throw Exception('Email is already verified');
+      }
+
+      // Send verification email with default Firebase settings
+      // To add a custom redirect URL, you need to:
+      // 1. Add the domain to Firebase Console → Authentication → Settings → Authorized domains
+      // 2. Then uncomment and configure ActionCodeSettings below
+      await user.sendEmailVerification();
+      debugPrint('✓ Verification email sent to ${user.email}');
+    } on FirebaseAuthException {
+      rethrow;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> checkEmailVerificationStatus() async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) return;
+
+      // Reload user to get latest verification status
+      await user.reload();
+      final reloadedUser = _firebaseAuth.currentUser;
+      
+      if (reloadedUser != null && reloadedUser.emailVerified) {
+        // Update Firestore with verification status
+        await _updateEmailVerificationStatus(true);
+        debugPrint('✓ Email verification status updated in Firestore');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error checking email verification status: $e');
+    }
+  }
+
+  Future<void> _updateEmailVerificationStatus(bool isVerified) async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) return;
+
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .update({'emailVerified': isVerified});
+
+      // Update session
+      if (_session.currentUser != null) {
+        _session.currentUser = DomainUser(
+          username: _session.currentUser!.username,
+          email: _session.currentUser!.email,
+          firebaseID: _session.currentUser!.firebaseID,
+          profilePictureUrl: _session.currentUser!.profilePictureUrl,
+          maypoleChatThreads: _session.currentUser!.maypoleChatThreads,
+          blockedUsers: _session.currentUser!.blockedUsers,
+          fcmToken: _session.currentUser!.fcmToken,
+          emailVerified: isVerified,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error updating email verification status: $e');
       rethrow;
     }
   }

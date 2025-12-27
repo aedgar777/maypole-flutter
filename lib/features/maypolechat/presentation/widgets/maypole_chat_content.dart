@@ -5,6 +5,7 @@ import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
+import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/domain/maypole_message.dart';
 import 'package:maypole/features/maypolechat/domain/user_mention.dart';
@@ -299,7 +300,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                 ),
               ListTile(
                 leading: const Icon(Icons.cancel),
-                title: const Text('Cancel'),
+                title: Text(AppLocalizations.of(context)!.cancel),
                 onTap: () {
                   Navigator.pop(context);
                 },
@@ -323,12 +324,8 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error deleting message: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        final l10n = AppLocalizations.of(context)!;
+        AppToast.showError(context, l10n.errorDeletingMessage(e.toString()));
       }
     }
   }

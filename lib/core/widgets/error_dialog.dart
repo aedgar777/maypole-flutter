@@ -34,7 +34,7 @@ class ErrorDialog {
               ],
             ),
             content: Text(
-              _formatError(error),
+              _formatError(error, l10n),
               style: Theme
                   .of(context)
                   .textTheme
@@ -51,9 +51,9 @@ class ErrorDialog {
   }
 
   /// Formats the error object into a readable string.
-  static String _formatError(dynamic error) {
+  static String _formatError(dynamic error, [AppLocalizations? l10n]) {
     if (error == null) {
-      return 'An unknown error occurred';
+      return l10n?.unknownError ?? 'An unknown error occurred';
     }
 
     // If it's already a string, return it
