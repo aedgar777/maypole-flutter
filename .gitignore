@@ -71,6 +71,15 @@ ios/*.mobileprovision
 ios/*.cer
 ios/*.certSigningRequest
 ios/AuthKey_*.p8
+ios/AuthKey.json
+
+# Fastlane
+ios/fastlane/report.xml
+ios/fastlane/Preview.html
+ios/fastlane/screenshots
+ios/fastlane/test_output
+ios/.env.local
+ios/vendor/bundle
 
 # Local properties (contains SDK paths)
 android/local.properties
