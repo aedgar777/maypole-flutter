@@ -104,8 +104,8 @@ platform :ios do
     )
   end
 
-  desc "Upload pre-built IPA to TestFlight (no build)"
-  lane :upload_to_testflight_only do
+  desc "Upload pre-built IPA to TestFlight"
+  lane :upload_ipa_only do
     # Create API key for App Store Connect
     api_key = app_store_connect_api_key(
       key_id: ENV["APP_STORE_CONNECT_API_KEY_KEY_ID"],
@@ -114,10 +114,10 @@ platform :ios do
       in_house: false
     )
 
-    # Upload the pre-built IPA
+    # Upload the IPA that was manually created
     upload_to_testflight(
       api_key: api_key,
-      ipa: "../build/ios/ipa/maypole.ipa",
+      ipa: "../build/ios/ipa/Runner.ipa",
       skip_waiting_for_build_processing: true,
       distribute_external: false,
       notify_external_testers: false
