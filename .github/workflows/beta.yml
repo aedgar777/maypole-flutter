@@ -180,8 +180,17 @@ jobs:
 
       - name: Setup Google Cloud credentials for Match
         run: |
-          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > $HOME/gcp-key.json
-          export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcp-key.json
+          mkdir -p ~/.config/gcloud
+          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > ~/.config/gcloud/application_default_credentials.json
+          
+          # Verify the credentials file was created
+          if [ -f ~/.config/gcloud/application_default_credentials.json ]; then
+            echo "✅ GCP credentials file created successfully"
+            ls -la ~/.config/gcloud/
+          else
+            echo "❌ Failed to create GCP credentials file"
+            exit 1
+          fi
 
       - name: Setup App Store Connect API Key
         run: |
@@ -191,7 +200,7 @@ jobs:
           
           # Verify the key file was created
           ls -la ~/private_keys/
-          echo "API Key file created successfully"
+          echo "✅ API Key file created successfully"
 
       - name: Install Fastlane
         working-directory: ios
@@ -206,7 +215,6 @@ jobs:
         working-directory: ios
         timeout-minutes: 30  # Timeout for this specific step
         env:
-          GOOGLE_APPLICATION_CREDENTIALS: $HOME/gcp-key.json
           MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
           MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
@@ -215,9 +223,22 @@ jobs:
           IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
           APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY_KEY_FILEPATH: ~/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
+          GOOGLE_CLOUD_KEYS_FILE: ${{ github.workspace }}/../gcp-credentials.json
         run: |
           set -e  # Exit on any error
+          
+          # Create GCP credentials in a location Fastlane can find
+          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > ${{ github.workspace }}/../gcp-credentials.json
+          
+          # Set environment variables with expanded paths
+          export GOOGLE_APPLICATION_CREDENTIALS="${{ github.workspace }}/../gcp-credentials.json"
+          export APP_STORE_CONNECT_API_KEY_KEY_FILEPATH="${HOME}/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8"
+          
+          # Verify files exist
+          echo "📋 Verifying credentials..."
+          ls -la "${GOOGLE_APPLICATION_CREDENTIALS}" || { echo "❌ GCP credentials not found"; exit 1; }
+          ls -la "${APP_STORE_CONNECT_API_KEY_KEY_FILEPATH}" || { echo "❌ API key not found"; exit 1; }
+          
           echo "🚀 Starting Fastlane deployment..."
           bundle exec fastlane deploy_beta --verbose
