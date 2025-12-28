@@ -229,6 +229,7 @@ jobs:
           APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
           GOOGLE_CLOUD_KEYS_FILE: ${{ github.workspace }}/../gcp-credentials.json
+          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
         run: |
           echo "==================== FASTLANE DEPLOYMENT STARTING ===================="
           echo "Timestamp: $(date)"
@@ -236,8 +237,17 @@ jobs:
           
           set -e  # Exit on any error
           
+          # Check if GCP secret is set
+          if [ -z "$GCP_SERVICE_ACCOUNT_KEY" ]; then
+            echo "❌ ERROR: GCP_SERVICE_ACCOUNT_KEY secret is not set!"
+            echo "Please add this secret to GitHub: Settings → Secrets → Actions → GCP_SERVICE_ACCOUNT_KEY"
+            exit 1
+          fi
+          
+          echo "✅ GCP_SERVICE_ACCOUNT_KEY secret is set (length: ${#GCP_SERVICE_ACCOUNT_KEY} characters)"
+          
           echo "📁 Creating GCP credentials file..."
-          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > ${{ github.workspace }}/../gcp-credentials.json
+          printf '%s' "$GCP_SERVICE_ACCOUNT_KEY" > "${{ github.workspace }}/../gcp-credentials.json"
           echo "✅ GCP credentials file created"
           
           echo "🔧 Setting environment variables..."
