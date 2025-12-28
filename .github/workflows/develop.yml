@@ -356,7 +356,23 @@ jobs:
           echo "==================== CREATING ARCHIVE & IPA ===================="
           set -e
           
-          # The app is already built by Flutter at build/ios/Release-iphoneos/Runner.app
+          # Find where Flutter built the app
+          echo "📂 Looking for Flutter build output..."
+          find ../build/ios -name "Runner.app" -type d || echo "No Runner.app found in build/ios"
+          
+          # Check the iphoneos build output
+          if [ -d "../build/ios/iphoneos/Runner.app" ]; then
+            APP_PATH="../build/ios/iphoneos/Runner.app"
+          elif [ -d "build/Runner.app" ]; then
+            APP_PATH="build/Runner.app"
+          else
+            echo "❌ Cannot find Runner.app - listing build directory:"
+            ls -la ../build/ios/ || echo "build/ios doesn't exist"
+            exit 1
+          fi
+          
+          echo "✅ Found app at: $APP_PATH"
+          
           echo "📦 Creating xcarchive from Flutter build..."
           
           ARCHIVE_PATH="$HOME/Library/Developer/Xcode/Archives/$(date +%Y-%m-%d)/Runner.xcarchive"
@@ -365,7 +381,7 @@ jobs:
           mkdir -p "$ARCHIVE_PATH/dSYMs"
           
           # Copy the built app
-          cp -r "../build/ios/Release-iphoneos/Runner.app" "$ARCHIVE_PATH/Products/Applications/"
+          cp -r "$APP_PATH" "$ARCHIVE_PATH/Products/Applications/"
           
           # Create Info.plist for the archive
           cat > "$ARCHIVE_PATH/Info.plist" << EOF
