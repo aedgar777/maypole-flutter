@@ -240,6 +240,7 @@ jobs:
     name: Build and Deploy iOS (Dev TestFlight)
     needs: test
     runs-on: macos-latest
+    timeout-minutes: 60  # Prevent 6-hour hangs
     environment: development
     steps:
       - name: Checkout repository
@@ -299,14 +300,13 @@ jobs:
 
       - name: Setup App Store Connect API Key
         run: |
-          mkdir -p ios
-          cat > ios/AuthKey.json << EOF
-          {
-            "key_id": "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}",
-            "issuer_id": "${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}",
-            "key": "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}"
-          }
-          EOF
+          # Create the AuthKey_<KEY_ID>.p8 file that Fastlane expects
+          mkdir -p ~/private_keys
+          echo "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}" > ~/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+          
+          # Verify the key file was created
+          ls -la ~/private_keys/
+          echo "API Key file created successfully"
 
       - name: Install Fastlane
         working-directory: ios
@@ -319,15 +319,20 @@ jobs:
 
       - name: Deploy to TestFlight with Fastlane
         working-directory: ios
+        timeout-minutes: 30  # Timeout for this specific step
         env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/../gcp-key.json
+          GOOGLE_APPLICATION_CREDENTIALS: $HOME/gcp-key.json
           MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
           MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+          APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_KEY_FILEPATH: ~/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
         run: |
-          export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcp-key.json
-          bundle exec fastlane deploy_dev
+          set -e  # Exit on any error
+          echo "🚀 Starting Fastlane deployment..."
+          bundle exec fastlane deploy_dev --verbose

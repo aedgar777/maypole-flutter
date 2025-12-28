@@ -48,11 +48,20 @@ platform :ios do
       }
     )
 
+    # Create API key for App Store Connect
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
+      key_filepath: ENV["APP_STORE_CONNECT_API_KEY_KEY_FILEPATH"],
+      in_house: false
+    )
+
     # Upload to TestFlight
     upload_to_testflight(
-      api_key_path: "AuthKey.json",
+      api_key: api_key,
       skip_waiting_for_build_processing: true,
-      distribute_external: false
+      distribute_external: false,
+      notify_external_testers: false
     )
   end
 
@@ -74,12 +83,21 @@ platform :ios do
       }
     )
 
+    # Create API key for App Store Connect
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
+      key_filepath: ENV["APP_STORE_CONNECT_API_KEY_KEY_FILEPATH"],
+      in_house: false
+    )
+
     # Upload to TestFlight (beta group)
     upload_to_testflight(
-      api_key_path: "AuthKey.json",
+      api_key: api_key,
       skip_waiting_for_build_processing: true,
       distribute_external: true,
-      groups: ["Beta Testers"]
+      groups: ["Beta Testers"],
+      notify_external_testers: true
     )
   end
 
@@ -101,10 +119,20 @@ platform :ios do
       }
     )
 
+    # Create API key for App Store Connect
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
+      key_filepath: ENV["APP_STORE_CONNECT_API_KEY_KEY_FILEPATH"],
+      in_house: false
+    )
+
     # Upload to App Store
     upload_to_testflight(
-      api_key_path: "AuthKey.json",
-      skip_waiting_for_build_processing: true
+      api_key: api_key,
+      skip_waiting_for_build_processing: true,
+      distribute_external: false,
+      notify_external_testers: false
     )
   end
 end
