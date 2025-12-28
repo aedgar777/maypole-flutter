@@ -329,10 +329,16 @@ jobs:
           echo "🔨 Starting Flutter iOS build..."
           flutter build ios --release --no-codesign
           echo "✅ Flutter iOS build completed successfully"
+      
+      - name: Capture Flutter environment
+        id: flutter_env
+        run: |
+          echo "flutter_root=$(dirname $(dirname $(which flutter)))" >> $GITHUB_OUTPUT
+          echo "Flutter root: $(dirname $(dirname $(which flutter)))"
 
       - name: Deploy to TestFlight with Fastlane
         working-directory: ios
-        timeout-minutes: 30  # Timeout for this specific step
+        timeout-minutes: 20  # Reduced timeout - build should complete faster
         env:
           MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
           MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
@@ -345,6 +351,7 @@ jobs:
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
           GOOGLE_CLOUD_KEYS_FILE: ${{ github.workspace }}/../gcp-credentials.json
           GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          FLUTTER_ROOT: ${{ steps.flutter_env.outputs.flutter_root }}
         run: |
           echo "==================== FASTLANE DEPLOYMENT STARTING ===================="
           echo "Timestamp: $(date)"

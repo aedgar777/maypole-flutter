@@ -35,17 +35,20 @@ platform :ios do
     # Sync certificates
     sync_dev_signing
 
-    # Build the app
+    # Build the app - skip clean since Flutter already built
     build_app(
       workspace: "Runner.xcworkspace",
       scheme: "Runner",
+      skip_build_archive: false,
+      skip_archive: false,
       export_method: "app-store",
       export_options: {
         method: "app-store",
         provisioningProfiles: {
           ENV["IOS_BUNDLE_ID"] => "match AppStore #{ENV['IOS_BUNDLE_ID']}"
         }
-      }
+      },
+      buildlog_path: "~/Library/Logs/gym"
     )
 
     # Create API key for App Store Connect
