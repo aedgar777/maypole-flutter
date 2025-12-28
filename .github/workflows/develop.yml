@@ -324,7 +324,11 @@ jobs:
           bundle install
 
       - name: Build Flutter for iOS
-        run: flutter build ios --release --no-codesign
+        timeout-minutes: 20  # Build should complete in 15-20 minutes
+        run: |
+          echo "🔨 Starting Flutter iOS build..."
+          flutter build ios --release --no-codesign
+          echo "✅ Flutter iOS build completed successfully"
 
       - name: Deploy to TestFlight with Fastlane
         working-directory: ios
@@ -341,19 +345,33 @@ jobs:
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
           GOOGLE_CLOUD_KEYS_FILE: ${{ github.workspace }}/../gcp-credentials.json
         run: |
+          echo "==================== FASTLANE DEPLOYMENT STARTING ===================="
+          echo "Timestamp: $(date)"
+          echo "Working directory: $(pwd)"
+          
           set -e  # Exit on any error
           
-          # Create GCP credentials in a location Fastlane can find
+          echo "📁 Creating GCP credentials file..."
           echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > ${{ github.workspace }}/../gcp-credentials.json
+          echo "✅ GCP credentials file created"
           
-          # Set environment variables with expanded paths
+          echo "🔧 Setting environment variables..."
           export GOOGLE_APPLICATION_CREDENTIALS="${{ github.workspace }}/../gcp-credentials.json"
           export APP_STORE_CONNECT_API_KEY_KEY_FILEPATH="${HOME}/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8"
+          echo "✅ Environment variables set"
           
-          # Verify files exist
-          echo "📋 Verifying credentials..."
-          ls -la "${GOOGLE_APPLICATION_CREDENTIALS}" || { echo "❌ GCP credentials not found"; exit 1; }
-          ls -la "${APP_STORE_CONNECT_API_KEY_KEY_FILEPATH}" || { echo "❌ API key not found"; exit 1; }
+          echo "📋 Verifying credentials files exist..."
+          ls -la "${GOOGLE_APPLICATION_CREDENTIALS}" || { echo "❌ GCP credentials not found at ${GOOGLE_APPLICATION_CREDENTIALS}"; exit 1; }
+          echo "✅ GCP credentials found"
+          
+          ls -la "${APP_STORE_CONNECT_API_KEY_KEY_FILEPATH}" || { echo "❌ API key not found at ${APP_STORE_CONNECT_API_KEY_KEY_FILEPATH}"; exit 1; }
+          echo "✅ API key found"
+          
+          echo "📦 Checking Fastlane installation..."
+          bundle exec fastlane --version
           
           echo "🚀 Starting Fastlane deployment..."
+          echo "==================== FASTLANE OUTPUT BEGINS ===================="
           bundle exec fastlane deploy_dev --verbose
+          echo "==================== FASTLANE OUTPUT ENDS ===================="
+          echo "✅ Deployment completed successfully!"
