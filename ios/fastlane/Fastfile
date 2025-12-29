@@ -51,9 +51,7 @@ platform :ios do
           ENV["IOS_BUNDLE_ID"] => "match AppStore #{ENV['IOS_BUNDLE_ID']}"
         }
       },
-      buildlog_path: "~/Library/Logs/gym",
-      silent: true,
-      suppress_xcode_output: true
+      buildlog_path: "~/Library/Logs/gym"
     )
 
     # Create API key for App Store Connect

@@ -332,7 +332,7 @@ jobs:
           echo "✅ Pods installed"
 
       - name: Build and Deploy to TestFlight with Fastlane
-        timeout-minutes: 45
+        timeout-minutes: 55
         working-directory: ios
         env:
           MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
