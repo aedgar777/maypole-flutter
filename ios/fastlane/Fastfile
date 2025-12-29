@@ -7,6 +7,9 @@
 # For a list of all available plugins, check out
 #     https://docs.fastlane.tools/plugins/available-plugins
 
+# Reduce log verbosity
+opt_out_usage
+
 default_platform(:ios)
 
 platform :ios do
@@ -16,7 +19,7 @@ platform :ios do
       type: "appstore",
       app_identifier: ENV["IOS_BUNDLE_ID"],
       readonly: true,
-      verbose: true
+      verbose: false
     )
   end
 
@@ -48,7 +51,9 @@ platform :ios do
           ENV["IOS_BUNDLE_ID"] => "match AppStore #{ENV['IOS_BUNDLE_ID']}"
         }
       },
-      buildlog_path: "~/Library/Logs/gym"
+      buildlog_path: "~/Library/Logs/gym",
+      silent: true,
+      suppress_xcode_output: true
     )
 
     # Create API key for App Store Connect

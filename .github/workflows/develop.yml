@@ -324,6 +324,7 @@ jobs:
           bundle install
 
       - name: Install CocoaPods dependencies
+        timeout-minutes: 10
         working-directory: ios
         run: |
           echo "==================== INSTALLING PODS ===================="
@@ -331,7 +332,7 @@ jobs:
           echo "✅ Pods installed"
 
       - name: Build and Deploy to TestFlight with Fastlane
-        timeout-minutes: 30
+        timeout-minutes: 45
         working-directory: ios
         env:
           MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
