@@ -331,7 +331,21 @@ jobs:
           pod install
           echo "✅ Pods installed"
 
-      - name: Build and Deploy to TestFlight with Fastlane
+      - name: Build Flutter iOS App
+        timeout-minutes: 20
+        run: |
+          echo "==================== BUILDING FLUTTER IOS APP ===================="
+          flutter build ios --release --no-codesign \
+            --dart-define=ENVIRONMENT=dev \
+            --dart-define=FIREBASE_DEV_IOS_API_KEY=${{ secrets.FIREBASE_DEV_IOS_API_KEY }} \
+            --dart-define=FIREBASE_DEV_IOS_APP_ID=${{ secrets.FIREBASE_DEV_IOS_APP_ID }} \
+            --dart-define=FIREBASE_DEV_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_DEV_MESSAGING_SENDER_ID }} \
+            --dart-define=FIREBASE_DEV_PROJECT_ID=${{ secrets.FIREBASE_DEV_PROJECT_ID }} \
+            --dart-define=FIREBASE_DEV_AUTH_DOMAIN=${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }} \
+            --dart-define=FIREBASE_DEV_STORAGE_BUCKET=${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }}
+          echo "✅ Flutter iOS build completed"
+
+      - name: Archive and Deploy to TestFlight with Fastlane
         timeout-minutes: 55
         working-directory: ios
         env:
