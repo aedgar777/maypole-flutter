@@ -33,17 +33,19 @@ platform :ios do
     )
   end
 
-  desc "Build and upload development to TestFlight"
+  desc "Archive and upload development to TestFlight"
   lane :deploy_dev do
     # Sync certificates
     sync_dev_signing
 
-    # Build the app - skip clean since Flutter already built
+    # Just archive (don't build) - Flutter has already compiled everything
+    # Use xcodebuild directly to avoid the hanging build script
+    sh("xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -archivePath ../build/ios/Runner.xcarchive archive CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO")
+
+    # Now export with proper signing
     build_app(
-      workspace: "Runner.xcworkspace",
-      scheme: "Runner",
-      skip_build_archive: false,
-      skip_archive: false,
+      skip_build_archive: true,  # Don't build, use existing archive
+      archive_path: "../build/ios/Runner.xcarchive",
       export_method: "app-store",
       export_options: {
         method: "app-store",
