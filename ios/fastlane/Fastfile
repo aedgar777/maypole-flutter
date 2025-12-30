@@ -39,8 +39,8 @@ platform :ios do
     sync_dev_signing
 
     # Just archive (don't build) - Flutter has already compiled everything
-    # Use xcodebuild directly to avoid the hanging build script
-    sh("xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -archivePath ../build/ios/Runner.xcarchive archive CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO")
+    # Working directory is ios/, workspace is in current dir, archive goes to project build dir
+    sh("xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -archivePath #{Dir.pwd}/../build/ios/Runner.xcarchive archive CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO")
 
     # Now export with proper signing
     build_app(
