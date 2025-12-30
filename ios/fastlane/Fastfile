@@ -38,14 +38,10 @@ platform :ios do
     # Sync certificates
     sync_dev_signing
 
-    # Just archive (don't build) - Flutter has already compiled everything
-    # sh() runs from ios/fastlane/ directory, so workspace is at ../Runner.xcworkspace
-    sh("xcodebuild -workspace ../Runner.xcworkspace -scheme Runner -configuration Release -archivePath ../../build/ios/Runner.xcarchive archive CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO")
-
-    # Now export with proper signing
+    # Build and archive the app
     build_app(
-      skip_build_archive: true,  # Don't build, use existing archive
-      archive_path: "../build/ios/Runner.xcarchive",
+      workspace: "Runner.xcworkspace",
+      scheme: "Runner",
       export_method: "app-store",
       export_options: {
         method: "app-store",
