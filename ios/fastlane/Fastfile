@@ -39,19 +39,19 @@ platform :ios do
     sync_dev_signing
 
     # Build and archive the app
+    # Note: clean: false because CI starts fresh, and clean: true can cause hangs
     build_app(
       workspace: "Runner.xcworkspace",
       scheme: "Runner",
       export_method: "app-store",
-      clean: true,
+      clean: false,
       export_options: {
         method: "app-store",
         provisioningProfiles: {
           ENV["IOS_BUNDLE_ID"] => "match AppStore #{ENV['IOS_BUNDLE_ID']}"
         }
       },
-      buildlog_path: "~/Library/Logs/gym",
-      timeout: 7200  # 2 hours (in seconds)
+      buildlog_path: "~/Library/Logs/gym"
     )
 
     # Create API key for App Store Connect
