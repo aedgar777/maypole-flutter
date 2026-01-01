@@ -346,7 +346,7 @@ jobs:
           echo "✅ Flutter iOS build completed"
 
       - name: Archive and Deploy to TestFlight with Fastlane
-        # timeout-minutes: 55  # Temporarily removed
+        timeout-minutes: 120  # 2 hours
         working-directory: ios
         env:
           MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
