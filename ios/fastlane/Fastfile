@@ -19,7 +19,7 @@ platform :ios do
       type: "appstore",
       app_identifier: ENV["IOS_BUNDLE_ID"],
       readonly: true,
-      verbose: false
+      verbose: true
     )
   end
 
@@ -43,13 +43,15 @@ platform :ios do
       workspace: "Runner.xcworkspace",
       scheme: "Runner",
       export_method: "app-store",
+      clean: true,
       export_options: {
         method: "app-store",
         provisioningProfiles: {
           ENV["IOS_BUNDLE_ID"] => "match AppStore #{ENV['IOS_BUNDLE_ID']}"
         }
       },
-      buildlog_path: "~/Library/Logs/gym"
+      buildlog_path: "~/Library/Logs/gym",
+      timeout: 7200  # 2 hours (in seconds)
     )
 
     # Create API key for App Store Connect
