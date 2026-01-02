@@ -47,11 +47,12 @@ platform :ios do
     
     # Step 1: Archive with raw xcodebuild
     # This avoids Fastlane's gym wrapper which can hang in CI
-    archive_path = "#{Dir.pwd}/../build/ios/Runner.xcarchive"
+    # Note: Fastlane runs from ios/fastlane/ directory, so workspace is at ../Runner.xcworkspace
+    archive_path = File.expand_path("../../build/ios/Runner.xcarchive", __dir__)
     
     sh(
       "xcodebuild",
-      "-workspace", "Runner.xcworkspace",
+      "-workspace", "../Runner.xcworkspace",
       "-scheme", "Runner",
       "-configuration", "Release",
       "-archivePath", archive_path,
@@ -83,7 +84,7 @@ platform :ios do
     File.write(export_plist_path, export_options.to_plist)
     
     # Step 3: Export the IPA
-    output_directory = "#{Dir.pwd}/build"
+    output_directory = File.expand_path("../build", __dir__)
     
     sh(
       "xcodebuild",
