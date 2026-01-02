@@ -48,6 +48,7 @@ platform :ios do
     # Step 1: Archive with raw xcodebuild
     # This avoids Fastlane's gym wrapper which can hang in CI
     # Note: Fastlane runs from ios/fastlane/ directory, so workspace is at ../Runner.xcworkspace
+    # Note: Don't specify signing params here - match already configured the Xcode project
     archive_path = File.expand_path("../../build/ios/Runner.xcarchive", __dir__)
     
     sh(
@@ -57,10 +58,7 @@ platform :ios do
       "-configuration", "Release",
       "-archivePath", archive_path,
       "-destination", "generic/platform=iOS",
-      "DEVELOPMENT_TEAM=#{team_id}",
-      "PROVISIONING_PROFILE_SPECIFIER=#{profile_name}",
-      "CODE_SIGN_STYLE=Manual",
-      "CODE_SIGN_IDENTITY=Apple Distribution",
+      "-allowProvisioningUpdates",
       "archive"
     )
     
