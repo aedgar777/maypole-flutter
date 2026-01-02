@@ -43,14 +43,14 @@ platform :ios do
     team_id = ENV["APPLE_TEAM_ID"]
     bundle_id = ENV["IOS_BUNDLE_ID"]
     
-    puts "🔨 Archiving with xcodebuild (direct, no Fastlane wrapper)..."
+    puts "🔨 Creating archive with signing (Flutter already built the app)..."
     
-    # Step 1: Archive with raw xcodebuild
-    # This avoids Fastlane's gym wrapper which can hang in CI
-    # Note: Fastlane runs from ios/fastlane/ directory, so workspace is at ../Runner.xcworkspace
-    # Note: Don't specify signing params here - match already configured the Xcode project
-    archive_path = File.expand_path("../../build/ios/Runner.xcarchive", __dir__)
+    # Step 1: Create archive from Flutter's build output
+    # Flutter already built the app with "flutter build ios --release --no-codesign"
+    # Now we just need to create a signed archive from that build
+    archive_path = File.expand_path("../../build/ios/archive/Runner.xcarchive", __dir__)
     
+    # Use xcodebuild to create archive with signing from the pre-built app
     sh(
       "xcodebuild",
       "-workspace", "../Runner.xcworkspace",
@@ -59,7 +59,8 @@ platform :ios do
       "-archivePath", archive_path,
       "-destination", "generic/platform=iOS",
       "-allowProvisioningUpdates",
-      "archive"
+      "archive",
+      "CODE_SIGN_ONLY=YES"  # Only sign, don't rebuild
     )
     
     puts "✅ Archive created successfully"
