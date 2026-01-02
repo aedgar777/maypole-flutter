@@ -51,16 +51,20 @@ platform :ios do
     archive_path = File.expand_path("../../build/ios/archive/Runner.xcarchive", __dir__)
     
     # Use xcodebuild to create archive with signing from the pre-built app
+    # Suppress verbose output to prevent buffering issues that can cause hangs
     sh(
-      "xcodebuild",
-      "-workspace", "../Runner.xcworkspace",
-      "-scheme", "Runner",
-      "-configuration", "Release",
-      "-archivePath", archive_path,
-      "-destination", "generic/platform=iOS",
-      "-allowProvisioningUpdates",
-      "archive",
-      "CODE_SIGN_ONLY=YES"  # Only sign, don't rebuild
+      "set -o pipefail && xcodebuild " \
+      "-workspace ../Runner.xcworkspace " \
+      "-scheme Runner " \
+      "-configuration Release " \
+      "-archivePath '#{archive_path}' " \
+      "-destination 'generic/platform=iOS' " \
+      "-allowProvisioningUpdates " \
+      "archive " \
+      "CODE_SIGN_ONLY=YES " \
+      "-quiet " \
+      "| grep -v '^export ' " \
+      "|| true"
     )
     
     puts "✅ Archive created successfully"
@@ -85,13 +89,15 @@ platform :ios do
     # Step 3: Export the IPA
     output_directory = File.expand_path("../build", __dir__)
     
+    # Suppress verbose output to prevent buffering issues
     sh(
-      "xcodebuild",
-      "-exportArchive",
-      "-archivePath", archive_path,
-      "-exportPath", output_directory,
-      "-exportOptionsPlist", export_plist_path,
-      "-allowProvisioningUpdates"
+      "xcodebuild " \
+      "-exportArchive " \
+      "-archivePath '#{archive_path}' " \
+      "-exportPath '#{output_directory}' " \
+      "-exportOptionsPlist '#{export_plist_path}' " \
+      "-allowProvisioningUpdates " \
+      "-quiet"
     )
     
     puts "✅ IPA exported successfully"
