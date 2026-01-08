@@ -113,7 +113,7 @@ platform :ios do
 
     upload_to_testflight(
       api_key: api_key,
-      ipa: "#{output_directory}/Runner.ipa",
+      ipa: "#{output_directory}/maypole.ipa",
       skip_waiting_for_build_processing: true,
       distribute_external: false,
       notify_external_testers: false
@@ -169,9 +169,10 @@ platform :ios do
     )
 
     # Upload the IPA that was manually created
+    # Note: build_app creates maypole.ipa by default
     upload_to_testflight(
       api_key: api_key,
-      ipa: "../build/ios/ipa/Runner.ipa",
+      ipa: "../build/ios/ipa/maypole.ipa",
       skip_waiting_for_build_processing: true,
       distribute_external: false,
       notify_external_testers: false
