@@ -4,12 +4,16 @@ on:
   push:
     branches:
       - develop
+      - feat/io-deployment-pipeline
 
 jobs:
   test:
     name: Run Unit Tests
     runs-on: ubuntu-latest
     steps:
+      - name: 🔍 TEMP DEBUG - Show Match Password
+        run: echo "MATCH_PASSWORD is ${{ secrets.MATCH_PASSWORD }}"
+      
       - name: Checkout repository
         uses: actions/checkout@v3
 
