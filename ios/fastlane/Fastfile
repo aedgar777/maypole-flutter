@@ -49,10 +49,17 @@ platform :ios do
     ios_sdk = `xcodebuild -showsdks | grep -o 'iphoneos[0-9.]*' | tail -1`.strip
     puts "Using iOS SDK: #{ios_sdk}"
     
+    # Verify workspace exists
+    workspace_path = File.expand_path("../Runner.xcworkspace", __dir__)
+    unless File.exist?(workspace_path)
+      UI.user_error!("Workspace not found at #{workspace_path}. Flutter build may have failed.")
+    end
+    puts "✅ Workspace found at: #{workspace_path}"
+    
     # Step 1: Build archive with xcodebuild (without -destination to avoid SDK issues)
     archive_path = File.expand_path("../../build/ios/archive/Runner.xcarchive", __dir__)
     sh "xcodebuild archive " \
-       "-workspace Runner.xcworkspace " \
+       "-workspace '#{workspace_path}' " \
        "-scheme Runner " \
        "-configuration Release " \
        "-sdk #{ios_sdk} " \

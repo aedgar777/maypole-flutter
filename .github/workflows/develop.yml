@@ -326,11 +326,11 @@ jobs:
           pod install
           echo "✅ Pods installed"
 
-      - name: Build Flutter frameworks
+      - name: Build Flutter frameworks  
         run: |
           echo "==================== BUILDING FLUTTER FRAMEWORKS ===================="
           # Flutter must build iOS frameworks to generate Runner.xcworkspace
-          # Fastlane needs the workspace to exist before it can build
+          # Even if the build fails, pod install will create the workspace
           flutter build ios --release --no-codesign \
             --dart-define=ENVIRONMENT=dev \
             --dart-define=FIREBASE_DEV_IOS_API_KEY=${{ secrets.FIREBASE_DEV_IOS_API_KEY }} \
@@ -338,9 +338,24 @@ jobs:
             --dart-define=FIREBASE_DEV_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_DEV_MESSAGING_SENDER_ID }} \
             --dart-define=FIREBASE_DEV_PROJECT_ID=${{ secrets.FIREBASE_DEV_PROJECT_ID }} \
             --dart-define=FIREBASE_DEV_AUTH_DOMAIN=${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }} \
-            --dart-define=FIREBASE_DEV_STORAGE_BUCKET=${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }} || echo "Build may fail on SDK but workspace should exist"
+            --dart-define=FIREBASE_DEV_STORAGE_BUCKET=${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }} || true
           
-          echo "✅ Flutter frameworks built, workspace ready for Fastlane"
+          # Check if workspace exists, if not create it with pod install
+          if [ ! -f "ios/Runner.xcworkspace/contents.xcworkspacedata" ]; then
+            echo "⚠️ Workspace not found, running pod install to create it..."
+            cd ios
+            pod install
+            cd ..
+          fi
+          
+          # Verify workspace now exists
+          if [ -f "ios/Runner.xcworkspace/contents.xcworkspacedata" ]; then
+            echo "✅ Workspace exists and ready for Fastlane"
+          else
+            echo "❌ ERROR: Workspace still doesn't exist!"
+            ls -la ios/
+            exit 1
+          fi
 
       - name: Setup credentials and deploy to TestFlight
         working-directory: ios
