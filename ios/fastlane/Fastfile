@@ -43,30 +43,30 @@ platform :ios do
     team_id = ENV["APPLE_TEAM_ID"]
     bundle_id = ENV["IOS_BUNDLE_ID"]
     
-    puts "🔨 Creating archive with signing..."
+    puts "🔨 Building and archiving with signing..."
     
     # Step 1: Get available iOS SDK to avoid "iOS x.x not installed" errors
     ios_sdk = `xcodebuild -showsdks | grep -o 'iphoneos[0-9.]*' | tail -1`.strip
     puts "Using iOS SDK: #{ios_sdk}"
     
-    # Step 2: Create archive from Flutter's build output  
-    # Flutter already built the app with "flutter build ios --release --no-codesign"
-    # Now we just need to create a signed archive from that build
+    # Step 2: Clean and build archive with the available SDK
+    # Build everything from scratch to avoid iOS SDK version issues
     archive_path = File.expand_path("../../build/ios/archive/Runner.xcarchive", __dir__)
     
-    # Use xcodebuild to create archive with signing from the pre-built app
+    # Use xcodebuild to create archive with signing
     # Use explicit SDK and xcpretty to format output and prevent buffering issues
+    # Note: Removed -destination to avoid "iOS x.x not installed" errors
     sh(
-      "set -o pipefail && xcodebuild " \
+      "set -o pipefail && xcodebuild clean archive " \
       "-workspace ../Runner.xcworkspace " \
       "-scheme Runner " \
       "-configuration Release " \
       "-sdk #{ios_sdk} " \
       "-archivePath '#{archive_path}' " \
-      "-destination 'generic/platform=iOS' " \
       "-allowProvisioningUpdates " \
-      "archive " \
-      "CODE_SIGN_ONLY=YES " \
+      "DEVELOPMENT_TEAM=#{team_id} " \
+      "CODE_SIGN_STYLE=Manual " \
+      "PROVISIONING_PROFILE_SPECIFIER='#{profile_name}' " \
       "| xcpretty --color || true"
     )
     
