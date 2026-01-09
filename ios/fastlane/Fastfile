@@ -45,16 +45,25 @@ platform :ios do
     
     puts "🔨 Building and archiving with Fastlane gym..."
     
-    # Use Fastlane's build_app (gym) which handles all the complexity
-    # of xcodebuild destinations, SDKs, and signing
+    # Get available iOS SDK to avoid "iOS x.x not installed" errors
+    ios_sdk = `xcodebuild -showsdks | grep -o 'iphoneos[0-9.]*' | tail -1`.strip
+    puts "Using iOS SDK: #{ios_sdk}"
+    
+    # List available destinations for debugging
+    puts "Available destinations:"
+    sh "xcodebuild -workspace Runner.xcworkspace -scheme Runner -showdestinations"
+    
+    # Use Fastlane's build_app (gym) with explicit SDK
     build_app(
       workspace: "Runner.xcworkspace",
       scheme: "Runner",
       configuration: "Release",
+      sdk: ios_sdk,
       export_method: "app-store",
       output_directory: "../build/ios/ipa",
       output_name: "maypole.ipa",
       clean: true,
+      buildlog_path: "../build/logs",
       export_options: {
         method: "app-store",
         teamID: team_id,
