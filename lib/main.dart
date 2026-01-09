@@ -9,6 +9,7 @@ import 'core/app_router.dart';
 import 'core/app_theme.dart';
 import 'core/firebase_options.dart';
 import 'core/widgets/notification_handler.dart';
+import 'core/widgets/beta_access_guard.dart';
 import 'core/ads/ad_providers.dart';
 import 'core/services/remote_config_service.dart';
 
@@ -121,6 +122,8 @@ class MyApp extends ConsumerWidget {
       case 'production':
       case 'prod':
         return 'Maypole';
+      case 'beta':
+        return 'Maypole (Beta)';
       case 'dev':
       case 'development':
       default:
@@ -132,13 +135,15 @@ class MyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     
-    return NotificationHandler(
-      child: MaterialApp.router(
-        title: _getAppTitle(),
-        theme: darkTheme,
-        routerConfig: router,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
+    return BetaAccessGuard(
+      child: NotificationHandler(
+        child: MaterialApp.router(
+          title: _getAppTitle(),
+          theme: darkTheme,
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
       ),
     );
   }
