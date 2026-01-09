@@ -307,17 +307,18 @@ jobs:
 
       - name: Create GoogleService-Info.plist for dev
         run: |
-          mkdir -p ios/Runner
-          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_DEV }}" > ios/Runner/GoogleService-Info.plist
+          # Create Firebase config in the location expected by firebase-setup.sh script
+          mkdir -p ios/Firebase/dev
+          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_DEV }}" > ios/Firebase/dev/GoogleService-Info.plist
           
           # Validate the plist is well-formed
-          if ! plutil -lint ios/Runner/GoogleService-Info.plist > /dev/null 2>&1; then
+          if ! plutil -lint ios/Firebase/dev/GoogleService-Info.plist > /dev/null 2>&1; then
             echo "Error: GoogleService-Info.plist is not valid"
-            cat ios/Runner/GoogleService-Info.plist
+            cat ios/Firebase/dev/GoogleService-Info.plist
             exit 1
           fi
           
-          echo "GoogleService-Info.plist created successfully"
+          echo "✅ GoogleService-Info.plist created successfully at ios/Firebase/dev/"
 
       - name: Install CocoaPods dependencies
         working-directory: ios
