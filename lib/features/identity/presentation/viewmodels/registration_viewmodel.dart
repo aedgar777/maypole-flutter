@@ -16,7 +16,8 @@ class RegistrationViewModel extends Notifier<RegistrationState> {
     required String password,
     required String username,
   }) async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    // Clear any previous errors and set loading state
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
       // Username availability check is done in registerWithEmailAndPassword
       await _authService.registerWithEmailAndPassword(
@@ -24,7 +25,7 @@ class RegistrationViewModel extends Notifier<RegistrationState> {
         password,
         username,
       );
-      state = state.copyWith(isLoading: false);
+      state = state.copyWith(isLoading: false, clearError: true);
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
