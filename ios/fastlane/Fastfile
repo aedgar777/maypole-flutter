@@ -49,11 +49,8 @@ platform :ios do
     ios_sdk = `xcodebuild -showsdks | grep -o 'iphoneos[0-9.]*' | tail -1`.strip
     puts "Using iOS SDK: #{ios_sdk}"
     
-    # List available destinations for debugging
-    puts "Available destinations:"
-    sh "xcodebuild -workspace Runner.xcworkspace -scheme Runner -showdestinations"
-    
     # Use Fastlane's build_app (gym) with explicit SDK
+    # Flutter has already built the frameworks, gym will re-build with signing
     build_app(
       workspace: "Runner.xcworkspace",
       scheme: "Runner",
@@ -62,7 +59,7 @@ platform :ios do
       export_method: "app-store",
       output_directory: "../build/ios/ipa",
       output_name: "maypole.ipa",
-      clean: true,
+      clean: false,  # Don't clean since Flutter already built
       buildlog_path: "../build/logs",
       export_options: {
         method: "app-store",
