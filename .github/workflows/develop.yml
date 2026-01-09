@@ -240,7 +240,7 @@ jobs:
     name: Build and Deploy iOS (Dev TestFlight)
     needs: test
     runs-on: macos-latest
-    # timeout-minutes: 60  # Temporarily removed to let build complete
+    timeout-minutes: 60  # Prevent infinite hangs - fail after 1 hour
     environment: development
     steps:
       - name: Checkout repository
@@ -361,6 +361,7 @@ jobs:
 
       - name: Setup credentials and deploy to TestFlight
         working-directory: ios
+        timeout-minutes: 50  # Timeout for this step specifically - slightly less than job timeout
         env:
           MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
           MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
@@ -379,6 +380,7 @@ jobs:
           # Disable output buffering to prevent hangs in CI
           export PYTHONUNBUFFERED=1
           export FASTLANE_DISABLE_OUTPUT_BUFFERING=1
+          export NSUnbufferedIO=YES
           
           # Setup GCP credentials for Match (matching local script exactly)
           mkdir -p ~/.config/gcloud
@@ -395,9 +397,26 @@ jobs:
           echo ""
           echo "==================== FASTLANE DEPLOYMENT ===================="
           echo "🚀 Starting Fastlane deploy_dev..."
+          echo "⏱️  Started at: $(date)"
           
-          # Run fastlane with all environment variables set (matching local script)
-          # Note: stdbuf is not available on macOS, using environment variables instead
-          bundle exec fastlane ios deploy_dev
+          # Run fastlane with progress monitoring
+          # Using script command to force unbuffered output
+          script -q /dev/null bundle exec fastlane ios deploy_dev 2>&1 | while IFS= read -r line; do
+            echo "$line"
+            echo "⏳ [$(date +%H:%M:%S)] Progress..." >&2
+          done
           
-          echo "✅ Deployment completed!"
+          FASTLANE_EXIT_CODE=${PIPESTATUS[0]}
+          
+          if [ $FASTLANE_EXIT_CODE -eq 0 ]; then
+            echo "✅ Deployment completed at: $(date)"
+          else
+            echo "❌ Deployment failed with exit code $FASTLANE_EXIT_CODE at: $(date)"
+            echo ""
+            echo "📋 Checking for logs..."
+            if [ -d "fastlane/logs" ]; then
+              echo "Last 100 lines of build logs:"
+              find fastlane/logs -type f -name "*.log" -exec tail -100 {} \;
+            fi
+            exit $FASTLANE_EXIT_CODE
+          fi

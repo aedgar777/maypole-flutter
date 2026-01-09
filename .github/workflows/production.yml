@@ -149,6 +149,13 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Clean build cache aggressively
+        run: |
+          flutter clean
+          rm -rf build
+          rm -rf android/.gradle
+          rm -rf android/app/build
+
       - name: Create .env file from secrets
         run: |
           cat > .env << EOF
