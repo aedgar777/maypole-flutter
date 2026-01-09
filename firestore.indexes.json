@@ -54,7 +54,26 @@
         { "fieldPath": "participantIds", "arrayConfig": "CONTAINS" },
         { "fieldPath": "lastMessageTime", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "images",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uploaderId", "order": "ASCENDING" },
+        { "fieldPath": "uploadedAt", "order": "ASCENDING" }
+      ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "images",
+      "fieldPath": "uploadedAt",
+      "indexes": [
+        {
+          "order": "DESCENDING",
+          "queryScope": "COLLECTION"
+        }
+      ]
+    }
+  ]
 }

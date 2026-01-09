@@ -11,6 +11,8 @@ class MaypoleMessage {
   final String body;
   final String taggedUser; // Legacy field for backward compatibility
   final List<String> taggedUserIds; // New field for multiple mentions
+  final String? messageType; // Type of message: 'text', 'image_upload'
+  final String? imageId; // For image upload messages, the ID of the uploaded image
 
   const MaypoleMessage({
     this.id,
@@ -21,6 +23,8 @@ class MaypoleMessage {
     required this.body,
     this.taggedUser = '',
     this.taggedUserIds = const [],
+    this.messageType,
+    this.imageId,
   });
 
   factory MaypoleMessage.fromMap(Map<String, dynamic> map, {String? documentId}) {
@@ -38,11 +42,13 @@ class MaypoleMessage {
               ?.map((e) => e.toString())
               .toList() ??
           [],
+      messageType: map['messageType'] as String?,
+      imageId: map['imageId'] as String?,
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {
+    final map = {
       'type': 'place',
       'senderName': senderName,
       'senderId': senderId,
@@ -52,5 +58,18 @@ class MaypoleMessage {
       'taggedUser': taggedUser,
       'taggedUserIds': taggedUserIds,
     };
+    
+    // Add optional fields only if they exist
+    if (messageType != null) {
+      map['messageType'] = messageType!;
+    }
+    if (imageId != null) {
+      map['imageId'] = imageId!;
+    }
+    
+    return map;
   }
+  
+  /// Helper to check if this is an image upload notification
+  bool get isImageUpload => messageType == 'image_upload';
 }

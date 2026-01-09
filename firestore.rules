@@ -74,15 +74,40 @@ service cloud.firestore {
         // Allow authenticated users to read messages in any thread
         allow read: if request.auth != null;
         
-        // FIXED: Validate senderId matches authenticated user and add message length validation
+        // Allow authenticated users to create messages
+        // Validates senderId matches authenticated user and body length
+        // Optional fields: messageType (for image uploads), imageId
         allow create: if request.auth != null
                       && request.resource.data.senderId == request.auth.uid
+                      && request.resource.data.body is string
                       && request.resource.data.body.size() > 0
                       && request.resource.data.body.size() <= 5000;
         
         // Allow users to delete only their own messages
         allow delete: if request.auth != null 
                       && resource.data.senderId == request.auth.uid;
+      }
+      
+      // Images subcollection within a maypole thread
+      match /images/{imageId} {
+        // Allow authenticated users to read images in any thread
+        allow read: if request.auth != null;
+        
+        // Allow authenticated users to create images
+        // Validate uploaderId matches authenticated user and required fields exist
+        // Note: Rate limiting is enforced at the application level (10 images/hour)
+        allow create: if request.auth != null
+                      && request.resource.data.uploaderId == request.auth.uid
+                      && request.resource.data.maypoleId is string
+                      && request.resource.data.uploaderId is string
+                      && request.resource.data.uploaderName is string
+                      && request.resource.data.uploadedAt is timestamp
+                      && request.resource.data.storageUrl is string
+                      && request.resource.data.maypoleId == maypoleId;
+        
+        // Allow users to delete only their own images
+        allow delete: if request.auth != null 
+                      && resource.data.uploaderId == request.auth.uid;
       }
     }
     
