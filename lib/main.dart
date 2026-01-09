@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -135,16 +136,25 @@ class MyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     
-    return BetaAccessGuard(
-      child: NotificationHandler(
-        child: MaterialApp.router(
-          title: _getAppTitle(),
-          theme: darkTheme,
-          routerConfig: router,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-        ),
-      ),
+    // Only apply beta access guard for web beta builds
+    const environment = String.fromEnvironment('ENVIRONMENT', defaultValue: '');
+    final isBetaWeb = kIsWeb && environment == 'beta';
+    
+    final app = MaterialApp.router(
+      title: _getAppTitle(),
+      theme: darkTheme,
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
     );
+    
+    final wrappedApp = NotificationHandler(child: app);
+    
+    // Only wrap with BetaAccessGuard for web beta environment
+    if (isBetaWeb) {
+      return BetaAccessGuard(child: wrappedApp);
+    }
+    
+    return wrappedApp;
   }
 }
