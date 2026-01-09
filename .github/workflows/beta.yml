@@ -72,6 +72,11 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Clean build cache
+        run: |
+          flutter clean
+          cd android && ./gradlew clean && cd ..
+
       - name: Create .env file from secrets
         run: |
           cat > .env << EOF
