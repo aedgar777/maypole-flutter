@@ -11,6 +11,17 @@
         "__pycache__"
       ],
       "runtime": "python312"
+    },
+    {
+      "source": "functions-js",
+      "codebase": "auth-functions",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log"
+      ],
+      "runtime": "nodejs20"
     }
   ],
   "hosting": {

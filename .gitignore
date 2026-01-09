@@ -106,6 +106,10 @@ firebase-debug.*.log
 /functions/venv/
 /functions/__pycache__/
 
+# Node.js functions
+/functions-js/node_modules/
+/functions-js/.firebase/
+
 # Any backup files of sensitive data
 *.backup
 firebase_options.dart.backup
