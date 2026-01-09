@@ -314,7 +314,15 @@ class AuthService {
 
       final username = currentUser.username;
 
-      // Delete notifications subcollection
+      // Cleanup FCM tokens before deletion
+      try {
+        await _fcmService.cleanupForUser(uid);
+        debugPrint('✓ FCM cleaned up before account deletion');
+      } catch (e) {
+        debugPrint('⚠️ FCM cleanup failed (non-critical): $e');
+      }
+
+      // Step 1: Delete notifications subcollection
       // Firestore doesn't automatically delete subcollections, so we must do it manually
       try {
         final notificationsSnapshot = await _firestore
@@ -335,28 +343,38 @@ class AuthService {
         // Continue with deletion even if this fails
       }
 
-      // Delete user document from Firestore
-      await _firestore.collection('users').doc(uid).delete();
-
-      // Delete username reservation
-      await _firestore
-          .collection('usernames')
-          .doc(username.toLowerCase())
-          .delete();
-
-      // Cleanup FCM tokens before deleting account
+      // Step 2: Delete username reservation BEFORE deleting user document
+      // This ensures username is freed even if something fails later
       try {
-        await _fcmService.cleanupForUser(uid);
-        debugPrint('✓ FCM cleaned up before account deletion');
+        await _firestore
+            .collection('usernames')
+            .doc(username.toLowerCase())
+            .delete();
+        debugPrint('✓ Deleted username reservation for $username');
       } catch (e) {
-        debugPrint('⚠️ FCM cleanup failed (non-critical): $e');
+        debugPrint('⚠️ Error deleting username reservation: $e');
+        // Continue with deletion
       }
 
-      // Delete Firebase Auth account
+      // Step 3: Delete user document from Firestore
+      try {
+        await _firestore.collection('users').doc(uid).delete();
+        debugPrint('✓ Deleted user document');
+      } catch (e) {
+        debugPrint('⚠️ Error deleting user document: $e');
+        // Continue with auth deletion even if Firestore fails
+      }
+
+      // Step 4: Delete Firebase Auth account (do this LAST)
+      // If this succeeds but above steps failed, the cloud function
+      // on_account_deletion_requested will clean up remaining data
       await user.delete();
+      debugPrint('✓ Deleted Firebase Auth account');
 
       // Clear session
       _session.currentUser = null;
+      
+      debugPrint('✅ Account deletion completed successfully');
     } on FirebaseAuthException catch (e) {
       // If re-authentication is required, throw a more specific error
       if (e.code == 'requires-recent-login') {
