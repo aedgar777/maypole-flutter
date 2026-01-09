@@ -373,7 +373,7 @@ jobs:
           echo "🚀 Starting Fastlane deploy_dev..."
           
           # Run fastlane with all environment variables set (matching local script)
-          # Use stdbuf to ensure line-buffered output and prevent hanging
-          stdbuf -oL -eL bundle exec fastlane ios deploy_dev
+          # Note: stdbuf is not available on macOS, using environment variables instead
+          bundle exec fastlane ios deploy_dev
           
           echo "✅ Deployment completed!"
