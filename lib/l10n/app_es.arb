@@ -106,5 +106,6 @@
   "verificationEmailSent": "¡Correo de verificación enviado! Por favor revise su bandeja de entrada.",
   "registrationSuccessTitle": "¡Bienvenido a Maypole!",
   "registrationSuccessMessage": "Su cuenta ha sido creada exitosamente. Hemos enviado un correo de verificación a {email}. Por favor revise su bandeja de entrada y haga clic en el enlace de verificación para activar todas las funciones.",
-  "gotIt": "Entendido"
+  "gotIt": "Entendido",
+  "hasAddedAnImage": "ha añadido una imagen"
 }

@@ -739,6 +739,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Got it'**
   String get gotIt;
+
+  /// Text shown when a user uploads an image to a maypole
+  ///
+  /// In en, this message translates to:
+  /// **'has added an image'**
+  String get hasAddedAnImage;
 }
 
 class _AppLocalizationsDelegate

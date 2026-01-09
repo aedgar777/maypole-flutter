@@ -5,11 +5,13 @@ class Maypole {
   final String id;
   final String name;
   final List<MaypoleMessage> messages;
+  final int imageCount; // Track total number of images for display purposes
 
   const Maypole({
     required this.id,
     required this.name,
     required this.messages,
+    this.imageCount = 0,
   });
 
   factory Maypole.fromMap(Map<String, dynamic> map) {
@@ -20,6 +22,7 @@ class Maypole {
           ?.map((e) => MaypoleMessage.fromMap(e as Map<String, dynamic>))
           .toList() ??
           [],
+      imageCount: map['imageCount'] ?? 0,
     );
   }
 
@@ -28,6 +31,7 @@ class Maypole {
       'id': id,
       'name': name,
       'messages': messages.map((e) => e.toMap()).toList(),
+      'imageCount': imageCount,
     };
   }
 }

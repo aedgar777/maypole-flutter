@@ -48,6 +48,7 @@ app.*.map.json
 .env
 .env.dev
 .env.prod
+.env.local
 
 # Android keystore and signing files (NEVER commit these!)
 android/key.properties
@@ -71,6 +72,15 @@ ios/*.mobileprovision
 ios/*.cer
 ios/*.certSigningRequest
 ios/AuthKey_*.p8
+ios/AuthKey.json
+
+# Fastlane
+ios/fastlane/report.xml
+ios/fastlane/Preview.html
+ios/fastlane/screenshots
+ios/fastlane/test_output
+ios/.env.local
+ios/vendor/bundle
 
 # Local properties (contains SDK paths)
 android/local.properties
@@ -95,6 +105,10 @@ firebase-debug.*.log
 # Python virtual environment (functions)
 /functions/venv/
 /functions/__pycache__/
+
+# Node.js functions
+/functions-js/node_modules/
+/functions-js/.firebase/
 
 # Any backup files of sensitive data
 *.backup

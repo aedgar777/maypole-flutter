@@ -2,296 +2,240 @@
 
 This guide will walk you through setting up automated deployments for the Maypole Flutter app across three environments: Development, Beta, and Production.
 
+**Key Feature**: This setup uses **Fastlane Match** to automate iOS code signing, eliminating the need for manual certificate management.
+
 ## Table of Contents
 
-1. [Android Setup](#android-setup)
-2. [iOS Setup](#ios-setup)
-3. [GitHub Secrets Configuration](#github-secrets-configuration)
-4. [Beta Branch Creation](#beta-branch-creation)
-5. [Firebase Configuration](#firebase-configuration)
-6. [Testing the Workflows](#testing-the-workflows)
+1. [iOS Setup with Fastlane Match](#ios-setup-with-fastlane-match)
+2. [GitHub Secrets Configuration](#github-secrets-configuration)
+3. [Beta Branch Creation](#beta-branch-creation)
+4. [Firebase Configuration](#firebase-configuration)
+5. [Testing the Workflows](#testing-the-workflows)
 
 ---
 
-## Android Setup
+## iOS Setup with Fastlane Match
 
-> **📱 About Google Play App Signing**
->
-> This setup uses **Google Play App Signing**, which is Google's recommended approach and provides significant security benefits:
-> 
-> **How it works:**
-> 1. You create a simple **upload key** (easy to reset if compromised)
-> 2. Google generates and securely stores the real **app signing key**
-> 3. You sign your AABs with the upload key and upload to Play Console
-> 4. Google re-signs with the app signing key before distributing to users
->
-> **Benefits:**
-> - ✅ **Lost/stolen upload key?** Just reset it in Play Console - your app signing key is safe with Google
-> - ✅ **Simpler CI/CD** - Only need to manage a simple upload keystore in GitHub Secrets
-> - ✅ **Better security** - Your actual app signing key never leaves Google's infrastructure
-> - ✅ **Required for App Bundles** - Google Play requires App Signing for dynamic delivery features
->
-> **The traditional approach** (managing your own app signing key) is more complex, riskier, and not recommended.
+### Why Fastlane Match?
 
-### 1. Create Upload Keystore
+**Fastlane Match** is the modern, automated approach to iOS code signing that:
+- ✅ Automatically creates and manages certificates and provisioning profiles
+- ✅ Stores them securely in a private Git repository
+- ✅ Makes them accessible to all team members and CI/CD systems
+- ✅ Eliminates manual certificate creation and Keychain Access steps
+- ✅ Prevents "works on my machine" signing issues
 
-Create a simple upload keystore for signing your app bundles:
+### Prerequisites
 
-```bash
-keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias play-store-upload
-```
-
-**Fill in the prompts**:
-- **Password**: Choose a secure password (you'll need this for GitHub Secrets)
-- **Name**: Your name or organization
-- **Organization Unit**: Your team/department
-- **Organization**: Your company name
-- **City/Locality**: Your city
-- **State/Province**: Your state
-- **Country Code**: Your two-letter country code (e.g., US)
-
-**Important**: Save this information securely:
-- **Key alias**: `upload` (or whatever you chose)
-- **Key password**: The password you set
-- **Store password**: Usually the same as key password
-
-### 2. Configure Android Build for Signing
-
-The build configuration has already been updated in `android/app/build.gradle.kts` to support keystore signing. The workflow will create the `key.properties` file automatically during CI/CD builds.
-
-**Local Testing** (optional): If you want to test release builds locally, create `android/key.properties`:
-
-```properties
-storePassword=YOUR_STORE_PASSWORD
-keyPassword=YOUR_KEY_PASSWORD
-keyAlias=play-store-upload
-storeFile=upload-keystore.jks
-```
-
-Then copy your keystore to `android/app/upload-keystore.jks`.
-
-**Note**: These files are gitignored and won't be committed.
-
-### 3. Create Service Account for Play Console API
-
-This allows GitHub Actions to automatically upload builds to Play Console.
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Select or create a project
-3. Navigate to **IAM & Admin** → **Service Accounts**
-4. Click **Create Service Account**
-5. Name it something like "github-actions-play-store"
-6. Click **Create and Continue**
-7. Grant the **Service Account User** role
-8. Click **Done**
-9. Click on the created service account
-10. Go to **Keys** tab → **Add Key** → **Create new key**
-11. Choose **JSON** format and download it
-12. **Save this JSON file securely** - you'll add it to GitHub Secrets
-
-### 4. Link Service Account to Play Console
-
-**⚠️ CRITICAL**: This step is essential for automated deployments to work. Permission errors are the #1 cause of deployment failures.
-
-1. Go to [Google Play Console](https://play.google.com/console/)
-2. Navigate to **Setup** → **API access**
-3. Link your Google Cloud project if not already linked
-   - Click **Link to Google Cloud Project**
-   - Select the project where you created the service account
-4. Grant access to your service account:
-   - Find the service account you created (should end with `.iam.gserviceaccount.com`)
-   - Click **View Play Console permissions** (or three dots → **Manage Play Console permissions**)
-   - Under **App permissions**:
-     - Select **app.maypole.maypole** (or select "All apps" if you prefer)
-   - Under **Account permissions**, grant these permissions:
-     - ✅ **View app information and download bulk reports** (read-only)
-     - ✅ **Manage testing tracks and edit tester lists** (REQUIRED for internal/beta releases)
-     - ✅ **Release to production, exclude devices, and use Play App Signing** (only if you want automated production releases)
-   - Click **Apply** then **Invite user**
-   - Wait 5-10 minutes for permissions to propagate
-
-**📝 Note**: The exact permission names may vary slightly in the Play Console UI. The key permission is anything related to "managing testing tracks" or "releasing to testing tracks".
-
-### 5. Set Up Play App Signing
-
-**First Time Setup** (when creating a new app):
-
-1. In Play Console, create your app
-2. Navigate to **Setup** → **App signing**
-3. Choose **Continue** to let Google create and manage your app signing key
-4. Upload your first signed AAB (you'll need to do this before the automated pipeline works)
-
-**To upload your first AAB manually**:
-
-```bash
-# Build your first AAB locally
-flutter build appbundle --release --flavor prod
-
-# Sign it with your upload key
-jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-  -keystore upload-keystore.jks \
-  build/app/outputs/bundle/prodRelease/app-prod-release.aab \
-  upload
-
-# Upload through Play Console web UI:
-# Release → Production (or Internal testing) → Create new release → Upload AAB
-```
-
-After the first upload, Google will display your app signing key certificate. The automated workflow will handle subsequent uploads.
-
-**Important**: After setup, download the **App Signing Certificate** from Play Console:
-1. Go to **Setup** → **App signing**
-2. Download the **App signing certificate** (for verification purposes)
-3. Keep this safe - you may need it for API integrations
-
-### 6. Set Up Testing Tracks
-
-1. In Play Console, go to your app
-2. Navigate to **Testing** → **Internal testing**
-3. Create an internal testing track if you haven't already
-4. Add testers/testing groups (email addresses or Google Groups)
-5. Repeat for **Closed testing** → Create **Beta** track
-6. Add beta testers to the beta track
-
-### 7. Prepare Keystore for GitHub
-
-Convert your upload keystore to base64:
-
-```bash
-base64 -i upload-keystore.jks | tr -d '\n' > keystore_base64.txt
-```
-
-The content of `keystore_base64.txt` will be added to GitHub Secrets.
-
-**Security Note**: Your upload key is stored in GitHub Secrets and used only for CI/CD. Even if compromised, you can reset it in Play Console without affecting your app's signing key or requiring users to reinstall.
+1. **Apple Developer Account**: Active membership ($99/year)
+2. **GitHub Account**: For storing certificates repository (private)
+3. **App Store Connect API Key**: For automated uploads
 
 ---
 
-## iOS Setup
-
-### 1. Apple Developer Account
-
-Ensure you have an active Apple Developer Program membership ($99/year).
-
-### 2. Create App ID
+### Step 1: Create App ID in Apple Developer Portal
 
 1. Go to [Apple Developer Portal](https://developer.apple.com/account/)
 2. Navigate to **Certificates, Identifiers & Profiles**
 3. Click **Identifiers** → **+** button
 4. Select **App IDs** → **Continue**
 5. Configure your App ID:
-   - **Description**: Maypole (or similar)
+   - **Description**: Maypole
    - **Bundle ID**: Explicit, e.g., `app.maypole.maypole`
-   - Enable required capabilities (Push Notifications, etc.)
+   - Enable required capabilities (Push Notifications, Sign in with Apple, etc.)
 6. Click **Continue** → **Register**
 
-### 3. Create Certificates
+**Save your Bundle ID** - you'll need it for GitHub Secrets.
 
-#### Distribution Certificate
-1. On your Mac, open **Keychain Access**
-2. **Keychain Access** → **Certificate Assistant** → **Request a Certificate from a Certificate Authority**
-3. Enter your email, select **Saved to disk**
-4. Save the `.certSigningRequest` file
-5. In Apple Developer Portal, go to **Certificates** → **+**
-6. Select **Apple Distribution** → **Continue**
-7. Upload your `.certSigningRequest` file
-8. Download the certificate (`.cer` file)
-9. Double-click to install it in Keychain Access
-10. In Keychain Access, find your certificate
-11. Right-click → **Export "Apple Distribution: [Your Name]"**
-12. Save as `.p12` file with a password
-13. **Save the password** - you'll need it for GitHub Secrets
+---
 
-### 4. Create Provisioning Profiles
+### Step 2: Create App Store Connect API Key
 
-#### App Store Provisioning Profile
-1. In Apple Developer Portal, go to **Profiles** → **+**
-2. Select **App Store** → **Continue**
-3. Select your App ID → **Continue**
-4. Select the distribution certificate you created → **Continue**
-5. Name it (e.g., "Maypole App Store") → **Generate**
-6. Download the `.mobileprovision` file
+This key allows Fastlane to upload builds and manage your app automatically.
 
-### 5. App Store Connect Setup
-
-#### Create App
 1. Go to [App Store Connect](https://appstoreconnect.apple.com/)
-2. Click **My Apps** → **+** → **New App**
-3. Fill in app information:
+2. Click **Users and Access** (in the top menu)
+3. Click the **Keys** tab (under Integrations section)
+4. Click **+** to generate a new key
+5. Configure the key:
+   - **Name**: "GitHub Actions Deploy" (or similar)
+   - **Access**: Select **App Manager** (recommended) or **Developer**
+6. Click **Generate**
+7. **Download the `.p8` file** - This is only available ONCE!
+8. **Note the Key ID** (e.g., `ABC123DEF4`)
+9. **Note the Issuer ID** (e.g., `12345678-1234-1234-1234-123456789012`)
+
+**Keep all three safe:**
+- ✅ `.p8` file content
+- ✅ Key ID
+- ✅ Issuer ID
+
+---
+
+### Step 3: Create App in App Store Connect
+
+1. In [App Store Connect](https://appstoreconnect.apple.com/), click **My Apps** → **+** → **New App**
+2. Fill in app information:
    - **Platforms**: iOS
    - **Name**: Maypole
    - **Primary Language**: English
-   - **Bundle ID**: Select the one you created
-   - **SKU**: Unique identifier (e.g., maypole-001)
+   - **Bundle ID**: Select the one you created in Step 1
+   - **SKU**: Unique identifier (e.g., `maypole-001`)
    - **User Access**: Full Access
-4. Click **Create**
+3. Click **Create**
 
-#### Create API Key
-1. In App Store Connect, go to **Users and Access**
-2. Click **Keys** tab (under Integrations)
-3. Click **+** to generate a new key
-4. Name it "GitHub Actions Deploy"
-5. Select **Access**: **App Manager** or **Developer**
-6. Click **Generate**
-7. Download the API key (`.p8` file) - **This is only available once!**
-8. Note the **Key ID** and **Issuer ID** shown on the page
-9. **Save all three**: the .p8 file, Key ID, and Issuer ID
+#### Set Up TestFlight Groups
 
-#### Set Up TestFlight
 1. In your app, go to **TestFlight** tab
-2. Create Internal Testing group and add testers
-3. Create External Testing group for beta testers
+2. Create Internal Testing group (for development builds)
+3. Create External Testing group named **"Beta Testers"** (for beta builds)
+4. Add testers to each group as needed
 
-### 6. Create ExportOptions.plist
+---
 
-Create a file at `ios/ExportOptions.plist`:
+### Step 4: Generate App-Specific Password
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>method</key>
-    <string>app-store</string>
-    <key>teamID</key>
-    <string>YOUR_TEAM_ID</string>
-    <key>uploadBitcode</key>
-    <false/>
-    <key>compileBitcode</key>
-    <false/>
-    <key>uploadSymbols</key>
-    <true/>
-    <key>signingStyle</key>
-    <string>manual</string>
-    <key>provisioningProfiles</key>
-    <dict>
-        <key>app.maypole.maypole</key>
-        <string>YOUR_PROVISIONING_PROFILE_NAME</string>
-    </dict>
-</dict>
-</plist>
-```
+Fastlane needs this to authenticate with your Apple ID.
 
-Replace:
-- `YOUR_TEAM_ID`: Find this in Apple Developer Portal → Membership
-- `YOUR_PROVISIONING_PROFILE_NAME`: Name of your provisioning profile
-- `app.maypole.maypole`: Your bundle ID
+1. Go to [appleid.apple.com](https://appleid.apple.com/)
+2. Sign in with your Apple ID (the one used for your Developer account)
+3. In the **Security** section, find **App-Specific Passwords**
+4. Click **Generate Password**
+5. Name it "Fastlane GitHub Actions" (or similar)
+6. **Save the generated password** - you'll need it for GitHub Secrets
 
-### 7. Prepare iOS Files for GitHub
+---
 
-Convert certificate to base64:
+### Step 5: Create Private Repository for Certificates
+
+Fastlane Match stores certificates in a private Git repository.
+
+1. Go to GitHub and create a **new private repository**
+   - Name: `maypole-ios-certificates` (or similar)
+   - **IMPORTANT**: Make it **Private**
+   - Don't add README or any files
+2. Copy the repository URL (e.g., `https://github.com/yourusername/maypole-ios-certificates.git`)
+3. **Save this URL** - you'll need it for GitHub Secrets
+
+---
+
+### Step 6: Create GitHub Personal Access Token
+
+This allows Fastlane Match to access your certificates repository from GitHub Actions.
+
+1. Go to GitHub → **Settings** → **Developer settings** → **Personal access tokens** → **Tokens (classic)**
+2. Click **Generate new token** → **Generate new token (classic)**
+3. Configure the token:
+   - **Note**: "Fastlane Match Certificates"
+   - **Expiration**: 1 year (or No expiration for simplicity)
+   - **Scopes**: Select **repo** (full control of private repositories)
+4. Click **Generate token**
+5. **Copy the token immediately** - you won't be able to see it again!
+
+Convert it to Base64 authorization string:
+
 ```bash
-base64 -i certificate.p12 | tr -d '\n' > certificate_base64.txt
+echo -n "your_github_username:your_personal_access_token" | base64
 ```
 
-Convert provisioning profile to base64:
+**Save this Base64 string** - you'll need it as `MATCH_GIT_BASIC_AUTHORIZATION`.
+
+---
+
+### Step 7: Initialize Fastlane Match Locally (One-Time Setup)
+
+This step creates your certificates and provisioning profiles and stores them in your private repository.
+
+#### 7.1 Install Fastlane
+
 ```bash
-base64 -i YourProfile.mobileprovision | tr -d '\n' > provisioning_base64.txt
+# Navigate to your project
+cd /path/to/maypole-flutter
+
+# Install Ruby dependencies
+cd ios
+bundle install
 ```
 
-Convert App Store Connect API key to base64:
+#### 7.2 Set Environment Variables
+
+Create a temporary file with your credentials (don't commit this!):
+
 ```bash
-base64 -i AuthKey_XXXXXXXXXX.p8 | tr -d '\n' > api_key_base64.txt
+# Create a temporary .env file in the ios directory
+cat > ios/.env.local << EOF
+MATCH_GIT_URL=https://github.com/yourusername/maypole-ios-certificates.git
+APPLE_ID=your.apple.id@email.com
+APPLE_TEAM_ID=YOUR_TEAM_ID
+IOS_BUNDLE_ID=app.maypole.maypole
+EOF
 ```
+
+**To find your Team ID:**
+- Go to [Apple Developer Portal](https://developer.apple.com/account/)
+- Click **Membership** in the sidebar
+- Your Team ID is shown (e.g., `ABC123DEF4`)
+
+#### 7.3 Run Fastlane Match
+
+```bash
+cd ios
+
+# Source your environment variables
+export $(cat .env.local | xargs)
+
+# Initialize Match and create certificates
+bundle exec fastlane match appstore
+
+# When prompted:
+# 1. Create a strong passphrase for encrypting certificates
+# 2. Enter your Apple ID password
+# 3. May require 2FA code - enter it when prompted
+```
+
+**IMPORTANT**: Save the passphrase you create - this is your `MATCH_PASSWORD` for GitHub Secrets!
+
+#### 7.4 Verify Success
+
+After Match completes successfully, your certificates repository should contain:
+- Certificates encrypted in the repo
+- Provisioning profiles
+- A `README.md` explaining the setup
+
+**Clean up:**
+
+```bash
+# Remove the temporary environment file
+rm ios/.env.local
+```
+
+---
+
+### Step 8: Prepare Secrets for GitHub
+
+You should now have collected:
+
+| Secret Name | Value | Source |
+|------------|-------|--------|
+| `MATCH_GIT_URL` | `https://github.com/user/maypole-ios-certificates.git` | Step 5 |
+| `MATCH_PASSWORD` | Passphrase you created | Step 7.3 |
+| `MATCH_GIT_BASIC_AUTHORIZATION` | Base64 string | Step 6 |
+| `APPLE_ID` | Your Apple ID email | Your Apple account |
+| `APPLE_TEAM_ID` | Team ID (e.g., `ABC123DEF4`) | Step 7.2 |
+| `IOS_BUNDLE_ID` | Bundle identifier (e.g., `app.maypole.maypole`) | Step 1 |
+| `APP_STORE_CONNECT_API_KEY_ID` | Key ID | Step 2 |
+| `APP_STORE_CONNECT_API_ISSUER_ID` | Issuer ID | Step 2 |
+| `APP_STORE_CONNECT_API_KEY_CONTENT` | Contents of `.p8` file | Step 2 |
+| `FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD` | App-specific password | Step 4 |
+
+For the `.p8` file:
+
+```bash
+# Read the contents of your .p8 file (don't base64 encode it)
+cat /path/to/AuthKey_XXXXXXXXXX.p8
+```
+
+Copy the entire contents including the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines.
 
 ---
 
@@ -303,11 +247,11 @@ base64 -i AuthKey_XXXXXXXXXX.p8 | tr -d '\n' > api_key_base64.txt
 
 1. Go to your GitHub repository → **Settings** → **Actions** → **General**
 2. Scroll down to **Workflow permissions**
-3. Select **Read and write permissions** (this allows workflows to push version bumps)
+3. Select **Read and write permissions**
 4. Check ✅ **Allow GitHub Actions to create and approve pull requests** (optional)
 5. Click **Save**
 
-> **Why is this needed?** The workflows automatically increment the build number and commit it back to the repository to ensure each deployment has a unique version code. Without write permissions, you'll get a 403 error when the workflow tries to push.
+---
 
 ### Step 2: Add Repository Secrets
 
@@ -315,35 +259,26 @@ Go to your GitHub repository → **Settings** → **Secrets and variables** → 
 
 Add the following secrets:
 
-### Android Secrets
+#### iOS Secrets (Fastlane Match)
 
-| Secret Name | Description | Where to Find |
-|------------|-------------|---------------|
-| `ANDROID_KEYSTORE_BASE64` | Base64-encoded keystore file | Content of `keystore_base64.txt` |
-| `ANDROID_KEY_ALIAS` | Keystore key alias | The alias you used when creating keystore |
-| `ANDROID_KEY_PASSWORD` | Key password | Password you set for the key |
-| `ANDROID_STORE_PASSWORD` | Keystore password | Password you set for the keystore |
-| `PLAY_STORE_SERVICE_ACCOUNT_JSON` | Service account JSON | Content of JSON file from Google Cloud |
-| `GOOGLE_SERVICES_JSON_DEV` | Dev google-services.json | Content of dev flavor google-services.json |
-| `GOOGLE_SERVICES_JSON_PROD` | Prod google-services.json | Content of prod flavor google-services.json |
+| Secret Name | Description | Value |
+|------------|-------------|-------|
+| `MATCH_GIT_URL` | Private repo for certificates | From Step 8 above |
+| `MATCH_PASSWORD` | Encryption passphrase | From Step 8 above |
+| `MATCH_GIT_BASIC_AUTHORIZATION` | Base64 GitHub token | From Step 8 above |
+| `APPLE_ID` | Your Apple ID email | From Step 8 above |
+| `APPLE_TEAM_ID` | Apple Developer Team ID | From Step 8 above |
+| `IOS_BUNDLE_ID` | App bundle identifier | From Step 8 above |
+| `APP_STORE_CONNECT_API_KEY_ID` | API Key ID | From Step 8 above |
+| `APP_STORE_CONNECT_API_ISSUER_ID` | API Issuer ID | From Step 8 above |
+| `APP_STORE_CONNECT_API_KEY_CONTENT` | Full `.p8` file content | From Step 8 above |
+| `FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD` | App-specific password | From Step 8 above |
+| `GOOGLE_SERVICE_INFO_PLIST_DEV` | Dev GoogleService-Info.plist | Full XML content of iOS dev file |
+| `GOOGLE_SERVICE_INFO_PLIST_PROD` | Prod GoogleService-Info.plist | Full XML content of iOS prod file |
 
-### iOS Secrets
+#### Firebase Secrets
 
-| Secret Name | Description | Where to Find |
-|------------|-------------|---------------|
-| `IOS_CERTIFICATE_BASE64` | Base64-encoded P12 certificate | Content of `certificate_base64.txt` |
-| `IOS_CERTIFICATE_PASSWORD` | Certificate password | Password used when exporting P12 |
-| `IOS_PROVISIONING_PROFILE_BASE64` | Base64-encoded provisioning profile | Content of `provisioning_base64.txt` |
-| `KEYCHAIN_PASSWORD` | Temporary keychain password | Create a secure random password |
-| `APP_STORE_CONNECT_API_KEY_ID` | API Key ID | From App Store Connect → Keys |
-| `APP_STORE_CONNECT_API_ISSUER_ID` | API Issuer ID | From App Store Connect → Keys |
-| `APP_STORE_CONNECT_API_KEY_CONTENT` | Base64-encoded .p8 file | Content of `api_key_base64.txt` |
-| `GOOGLE_SERVICE_INFO_PLIST_DEV` | Dev GoogleService-Info.plist | Content of iOS dev GoogleService-Info.plist |
-| `GOOGLE_SERVICE_INFO_PLIST_PROD` | Prod GoogleService-Info.plist | Content of iOS prod GoogleService-Info.plist |
-
-### Firebase Secrets (if not already added)
-
-These should already exist, but verify:
+These should already exist from your Firebase setup:
 
 | Secret Name | Description |
 |------------|-------------|
@@ -364,16 +299,17 @@ git checkout develop
 git pull origin develop
 git checkout -b beta
 git push -u origin beta
-
-# Protect the beta branch (do this in GitHub UI)
-# Go to Settings → Branches → Add rule
-# Branch name pattern: beta
-# Enable: Require pull request reviews before merging
 ```
+
+### Protect the Beta Branch (Optional)
+
+1. Go to GitHub → **Settings** → **Branches** → **Add rule**
+2. Branch name pattern: `beta`
+3. Enable: **Require pull request reviews before merging**
+4. Click **Create**
 
 ### Beta Branch Workflow
 
-The intended workflow is:
 1. Development happens on feature branches
 2. Feature branches merge into `develop`
 3. When ready for beta testing, merge `develop` into `beta`
@@ -388,62 +324,6 @@ The intended workflow is:
 1. **Development**: `maypole-flutter-dev`
 2. **Production**: `maypole-flutter` (or `maypole-flutter-ce6c3`)
 
-### Configure google-services.json for Android
-
-**Important**: Each environment (dev/prod) needs its own `google-services.json` file from Firebase.
-
-#### Download google-services.json Files
-
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. For **Development** environment:
-   - Select `maypole-flutter-dev` project
-   - Click ⚙️ Settings → Project Settings
-   - Scroll to "Your apps" section
-   - Find your Android app (package: `app.maypole.maypole`)
-   - Click the download icon (⬇) to download `google-services.json`
-   - Save as `google-services-dev.json` (for reference)
-
-3. For **Production** environment:
-   - Select `maypole-flutter-ce6c3` (or `maypole-flutter`) project
-   - Repeat the same steps above
-   - Save as `google-services-prod.json` (for reference)
-
-#### Add to GitHub Secrets
-
-**CRITICAL**: When adding these files as GitHub secrets, follow these exact steps:
-
-1. Open the `google-services-dev.json` file in a text editor
-2. **Copy the ENTIRE file contents** (from the first `{` to the last `}`)
-3. Go to GitHub → Repository Settings → Secrets and variables → Actions
-4. Create a new secret named `GOOGLE_SERVICES_JSON_DEV`
-5. **Paste the raw JSON directly** - DO NOT:
-   - ❌ Add quotes around the JSON
-   - ❌ Escape any characters
-   - ❌ Modify the content in any way
-6. Repeat for production: Create `GOOGLE_SERVICES_JSON_PROD` with contents of `google-services-prod.json`
-
-**Example of what the secret should look like:**
-```json
-{
-  "project_info": {
-    "project_number": "1234567890",
-    "project_id": "your-project-id",
-    ...
-  },
-  "client": [
-    ...
-  ]
-}
-```
-
-**Common mistakes to avoid:**
-- ❌ Wrapping the entire JSON in quotes: `"{\"project_info\": ...}"`
-- ❌ Adding escape characters: `{\\\"project_info\\\": ...}`
-- ❌ Copying only part of the file
-- ❌ Adding extra newlines or spaces
-
-If you see errors like "Expecting value: line 2 column 1", your secret likely has quotes around it or is otherwise malformed. Delete the secret and recreate it with the raw JSON content.
-
 ### Firebase Rules Files
 
 Ensure you have these files in your project root:
@@ -453,7 +333,7 @@ Ensure you have these files in your project root:
 
 ### Firebase CLI Setup
 
-If you haven't already, initialize Firebase in your project:
+If you haven't already:
 
 ```bash
 npm install -g firebase-tools
@@ -484,8 +364,7 @@ git push origin develop
 Watch the workflow in GitHub Actions. It should:
 - ✅ Run unit tests
 - ✅ Build web and deploy to Firebase Hosting dev
-- ✅ Build Android APK and upload to Play Store internal testing
-- ✅ Build iOS IPA and upload to TestFlight internal
+- ✅ Build iOS and upload to TestFlight internal
 
 ### Test Beta Workflow
 
@@ -497,8 +376,7 @@ git push origin beta
 ```
 
 This should:
-- ✅ Build Android APK and upload to Play Store beta track
-- ✅ Build iOS IPA and upload to TestFlight beta group
+- ✅ Build iOS and upload to TestFlight beta group (external testers)
 
 ### Test Production Workflow
 
@@ -511,142 +389,63 @@ git push origin master
 
 This should:
 - ✅ Build and deploy web to Firebase Hosting production
-- ✅ Deploy Firebase services (Firestore rules, indexes, storage rules)
-- ✅ Build Android APK and upload to Play Store production track
-- ✅ Build iOS IPA and upload to App Store
+- ✅ Deploy Firebase services (rules, indexes)
+- ✅ Build iOS and upload to TestFlight/App Store
 
 ---
 
 ## Troubleshooting
 
-### Common Issues
+### Common Issues with Fastlane Match
 
-#### Android: "Failed to find Build Tools"
-- Ensure Java 17 is being used (specified in workflow)
-- Check that `build.gradle.kts` is properly configured
+#### "Couldn't find the private key"
+- **Solution**: Verify `MATCH_GIT_BASIC_AUTHORIZATION` is correctly set
+- Check that your GitHub PAT has `repo` scope
+- Ensure the certificates repository URL is correct
 
-#### Android: "google-services.json is not valid JSON" ⚠️ COMMON
+#### "Wrong password"
+- **Solution**: Verify `MATCH_PASSWORD` matches the passphrase you set during initialization
 
-**Error Message**: `❌ Error: google-services.json is not valid JSON - Expecting value: line 2 column 1 (char 1)`
+#### "Couldn't find provisioning profile"
+- **Solution**: Run `bundle exec fastlane match appstore` locally again to regenerate profiles
+- Check that `IOS_BUNDLE_ID` matches exactly
 
-**Root Cause**: The `GOOGLE_SERVICES_JSON_DEV` or `GOOGLE_SERVICES_JSON_PROD` secret in GitHub is malformed.
+#### "Certificate has expired"
+- **Solution**: Run `bundle exec fastlane match nuke distribution` (careful!)
+- Then run `bundle exec fastlane match appstore` to create new ones
 
-**Common causes**:
-1. ❌ Extra quotes around the entire JSON: `"{\"project_info\": ...}"`
-2. ❌ Escape characters added: `{\\\"project_info\\\": ...}`
-3. ❌ Only copied part of the file
-4. ❌ Added extra whitespace or newlines before/after the JSON
+### Re-running Match Setup
 
-**Solution**:
-1. Download the correct `google-services.json` from [Firebase Console](https://console.firebase.google.com/)
-   - For dev: Project `maypole-flutter-dev` → Settings → Download `google-services.json`
-   - For prod: Project `maypole-flutter-ce6c3` → Settings → Download `google-services.json`
-2. Open the file in a text editor
-3. **Copy the ENTIRE raw JSON** (from first `{` to last `}`)
-4. Go to GitHub → Settings → Secrets → Actions
-5. **Delete** the existing `GOOGLE_SERVICES_JSON_DEV` or `GOOGLE_SERVICES_JSON_PROD` secret
-6. **Create a new secret** with the same name
-7. **Paste the raw JSON directly** - no quotes, no modifications
-8. Save and re-run the workflow
+If you need to start over:
 
-**Verify locally** (optional):
 ```bash
-# Test that your JSON is valid
-cat your-google-services.json | python3 -m json.tool
-# Should output formatted JSON without errors
+cd ios
+
+# Set environment variables again
+export MATCH_GIT_URL="your_url"
+export APPLE_ID="your_email"
+export APPLE_TEAM_ID="your_team_id"
+export IOS_BUNDLE_ID="your_bundle_id"
+
+# Nuke existing certificates (CAREFUL - this affects all team members!)
+bundle exec fastlane match nuke distribution
+
+# Create new certificates
+bundle exec fastlane match appstore
 ```
 
-The workflows now include enhanced debugging that will show you exactly what's wrong with the file when this error occurs.
+### TestFlight Upload Issues
 
-#### iOS: "No signing identity found"
-- Verify certificate is valid and not expired
-- Check that provisioning profile matches the bundle ID
-- Ensure certificate password is correct
-
-#### Play Store: "The caller does not have permission" ⚠️ MOST COMMON
-
-**This is the #1 deployment error.** See the dedicated fix guide:
-👉 **[PLAY_STORE_PERMISSIONS_FIX.md](./PLAY_STORE_PERMISSIONS_FIX.md)**
-
-Quick checklist:
-- ✅ Service account has **"Manage testing tracks"** permission in Play Console
-- ✅ Service account is linked to your specific app (not just the account)
-- ✅ Waited 5-10 minutes after granting permissions
-- ✅ First APK/AAB was uploaded manually (for new apps)
-- ✅ Service account email in GitHub secret matches Play Console
-
-**Fix it now**: Follow the step-by-step guide in `PLAY_STORE_PERMISSIONS_FIX.md`
-
-#### Play Store: "Only releases with status draft may be created on draft app"
-
-**This error occurs when your app is still in draft status** (hasn't been published yet).
-
-**Solution**: The workflows are already configured to upload as `draft` for unpublished apps:
-- ✅ `develop.yml` uploads to internal track as `draft`
-- ✅ `beta.yml` uploads to beta track as `draft`
-- ✅ `production.yml` uploads to production track as `draft`
-
-**After your first release is published**, you can optionally change `status: draft` to `status: completed` in the workflows to automatically release new versions without manual approval.
-
-**Initial App Setup Requirements**:
-1. Create app in Google Play Console with package name `app.maypole.maypole`
-2. Complete all required store listing details (app name, description, screenshots, etc.)
-3. Complete content rating questionnaire
-4. Select target audience and content settings
-5. The workflow will upload the APK/AAB as a draft
-6. Manually review and publish your first release through the Play Console
-
-Once published, subsequent builds will continue to upload as drafts that you can review and release manually.
-
-#### Play Store: "Package not found"
-- Verify package name matches exactly: `app.maypole.maypole`
-- Check AndroidManifest.xml and build.gradle have correct package/applicationId
-- Ensure app exists in Play Console with this exact package name
-
-#### Play Store: "Invalid service account JSON"
-- Verify the JSON is complete (not truncated)
-- Ensure no extra quotes or escaping around the JSON in GitHub secrets
-- Validate JSON: `echo "$JSON" | jq .` should parse successfully
-
-#### TestFlight: "Invalid API Key"
-- Verify Key ID and Issuer ID are correct
-- Check that .p8 file is properly base64 encoded
-- Ensure API key has correct permissions in App Store Connect
+#### "Invalid API Key"
+- Verify all three values: Key ID, Issuer ID, and .p8 content
+- Ensure the `.p8` content includes the BEGIN/END lines
+- Check that API key has correct permissions in App Store Connect
 
 ### Getting Help
 
 - Check GitHub Actions logs for detailed error messages
-- Review the workflow YAML files for configuration issues
+- Review the Fastlane documentation: [https://docs.fastlane.tools/actions/match/](https://docs.fastlane.tools/actions/match/)
 - Ensure all secrets are properly set in GitHub
-
----
-
-## Beta Web App Strategy
-
-As you mentioned wanting thoughts on a beta web version for enrolled users:
-
-### Recommended Approach: Firebase Hosting Channels
-
-1. **Use Preview Channels**: Create a dedicated preview channel for beta
-   ```bash
-   firebase hosting:channel:create beta --project maypole-flutter
-   ```
-
-2. **Update Beta Workflow**: Modify `beta.yml` to also deploy web to beta channel:
-   ```yaml
-   - name: Deploy to Firebase Hosting (Beta Channel)
-     run: |
-       firebase hosting:channel:deploy beta --project maypole-flutter --non-interactive
-   ```
-
-3. **Access Control**: 
-   - Beta URL will be: `https://maypole-flutter--beta-XXXXXXXX.web.app`
-   - Share this URL only with beta testers
-   - Optionally add authentication check in your Flutter app to restrict beta features
-
-### Alternative: Separate Firebase Project
-
-Create a `maypole-flutter-beta` Firebase project and deploy there instead. This gives complete isolation but requires additional Firebase configuration.
 
 ---
 
@@ -654,38 +453,62 @@ Create a `maypole-flutter-beta` Firebase project and deploy there instead. This 
 
 ### Certificate Renewal
 
-- **Apple Distribution Certificate**: Valid for 1 year, renew annually
-- **Provisioning Profiles**: Valid for 1 year, renew annually
-- **Android Upload Keystore**: Valid for 10000 days (27+ years)
-  - Note: Even if compromised, you can reset your upload key in Play Console without affecting your app signing key or requiring users to reinstall
+- **Apple Distribution Certificate**: Valid for 1 year, auto-renewed by Match
+- **Provisioning Profiles**: Valid for 1 year, auto-renewed by Match
+- **App Store Connect API Key**: No expiration
+- **GitHub PAT**: Expires based on your setting (renew when needed)
+
+### When Certificates Expire
+
+Fastlane Match handles renewal automatically. If needed manually:
+
+```bash
+cd ios
+bundle exec fastlane match appstore --force
+```
+
+This will create new certificates and update your certificates repository.
 
 ### Regular Updates
 
 - Update Flutter version in workflows as needed
-- Keep dependencies up to date
+- Keep Fastlane and dependencies up to date: `bundle update`
 - Review and update security rules regularly
 
 ---
 
 ## Summary Checklist
 
-### Android
-- [ ] Upload keystore created and base64 encoded
-- [ ] Android build.gradle.kts updated with signing config (✅ Already done)
-- [ ] First AAB manually uploaded to enable Google Play App Signing
-- [ ] App signing certificate downloaded from Play Console (for reference)
-- [ ] Google Cloud service account created and configured
-- [ ] Service account linked to Play Console with correct permissions
-- [ ] Play Console testing tracks set up (internal and beta)
+### iOS Setup
+- [ ] App ID created in Apple Developer Portal
+- [ ] App Store Connect API key created (Key ID, Issuer ID, .p8 file)
+- [ ] App created in App Store Connect
+- [ ] TestFlight groups created (Internal, Beta Testers)
+- [ ] App-specific password generated
+- [ ] Private certificates repository created
+- [ ] GitHub Personal Access Token created
+- [ ] Fastlane Match initialized locally
+- [ ] All iOS GitHub secrets added
 
-### iOS
-- [ ] iOS certificates created and exported
-- [ ] iOS provisioning profiles created
-- [ ] App Store Connect API key created
-- [ ] ExportOptions.plist created with correct values
-- [ ] All GitHub secrets added
+### General Setup
 - [ ] Beta branch created and pushed
 - [ ] Firebase projects configured
+- [ ] GitHub Actions permissions set (read/write)
 - [ ] Test workflow executions completed successfully
 
-Once all items are checked, your automated deployment pipeline will be fully operational! 🚀
+Once all items are checked, your automated deployment pipeline is fully operational! 🚀
+
+---
+
+## Advantages of Fastlane Match
+
+Compared to manual certificate management, Fastlane Match provides:
+
+1. **Zero Manual Work**: No Keychain Access, no certificate exports, no .p12 files
+2. **Team Friendly**: New team members get certificates automatically
+3. **CI/CD Ready**: Works seamlessly in GitHub Actions, GitLab CI, etc.
+4. **Automatic Renewal**: Handles certificate expiration automatically
+5. **Single Source of Truth**: All certificates in one encrypted repository
+6. **Rollback Capability**: Git history of all certificate changes
+
+This is the modern, industry-standard approach to iOS code signing! 🎉

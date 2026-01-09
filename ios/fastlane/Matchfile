@@ -1,0 +1,26 @@
+# Fastlane Match configuration
+# For more information: https://docs.fastlane.tools/actions/match/
+
+# Storage mode - using Google Cloud Storage
+storage_mode("google_cloud")
+
+# Google Cloud Storage bucket name
+google_cloud_bucket_name(ENV["MATCH_GCS_BUCKET"])
+
+# Google Cloud project ID
+google_cloud_project_id(ENV["MATCH_GCS_PROJECT_ID"])
+
+# Skip confirmation when using GCS (required for CI/CD)
+skip_google_cloud_account_confirmation(true)
+
+# The type of certificates to manage (appstore, development, adhoc)
+type("appstore")
+
+# Your Apple Developer Team ID
+team_id(ENV["APPLE_TEAM_ID"])
+
+# Your Apple ID email
+username(ENV["APPLE_ID"])
+
+# The bundle identifier(s) for your app
+app_identifier([ENV["IOS_BUNDLE_ID"]])

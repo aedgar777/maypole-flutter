@@ -20,10 +20,14 @@ class LoginViewModel extends Notifier<LoginState> {
   void _setErrorMessage(String? message) {
     state = state.copyWith(errorMessage: message);
   }
+  
+  void _clearError() {
+    state = state.copyWith(clearError: true);
+  }
 
   Future<void> signInWithEmail(String email, String password) async {
     _setLoading(true);
-    _setErrorMessage(null); // Clear previous errors
+    _clearError(); // Clear previous errors
     try {
       await _authService.signInWithEmailAndPassword(email, password);
       // Success: No need to set message, state will reflect user login
@@ -52,7 +56,7 @@ class LoginViewModel extends Notifier<LoginState> {
 
   Future<void> signOut() async {
     _setLoading(true);
-    _setErrorMessage(null);
+    _clearError();
     try {
       await _authService.signOut();
     } catch (e) {

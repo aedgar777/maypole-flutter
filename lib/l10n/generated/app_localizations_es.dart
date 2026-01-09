@@ -372,4 +372,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get gotIt => 'Entendido';
+
+  @override
+  String get hasAddedAnImage => 'ha añadido una imagen';
 }
