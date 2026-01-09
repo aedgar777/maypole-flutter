@@ -150,9 +150,7 @@ jobs:
         run: flutter pub get
 
       - name: Clean build cache
-        run: |
-          flutter clean
-          cd android && ./gradlew clean && cd ..
+        run: flutter clean
 
       - name: Create .env file from secrets
         run: |
