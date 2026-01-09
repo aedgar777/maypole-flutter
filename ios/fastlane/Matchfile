@@ -10,6 +10,9 @@ google_cloud_bucket_name(ENV["MATCH_GCS_BUCKET"])
 # Google Cloud project ID
 google_cloud_project_id(ENV["MATCH_GCS_PROJECT_ID"])
 
+# Use credentials from environment variable (set by CI/CD or local shell)
+google_cloud_keys_file(ENV["GOOGLE_APPLICATION_CREDENTIALS"] || "#{Dir.pwd}/gc_keys.json")
+
 # Skip confirmation when using GCS (required for CI/CD)
 skip_google_cloud_account_confirmation(true)
 
