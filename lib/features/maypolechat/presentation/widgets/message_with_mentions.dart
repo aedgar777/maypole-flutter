@@ -240,10 +240,9 @@ class MessageWithMentions extends StatelessWidget {
       // Add the mention with highlighting
       spans.add(TextSpan(
         text: match.group(0),
-        style: TextStyle(
-          color: Colors.blue[700],
-          fontWeight: FontWeight.w600,
-          backgroundColor: Colors.blue[50],
+        style: const TextStyle(
+          color: brightTeal,
+          fontWeight: FontWeight.bold,
         ),
       ));
 

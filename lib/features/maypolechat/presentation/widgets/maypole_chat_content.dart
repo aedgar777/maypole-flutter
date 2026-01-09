@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
@@ -9,9 +10,11 @@ import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/domain/maypole_message.dart';
 import 'package:maypole/features/maypolechat/domain/user_mention.dart';
+import 'package:maypole/features/maypolechat/presentation/screens/maypole_gallery_screen.dart';
 import 'package:maypole/features/maypolechat/presentation/viewmodels/mention_controller.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/mention_text_field.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/message_with_mentions.dart';
+import 'package:maypole/features/maypolechat/presentation/widgets/image_upload_notification.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import 'package:maypole/core/ads/widgets/banner_ad_widget.dart';
 import 'package:maypole/core/ads/ad_config.dart';
@@ -45,6 +48,8 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
   final ScrollController _scrollController = ScrollController();
   final FocusNode _messageFocusNode = FocusNode();
   final Set<String> _animatedMessageIds = {};
+  final ImagePicker _picker = ImagePicker();
+  bool _isUploadingImage = false;
 
   @override
   void initState() {
@@ -154,32 +159,40 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                 return _AnimatedMessageItem(
                   key: ValueKey(messageKey),
                   isNew: isNew,
-                  child: GestureDetector(
-                    onLongPress: () {
-                      HapticFeedback.mediumImpact();
-                      _showMessageContextMenu(context, message);
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8.0,
-                        vertical: 4.0,
-                      ),
-                      child: MessageWithMentions(
-                        senderName: message.senderName,
-                        senderId: message.senderId,
-                        senderProfilePictureUrl: message.senderProfilePictureUrl,
-                        body: message.body,
-                        timestamp: message.timestamp,
-                        isOwnMessage: isOwnMessage,
-                        onTagUser: !isOwnMessage 
-                            ? () => _tagUser(message.senderName, message.senderId)
-                            : null,
-                        onDelete: isOwnMessage
-                            ? () => _deleteMessage(message)
-                            : null,
-                      ),
-                    ),
-                  ),
+                  child: message.isImageUpload
+                      ? ImageUploadNotification(
+                          senderName: message.senderName,
+                          maypoleId: widget.threadId,
+                          maypoleName: widget.maypoleName,
+                          imageId: message.imageId ?? '',
+                          timestamp: message.timestamp,
+                        )
+                      : GestureDetector(
+                          onLongPress: () {
+                            HapticFeedback.mediumImpact();
+                            _showMessageContextMenu(context, message);
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8.0,
+                              vertical: 4.0,
+                            ),
+                            child: MessageWithMentions(
+                              senderName: message.senderName,
+                              senderId: message.senderId,
+                              senderProfilePictureUrl: message.senderProfilePictureUrl,
+                              body: message.body,
+                              timestamp: message.timestamp,
+                              isOwnMessage: isOwnMessage,
+                              onTagUser: !isOwnMessage 
+                                  ? () => _tagUser(message.senderName, message.senderId)
+                                  : null,
+                              onDelete: isOwnMessage
+                                  ? () => _deleteMessage(message)
+                                  : null,
+                            ),
+                          ),
+                        ),
                 );
               },
             ),
@@ -202,7 +215,26 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.maypoleName)),
+      appBar: AppBar(
+        title: Text(widget.maypoleName),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.photo_library),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MaypoleGalleryScreen(
+                    threadId: widget.threadId,
+                    maypoleName: widget.maypoleName,
+                  ),
+                ),
+              );
+            },
+            tooltip: 'View gallery',
+          ),
+        ],
+      ),
       body: body,
       bottomNavigationBar: AdConfig.adsEnabled
           ? const BannerAdWidget(
@@ -241,6 +273,24 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 38.0),
       child: Row(
         children: [
+          _isUploadingImage
+              ? const Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white70,
+                    ),
+                  ),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.image),
+                  color: Colors.white70,
+                  onPressed: () => _pickAndUploadImage(sender),
+                  tooltip: 'Add photo',
+                ),
           Expanded(
             child: MentionTextField(
               controller: _messageController,
@@ -310,6 +360,78 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
         );
       },
     );
+  }
+
+  Future<void> _pickAndUploadImage(DomainUser sender) async {
+    if (_isUploadingImage) return;
+
+    try {
+      // Show dialog to choose between camera and gallery
+      final source = await showDialog<ImageSource>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Select Image Source'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Gallery'),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Camera'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (source == null) return;
+
+      // Pick image
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (image == null) return;
+
+      setState(() {
+        _isUploadingImage = true;
+      });
+
+      // Upload image
+      await ref.read(maypoleImageServiceProvider).uploadImage(
+        maypoleId: widget.threadId,
+        maypoleName: widget.maypoleName,
+        userId: sender.firebaseID,
+        username: sender.username,
+        filePath: image.path,
+      );
+
+      if (mounted) {
+        AppToast.showSuccess(context, 'Image uploaded successfully!');
+      }
+    } catch (e) {
+      if (mounted) {
+        if (e.toString().contains('Rate limit')) {
+          AppToast.showError(context, e.toString());
+        } else {
+          ErrorDialog.show(context, e);
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingImage = false;
+        });
+      }
+    }
   }
 
   Future<void> _deleteMessage(MaypoleMessage message) async {

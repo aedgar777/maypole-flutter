@@ -20,5 +20,42 @@ service firebase.storage {
       allow delete: if request.auth != null 
                     && request.auth.uid == userId;
     }
+    
+    // Profile Pictures Rules (new path structure)
+    // Path structure: profile_pictures/{userId}/profile.{extension}
+    match /profile_pictures/{userId}/{allPaths=**} {
+      // Anyone can read profile pictures (needed for displaying in chats)
+      allow read: if true;
+      
+      // Only authenticated users can upload to their own folder
+      allow write: if request.auth != null 
+                   && request.auth.uid == userId
+                   && request.resource.size < 5 * 1024 * 1024  // 5MB max
+                   && request.resource.contentType.matches('image/.*')
+                   && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/gif'];
+      
+      // Only owner can delete their own pictures
+      allow delete: if request.auth != null 
+                    && request.auth.uid == userId;
+    }
+    
+    // Maypole Images Rules
+    // Path structure: maypole_images/{maypoleId}/{filename}
+    match /maypole_images/{maypoleId}/{allPaths=**} {
+      // Anyone authenticated can read maypole images
+      allow read: if request.auth != null;
+      
+      // Authenticated users can create/upload maypole images
+      // Note: Rate limiting (10 images/hour per user per maypole) is enforced at application level
+      allow create: if request.auth != null
+                    && request.resource.size < 10 * 1024 * 1024  // 10MB max
+                    && request.resource.contentType.matches('image/.*');
+      
+      // Allow updating metadata (for Cloud Functions or other operations)
+      allow update: if request.auth != null;
+      
+      // Users can delete images (ownership is verified at application level via Firestore)
+      allow delete: if request.auth != null;
+    }
   }
 }

@@ -503,5 +503,9 @@
   "gotIt": "Got it",
   "@gotIt": {
     "description": "Button text to acknowledge a message"
+  },
+  "hasAddedAnImage": "has added an image",
+  "@hasAddedAnImage": {
+    "description": "Text shown when a user uploads an image to a maypole"
   }
 }
