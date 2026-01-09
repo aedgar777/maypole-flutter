@@ -43,24 +43,34 @@ platform :ios do
     team_id = ENV["APPLE_TEAM_ID"]
     bundle_id = ENV["IOS_BUNDLE_ID"]
     
-    puts "🔨 Building and archiving with Fastlane gym..."
+    puts "🔨 Building and archiving with manual xcodebuild..."
     
-    # Get available iOS SDK to avoid "iOS x.x not installed" errors
+    # Get available iOS SDK
     ios_sdk = `xcodebuild -showsdks | grep -o 'iphoneos[0-9.]*' | tail -1`.strip
     puts "Using iOS SDK: #{ios_sdk}"
     
-    # Use Fastlane's build_app (gym) with explicit SDK
-    # Flutter has already built the frameworks, gym will re-build with signing
-    build_app(
-      workspace: "Runner.xcworkspace",
-      scheme: "Runner",
-      configuration: "Release",
-      sdk: ios_sdk,
+    # Step 1: Build archive with xcodebuild (without -destination to avoid SDK issues)
+    archive_path = File.expand_path("../../build/ios/archive/Runner.xcarchive", __dir__)
+    sh "xcodebuild archive " \
+       "-workspace Runner.xcworkspace " \
+       "-scheme Runner " \
+       "-configuration Release " \
+       "-sdk #{ios_sdk} " \
+       "-archivePath '#{archive_path}' " \
+       "-allowProvisioningUpdates " \
+       "CODE_SIGN_STYLE=Manual " \
+       "DEVELOPMENT_TEAM=#{team_id} " \
+       "PROVISIONING_PROFILE_SPECIFIER='#{profile_name}'"
+    
+    puts "✅ Archive created"
+    
+    # Step 2: Export IPA using gym's export
+    gym(
+      skip_build_archive: true,
+      archive_path: archive_path,
       export_method: "app-store",
       output_directory: "../build/ios/ipa",
       output_name: "maypole.ipa",
-      clean: false,  # Don't clean since Flutter already built
-      buildlog_path: "../build/logs",
       export_options: {
         method: "app-store",
         teamID: team_id,
