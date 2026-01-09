@@ -187,72 +187,6 @@ maypole-flutter/
 
 ---
 
-## 🚀 Getting Started
-
-### Prerequisites
-
-- **Flutter SDK 3.8+** ([installation guide](https://flutter.dev/docs/get-started/install))
-- **Dart SDK 3.8.0+** (included with Flutter)
-- **Firebase CLI** (`npm install -g firebase-tools`)
-- **Xcode** (for iOS/macOS development)
-- **Android Studio** (for Android development)
-- **Git** for version control
-
-### Setup
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/maypole-flutter.git
-   cd maypole-flutter
-   ```
-
-2. **Install dependencies**
-   ```bash
-   flutter pub get
-   ```
-
-3. **Configure Firebase**
-   - Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
-   - Enable Authentication, Firestore, Storage, and Cloud Messaging
-   - Download `google-services.json` (Android) and `GoogleService-Info.plist` (iOS)
-   - Place them in the appropriate platform directories
-
-4. **Set up environment variables**
-   ```bash
-   cp .env.example .env.local
-   # Edit .env.local with your API keys
-   ```
-
-5. **Deploy Firestore rules and indexes**
-   ```bash
-   ./deploy-firestore-rules.sh
-   ./deploy-firestore-indexes.sh
-   ```
-
-6. **Run the app**
-   ```bash
-   flutter run --flavor dev
-   ```
-
-### Building
-
-**Android**
-```bash
-./scripts/build-android-prod-release.sh
-```
-
-**iOS**
-```bash
-./scripts/build-ios-prod-release.sh
-```
-
-**Web**
-```bash
-./scripts/build-web-prod.sh
-```
-
----
-
 ## 🌐 Use Cases
 
 ### For Communities
@@ -273,11 +207,6 @@ maypole-flutter/
 - Pet owners meeting at dog parks
 - Hobbyists finding local groups (photography spots, fishing holes, etc.)
 
----
-
-## 📱 Screenshots
-
-*(Coming soon - add screenshots of key features)*
 
 ---
 
@@ -297,14 +226,12 @@ This is a private project, but contributions are welcome from team members. Plea
 
 Copyright © 2026 Maypole. All rights reserved.
 
-This is proprietary software. Unauthorized copying, distribution, or use is strictly prohibited.
-
 ---
 
 ## 📞 Contact
 
 For questions, support, or business inquiries:
-- Email: support@maypole.app
+- Email: info@maypole.app
 - Website: [maypole.app](https://maypole.app)
 
 ---
