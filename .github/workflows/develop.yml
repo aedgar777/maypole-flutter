@@ -21,7 +21,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.7'
+          flutter-version: '3.24.3'
           channel: 'stable'
 
       - name: Get dependencies
@@ -61,7 +61,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.7'
+          flutter-version: '3.24.3'
           channel: 'stable'
 
       - name: Flutter pub get
@@ -181,7 +181,7 @@ jobs:
   #     - name: Setup Flutter
   #       uses: subosito/flutter-action@v2
   #       with:
-#                   flutter-version: '3.35.7'
+#                   flutter-version: '3.24.3'
   #         channel: 'stable'
   #
   #     - name: Get dependencies
@@ -246,18 +246,35 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Select Xcode version
+      - name: List and select Xcode version
         run: |
-          # Use the latest stable Xcode available on the runner
-          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer || \
-          sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer || \
-          sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer
+          # List all available Xcode versions
+          echo "Available Xcode versions:"
+          ls /Applications/ | grep Xcode
+          
+          # Select the latest stable Xcode (try common versions)
+          if [ -d "/Applications/Xcode_16.1.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_16.0.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_15.4.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_15.3.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_15.3.app/Contents/Developer
+          fi
+          
+          echo "Selected Xcode version:"
           xcodebuild -version
+          
+          echo "Available iOS SDKs:"
+          xcodebuild -showsdks | grep -i ios
           
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.7'
+          # Using 3.24.3 - a well-established stable version available on GitHub Actions
+          # Your local version (3.35.7) is newer but may cause issues if not available on runners
+          flutter-version: '3.24.3'
           channel: 'stable'
 
       - name: Get dependencies
