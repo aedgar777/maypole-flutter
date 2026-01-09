@@ -341,4 +341,7 @@ class MockAppLocalizations extends AppLocalizations {
 
   @override
   String get gotIt => 'Got it';
+
+  @override
+  String get hasAddedAnImage => 'has added an image';
 }
