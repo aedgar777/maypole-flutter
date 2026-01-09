@@ -46,9 +46,19 @@ app.*.map.json
 
 # Environment files with sensitive data
 .env
-.env.local
 .env.dev
 .env.prod
+.env.local
+
+# Android keystore and signing files (NEVER commit these!)
+android/key.properties
+android/app/*.jks
+android/app/*.keystore
+*.jks
+*.keystore
+
+# Keystore backup documentation (contains sensitive info)
+KEYSTORE_BACKUP.md
 .env.production
 
 # Firebase configuration files with sensitive data
@@ -56,8 +66,33 @@ app.*.map.json
 /ios/Runner/GoogleService-Info.plist
 /macos/Runner/GoogleService-Info.plist
 
+# iOS signing files
+ios/*.p12
+ios/*.mobileprovision
+ios/*.cer
+ios/*.certSigningRequest
+ios/AuthKey_*.p8
+ios/AuthKey.json
+
+# Fastlane
+ios/fastlane/report.xml
+ios/fastlane/Preview.html
+ios/fastlane/screenshots
+ios/fastlane/test_output
+ios/.env.local
+ios/vendor/bundle
+
 # Local properties (contains SDK paths)
 android/local.properties
+
+# Android signing keys
+android/key.properties
+android/app/*.jks
+android/app/*.keystore
+*.jks
+*keystore*.jks
+keystore_base64.txt
+*_base64.txt
 
 # Sensitive Firebase files
 firebase-debug.log
@@ -71,9 +106,19 @@ firebase-debug.*.log
 /functions/venv/
 /functions/__pycache__/
 
+# Node.js functions
+/functions-js/node_modules/
+/functions-js/.firebase/
+
 # Any backup files of sensitive data
 *.backup
 firebase_options.dart.backup
 
 # Team secrets management
 .secrets-project
+
+# Firebase project configuration
+# Note: .firebaserc should be gitignored if it contains sensitive project IDs
+# For open source or when project IDs are not sensitive, you can commit it
+# See .firebaserc for template
+.firebaserc

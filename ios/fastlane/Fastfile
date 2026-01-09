@@ -1,0 +1,186 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#     https://docs.fastlane.tools/plugins/available-plugins
+
+# Reduce log verbosity
+opt_out_usage
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Sync development certificates and provisioning profiles"
+  lane :sync_dev_signing do
+    match(
+      type: "appstore",
+      app_identifier: ENV["IOS_BUNDLE_ID"],
+      readonly: true,
+      verbose: true
+    )
+  end
+
+  desc "Sync production certificates and provisioning profiles"
+  lane :sync_prod_signing do
+    match(
+      type: "appstore",
+      app_identifier: ENV["IOS_BUNDLE_ID"],
+      readonly: true,
+      verbose: true
+    )
+  end
+
+  desc "Archive and upload development to TestFlight"
+  lane :deploy_dev do
+    # Sync certificates and get provisioning profile info
+    sync_dev_signing
+    
+    # Get signing information
+    profile_name = "match AppStore #{ENV['IOS_BUNDLE_ID']}"
+    team_id = ENV["APPLE_TEAM_ID"]
+    bundle_id = ENV["IOS_BUNDLE_ID"]
+    
+    puts "🔨 Building IPA with gym..."
+    
+    # Use gym without specifying SDK - let it use the default from Xcode
+    # Flutter already built the app, gym will rebuild with signing
+    build_ios_app(
+      workspace: "Runner.xcworkspace",
+      scheme: "Runner",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "../build/ios/ipa",
+      output_name: "maypole.ipa",
+      clean: false,  # Don't clean Flutter's build
+      include_bitcode: false,
+      include_symbols: true,
+      export_options: {
+        method: "app-store",
+        teamID: team_id,
+        provisioningProfiles: {
+          bundle_id => profile_name
+        },
+        signingStyle: "manual",
+        uploadSymbols: true,
+        uploadBitcode: false
+      },
+      xcargs: "-allowProvisioningUpdates"
+    )
+    
+    puts "✅ Build and archive completed successfully!"
+    puts "☁️  Uploading to TestFlight..."
+
+    # Step 2: Upload to TestFlight
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
+      key_filepath: ENV["APP_STORE_CONNECT_API_KEY_KEY_FILEPATH"],
+      in_house: false
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: "../build/ios/ipa/maypole.ipa",
+      skip_waiting_for_build_processing: true,
+      distribute_external: false,
+      notify_external_testers: false
+    )
+    
+    puts "🎉 Deployment completed successfully!"
+  end
+
+  desc "Build and upload beta to TestFlight"
+  lane :deploy_beta do
+    # Sync certificates
+    sync_prod_signing
+
+    # Build the app
+    build_app(
+      workspace: "Runner.xcworkspace",
+      scheme: "Runner",
+      export_method: "app-store",
+      export_options: {
+        method: "app-store",
+        provisioningProfiles: {
+          ENV["IOS_BUNDLE_ID"] => "match AppStore #{ENV['IOS_BUNDLE_ID']}"
+        }
+      }
+    )
+
+    # Create API key for App Store Connect
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
+      key_filepath: ENV["APP_STORE_CONNECT_API_KEY_KEY_FILEPATH"],
+      in_house: false
+    )
+
+    # Upload to TestFlight (beta group)
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true,
+      distribute_external: true,
+      groups: ["Beta Testers"],
+      notify_external_testers: true
+    )
+  end
+
+  desc "Upload pre-built IPA to TestFlight"
+  lane :upload_ipa_only do
+    # Create API key for App Store Connect
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
+      key_filepath: ENV["APP_STORE_CONNECT_API_KEY_KEY_FILEPATH"],
+      in_house: false
+    )
+
+    # Upload the IPA that was manually created
+    # Note: build_app creates maypole.ipa by default
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: "../build/ios/ipa/maypole.ipa",
+      skip_waiting_for_build_processing: true,
+      distribute_external: false,
+      notify_external_testers: false
+    )
+  end
+
+  desc "Build and upload production to TestFlight/App Store"
+  lane :deploy_prod do
+    # Sync certificates
+    sync_prod_signing
+
+    # Build the app
+    build_app(
+      workspace: "Runner.xcworkspace",
+      scheme: "Runner",
+      export_method: "app-store",
+      export_options: {
+        method: "app-store",
+        provisioningProfiles: {
+          ENV["IOS_BUNDLE_ID"] => "match AppStore #{ENV['IOS_BUNDLE_ID']}"
+        }
+      }
+    )
+
+    # Create API key for App Store Connect
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
+      key_filepath: ENV["APP_STORE_CONNECT_API_KEY_KEY_FILEPATH"],
+      in_house: false
+    )
+
+    # Upload to App Store
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true,
+      distribute_external: false,
+      notify_external_testers: false
+    )
+  end
+end

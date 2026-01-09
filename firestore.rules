@@ -4,15 +4,18 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Users collection rules
     match /users/{userId} {
-      // Allow users to read their own document
-      allow read: if request.auth != null && request.auth.uid == userId;
+      // Allow authenticated users to read any user's public profile data
+      // This is needed for displaying usernames, profile pictures, etc.
+      allow read: if request.auth != null;
       
       // Allow users to create their own document when registering
       // The document ID must match their Firebase UID
       allow create: if request.auth != null 
                     && request.auth.uid == userId
                     && request.resource.data.firebaseID == userId
-                    && request.resource.data.keys().hasAll(['username', 'email', 'firebaseID']);
+                    && request.resource.data.keys().hasAll(['username', 'email', 'firebaseID'])
+                    && request.resource.data.username is string
+                    && request.resource.data.email is string;
       
       // Allow users to update their own document
       // Prevent changing firebaseID and email
@@ -23,11 +26,28 @@ service cloud.firestore {
       
       // Allow users to delete their own document
       allow delete: if request.auth != null && request.auth.uid == userId;
+      
+      // Notifications subcollection within user document
+      match /notifications/{notificationId} {
+        // Allow users to read their own notifications
+        allow read: if request.auth != null && request.auth.uid == userId;
+        
+        // Allow authenticated users to create notifications for any user
+        // This is needed when sending DMs or tagging users
+        allow create: if request.auth != null;
+        
+        // Allow users to update their own notifications (e.g., mark as read)
+        allow update: if request.auth != null && request.auth.uid == userId;
+        
+        // Allow users to delete their own notifications
+        allow delete: if request.auth != null && request.auth.uid == userId;
+      }
     }
     
     // Usernames collection for username availability checking
     match /usernames/{username} {
-      // Allow anyone to read username documents (they only contain minimal data)
+      // Allow unauthenticated reads for username availability checking during registration
+      // This is safe because username enumeration is not a security concern
       allow read: if true;
       
       // Allow authenticated users to create username documents with proper structure
@@ -38,6 +58,100 @@ service cloud.firestore {
       
       // Allow users to delete their own username documents
       allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
+    }
+    
+    // Maypoles (place-based chat threads) collection rules
+    match /maypoles/{maypoleId} {
+      // Allow authenticated users to read any maypole thread
+      allow read: if request.auth != null;
+      
+      // Allow authenticated users to create or update maypole threads
+      // This is needed when sending the first message to a new thread
+      allow create, update: if request.auth != null;
+      
+      // Messages subcollection within a maypole thread
+      match /messages/{messageId} {
+        // Allow authenticated users to read messages in any thread
+        allow read: if request.auth != null;
+        
+        // Allow authenticated users to create messages
+        // Validates senderId matches authenticated user and body length
+        // Optional fields: messageType (for image uploads), imageId
+        allow create: if request.auth != null
+                      && request.resource.data.senderId == request.auth.uid
+                      && request.resource.data.body is string
+                      && request.resource.data.body.size() > 0
+                      && request.resource.data.body.size() <= 5000;
+        
+        // Allow users to delete only their own messages
+        allow delete: if request.auth != null 
+                      && resource.data.senderId == request.auth.uid;
+      }
+      
+      // Images subcollection within a maypole thread
+      match /images/{imageId} {
+        // Allow authenticated users to read images in any thread
+        allow read: if request.auth != null;
+        
+        // Allow authenticated users to create images
+        // Validate uploaderId matches authenticated user and required fields exist
+        // Note: Rate limiting is enforced at the application level (10 images/hour)
+        allow create: if request.auth != null
+                      && request.resource.data.uploaderId == request.auth.uid
+                      && request.resource.data.maypoleId is string
+                      && request.resource.data.uploaderId is string
+                      && request.resource.data.uploaderName is string
+                      && request.resource.data.uploadedAt is timestamp
+                      && request.resource.data.storageUrl is string
+                      && request.resource.data.maypoleId == maypoleId;
+        
+        // Allow users to delete only their own images
+        allow delete: if request.auth != null 
+                      && resource.data.uploaderId == request.auth.uid;
+      }
+    }
+    
+    // Direct Message threads collection rules
+    match /DMThreads/{threadId} {
+      // Helper function for create/update - check thread ID pattern
+      function isParticipant() {
+        return request.auth != null && (
+          threadId.matches(request.auth.uid + '_.*') ||
+          threadId.matches('.*_' + request.auth.uid)
+        );
+      }
+      
+      // For individual document reads (get), verify thread ID pattern
+      allow get: if isParticipant();
+      
+      // For queries (list), allow authenticated users
+      // The client query MUST use .where('participantIds', arrayContains: userId)
+      // to ensure users only receive threads they're part of
+      allow list: if request.auth != null;
+      
+      // Allow users to create threads they are part of
+      allow create: if isParticipant() 
+                    && request.auth.uid in request.resource.data.participantIds;
+      
+      // Allow users to update threads they are part of
+      // This is needed for updating lastMessage and lastMessageTime
+      allow update: if isParticipant();
+      
+      // Messages subcollection within a DM thread
+      match /messages/{messageId} {
+        // Allow participants to read messages in their DM thread
+        allow read: if isParticipant();
+        
+        // Allow participants to create messages in their DM thread
+        allow create: if isParticipant();
+        
+        // Allow users to update messages they sent (for soft-delete via deletedFor field)
+        // Ensure the sender field cannot be changed
+        allow update: if isParticipant() 
+                      && request.auth != null
+                      && resource.data.sender == request.resource.data.sender
+                      && resource.data.sender == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username;
+      }
     }
     
     // Default deny for all other documents

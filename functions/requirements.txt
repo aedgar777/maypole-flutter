@@ -1,1 +1,6 @@
-firebase_functions~=0.1.0
+firebase-admin==6.5.0
+firebase-functions==0.4.1
+google-cloud-firestore==2.16.0
+google-cloud-storage==2.18.2
+Pillow==10.4.0
+requests==2.32.3

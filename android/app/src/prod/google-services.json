@@ -12,34 +12,17 @@
           "package_name": "app.maypole.maypole"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "1069925301177-ap52ltfg327s2ltbtlt8r9qu9l93tmrj.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "app.maypole.maypole",
-            "certificate_hash": "1734c3f11e36840f3c7fae53fc50cd84dfd7b1d8"
-          }
-        },
-        {
-          "client_id": "1069925301177-9lo5bht5kis83tpcsnd8lsi10au52878.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAySMsqTui6rG0iVCc4f3fmMhwLfsMd-W0"
+          "current_key": "AIzaSyC-PQzzGsoVRg1QSq6NtA1K0xZPs5NdWbM"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "1069925301177-9lo5bht5kis83tpcsnd8lsi10au52878.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "1069925301177-55lqkvi2bm0cc9gjru289ck4ur34kif2.apps.googleusercontent.com",
+              "client_id": "1069925301177-5mrbhfnct3l39g1vj6tlhvfmcug4vi11.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
                 "bundle_id": "app.maypole.maypole"

@@ -3,15 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/services/auth_service.dart';
 import '../../domain/states/auth_state.dart';
 
+class LoginViewModel extends Notifier<LoginState> {
+  late final AuthService _authService;
 
-
-
-class LoginViewModel extends StateNotifier<LoginState> {
-  final AuthService _authService;
-
-  LoginViewModel({required AuthService authService})
-      : _authService = authService,
-        super(const LoginState()); // Initialize the state
+  @override
+  LoginState build() {
+    _authService = ref.watch(authServiceProvider);
+    return const LoginState();
+  }
 
   // Methods to update state
   void _setLoading(bool value) {
@@ -21,10 +20,14 @@ class LoginViewModel extends StateNotifier<LoginState> {
   void _setErrorMessage(String? message) {
     state = state.copyWith(errorMessage: message);
   }
+  
+  void _clearError() {
+    state = state.copyWith(clearError: true);
+  }
 
   Future<void> signInWithEmail(String email, String password) async {
     _setLoading(true);
-    _setErrorMessage(null); // Clear previous errors
+    _clearError(); // Clear previous errors
     try {
       await _authService.signInWithEmailAndPassword(email, password);
       // Success: No need to set message, state will reflect user login
@@ -53,7 +56,7 @@ class LoginViewModel extends StateNotifier<LoginState> {
 
   Future<void> signOut() async {
     _setLoading(true);
-    _setErrorMessage(null);
+    _clearError();
     try {
       await _authService.signOut();
     } catch (e) {
@@ -63,3 +66,8 @@ class LoginViewModel extends StateNotifier<LoginState> {
     }
   }
 }
+
+// Add the missing provider import
+final authServiceProvider = Provider<AuthService>((ref) {
+  return AuthService();
+});

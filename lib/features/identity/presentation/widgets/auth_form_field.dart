@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:maypole/core/app_theme.dart';
 
 class AuthFormField extends StatelessWidget {
   final TextEditingController controller;
@@ -6,7 +7,9 @@ class AuthFormField extends StatelessWidget {
   final bool obscureText;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
-  final void Function(String)? onChanged; // Add this line
+  final void Function(String)? onChanged;
+  final void Function(String)? onFieldSubmitted;
+  final int? maxLength;
 
   const AuthFormField({
     super.key,
@@ -15,7 +18,9 @@ class AuthFormField extends StatelessWidget {
     this.obscureText = false,
     this.keyboardType,
     this.validator,
-    this.onChanged, // Add this line
+    this.onChanged,
+    this.onFieldSubmitted,
+    this.maxLength,
   });
 
   @override
@@ -24,12 +29,49 @@ class AuthFormField extends StatelessWidget {
       controller: controller,
       decoration: InputDecoration(
         labelText: labelText,
-        border: OutlineInputBorder(),
+        filled: true,
+        fillColor: lightPurple,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.primary,
+            width: 2,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.error,
+            width: 2,
+          ),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.error,
+            width: 2,
+          ),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        counterText: '',
       ),
       obscureText: obscureText,
       keyboardType: keyboardType,
       validator: validator,
-      onChanged: onChanged, // Add this line
+      onChanged: onChanged,
+      onFieldSubmitted: onFieldSubmitted,
+      maxLength: maxLength,
     );
   }
 }

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/utils/string_utils.dart';
+import 'package:maypole/core/widgets/error_dialog.dart';
+import 'package:maypole/l10n/generated/app_localizations.dart';
+import '../domain/domain_user.dart';
 import './widgets/auth_form_field.dart';
 import '../auth_providers.dart';
 import '../domain/states/auth_state.dart';
@@ -18,37 +21,66 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _usernameController = TextEditingController();
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _usernameController.dispose();
     super.dispose();
   }
 
-  Widget _buildLoggedInView(User user) {
-    // Automatically navigate to chat list when user is registered and logged in
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.go('/home');
-    });
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text('Welcome ${user.email}'),
-          ElevatedButton(
-            onPressed: () => context.go('/'),
-            child: const Text('Continue to App'),
+  void _showSuccessDialogAndNavigate(BuildContext context) {
+    // Show success dialog informing user about verification email
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      
+      final l10n = AppLocalizations.of(context)!;
+      final email = _emailController.text.trim();
+      
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                Icons.check_circle_outline,
+                color: Colors.green,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(l10n.registrationSuccessTitle),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+          content: Text(
+            l10n.registrationSuccessMessage(email),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                if (mounted) {
+                  context.go('/home');
+                }
+              },
+              child: Text(l10n.gotIt),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
-  Widget _buildRegistrationForm(RegistrationState registrationState) {
+  Widget _buildRegistrationForm(RegistrationState registrationState,
+      BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -58,23 +90,46 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               AuthFormField(
-                controller: _usernameController,
-                labelText: 'Username',
-                validator: StringUtils.validateUsername
+                  controller: _usernameController,
+                  labelText: l10n.username,
+                  maxLength: StringUtils.maxUsernameLength,
+                  onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
+                      _handleRegistration() : null,
+                  validator: (value) => StringUtils.validateUsername(value, l10n)
               ),
               const SizedBox(height: 20),
               AuthFormField(
-                controller: _emailController,
-                labelText: 'Email',
-                keyboardType: TextInputType.emailAddress,
-                validator: StringUtils.validateEmail
+                  controller: _emailController,
+                  labelText: l10n.email,
+                  keyboardType: TextInputType.emailAddress,
+                  maxLength: StringUtils.maxEmailLength,
+                  onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
+                      _handleRegistration() : null,
+                  validator: (value) => StringUtils.validateEmail(value, l10n)
               ),
               const SizedBox(height: 20),
               AuthFormField(
-                controller: _passwordController,
-                labelText: 'Password',
-                obscureText: true,
-                validator: StringUtils.validatePassword
+                  controller: _passwordController,
+                  labelText: l10n.password,
+                  obscureText: true,
+                  maxLength: StringUtils.maxPasswordLength,
+                  onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
+                      _handleRegistration() : null,
+                  validator: (value) => StringUtils.validatePassword(value, l10n)
+              ),
+              const SizedBox(height: 20),
+              AuthFormField(
+                  controller: _confirmPasswordController,
+                  labelText: l10n.confirmPassword,
+                  obscureText: true,
+                  maxLength: StringUtils.maxPasswordLength,
+                  onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
+                      _handleRegistration() : null,
+                  validator: (value) => StringUtils.validateConfirmPassword(
+                    value,
+                    _passwordController.text,
+                    l10n
+                  )
               ),
               const SizedBox(height: 30),
               if (registrationState.isLoading)
@@ -84,11 +139,11 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   children: [
                     ElevatedButton(
                       onPressed: _handleRegistration,
-                      child: const Text('Register'),
+                      child: Text(l10n.register),
                     ),
                     TextButton(
                       onPressed: () => context.go('/login'),
-                      child: const Text('Already have an account? Login'),
+                      child: Text(l10n.alreadyHaveAccount),
                     ),
                   ],
                 ),
@@ -120,17 +175,27 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   @override
   Widget build(BuildContext context) {
     final registrationState = ref.watch(registrationViewModelProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Register'),
+        title: Text(l10n.register),
       ),
       body: ref.watch(authStateProvider).when(
-        data: (user) => user != null
-            ? _buildLoggedInView(user)
-            : _buildRegistrationForm(registrationState),
+        data: (user) {
+          if (user != null) {
+            _showSuccessDialogAndNavigate(context);
+            return const Center(child: CircularProgressIndicator());
+          }
+          return _buildRegistrationForm(registrationState, context);
+        },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        error: (err, stack) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ErrorDialog.show(context, err);
+          });
+          return const Center(child: CircularProgressIndicator());
+        },
       ),
     );
   }

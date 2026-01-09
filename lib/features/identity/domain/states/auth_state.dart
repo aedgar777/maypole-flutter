@@ -20,10 +20,11 @@ class LoginState extends AuthState {
   LoginState copyWith({
     bool? isLoading,
     String? errorMessage,
+    bool clearError = false,
   }) {
     return LoginState(
       isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
   }
 }
@@ -41,10 +42,11 @@ class RegistrationState extends AuthState {
     bool? isLoading,
     String? errorMessage,
     bool? isUsernameValid,
+    bool clearError = false,
   }) {
     return RegistrationState(
       isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       isUsernameValid: isUsernameValid ?? this.isUsernameValid,
     );
   }

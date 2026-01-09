@@ -2,38 +2,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/services/auth_service.dart';
 import '../../domain/states/auth_state.dart';
 
+class RegistrationViewModel extends Notifier<RegistrationState> {
+  late final AuthService _authService;
 
-class RegistrationViewModel extends StateNotifier<RegistrationState> {
-  final AuthService _authService;
-
-  RegistrationViewModel({required AuthService authService})
-      : _authService = authService,
-        super(const RegistrationState());
+  @override
+  RegistrationState build() {
+    _authService = ref.watch(authServiceProvider);
+    return const RegistrationState();
+  }
 
   Future<void> register({
     required String email,
     required String password,
     required String username,
   }) async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    // Clear any previous errors and set loading state
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
-
-      final isAvailable = await _authService.isUsernameAvailable(username);
-      if (!isAvailable) {
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: 'Username is already taken',
-        );
-        return;
-      }
-
-      // Proceed with registration if username is available
+      // Username availability check is done in registerWithEmailAndPassword
       await _authService.registerWithEmailAndPassword(
         email,
         password,
         username,
       );
-      state = state.copyWith(isLoading: false);
+      state = state.copyWith(isLoading: false, clearError: true);
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -42,3 +34,7 @@ class RegistrationViewModel extends StateNotifier<RegistrationState> {
     }
   }
 }
+
+final authServiceProvider = Provider<AuthService>((ref) {
+  return AuthService();
+});

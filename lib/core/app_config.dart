@@ -1,4 +1,5 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'utils/platform_info.dart';
 
 /// A class to access environment-specific variables.
 ///
@@ -6,8 +7,17 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 /// and provides the correct keys based on whether the app is in
 /// 'prod' or 'dev' mode.
 class AppConfig {
-
   static String get _environment => dotenv.env['ENVIRONMENT'] ?? 'dev';
+
+  /// Returns true if the app is running on desktop platforms (Windows, Linux, macOS).
+  static bool get isDesktop {
+    return PlatformInfo.isDesktop;
+  }
+
+  /// Returns true if the app is running on desktop or web (typically wide screen devices).
+  static bool get isWideScreen {
+    return PlatformInfo.isWideScreen;
+  }
 
   /// Returns true if the current environment is production.
   static bool get isProduction => _environment.toLowerCase() == 'prod' || _environment.toLowerCase() == 'production';
@@ -128,10 +138,33 @@ class AppConfig {
 
   /// Provides the correct Google Places API key based on the environment.
   static String get googlePlacesApiKey {
+    // First check dart-define (used in web builds)
+    const dartDefineKey = String.fromEnvironment('GOOGLE_PLACES_API_KEY');
+    if (dartDefineKey.isNotEmpty) {
+      return dartDefineKey;
+    }
+
+    // Fall back to dotenv
     if (isProduction) {
       return dotenv.env['GOOGLE_PLACES_PROD_API_KEY'] ?? '';
     } else {
       return dotenv.env['GOOGLE_PLACES_DEV_API_KEY'] ?? '';
+    }
+  }
+
+  /// Provides the correct Cloud Functions URL based on the environment.
+  static String get cloudFunctionsUrl {
+    // First check dart-define (used in web builds)
+    const dartDefineUrl = String.fromEnvironment('CLOUD_FUNCTIONS_URL');
+    if (dartDefineUrl.isNotEmpty) {
+      return dartDefineUrl;
+    }
+
+    // Fall back to dotenv
+    if (isProduction) {
+      return dotenv.env['CLOUD_FUNCTIONS_PROD_URL'] ?? '';
+    } else {
+      return dotenv.env['CLOUD_FUNCTIONS_DEV_URL'] ?? '';
     }
   }
 }

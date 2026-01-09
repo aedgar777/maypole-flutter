@@ -1,0 +1,5 @@
+// Configuration settings for Dev Debug builds
+#include "Debug.xcconfig"
+
+// Override settings for dev environment
+PRODUCT_BUNDLE_IDENTIFIER = app.maypole.maypole.dev

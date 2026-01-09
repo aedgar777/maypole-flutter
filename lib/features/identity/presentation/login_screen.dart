@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:maypole/core/app_config.dart';
+import 'package:maypole/core/utils/string_utils.dart';
+import 'package:maypole/core/widgets/error_dialog.dart';
+import 'package:maypole/features/identity/domain/domain_user.dart';
+import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../domain/states/auth_state.dart';
 import '../auth_providers.dart';
 import './widgets/auth_form_field.dart';
@@ -25,26 +29,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  Widget _buildLoggedInView(User user) {
-    // Automatically navigate to chat list when user is logged in
+  void _navigateToHome(BuildContext context) {
+    // Automatically navigate to home when user is logged in
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.go('/home');
+      if (mounted) {
+        context.go('/home');
+      }
     });
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text('Welcome ${user.email}'),
-          ElevatedButton(
-            onPressed: () {
-              ref.read(loginViewModelProvider.notifier).signOut();
-            },
-            child: const Text('Sign Out'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _handleSignIn() {
@@ -56,7 +47,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Widget _buildLoginForm(AuthState loginState) {
+  Widget _buildLoginForm(AuthState loginState, BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Column(
       children: [
         const Spacer(flex: 1),
@@ -77,32 +70,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   AuthFormField(
                     controller: _emailController,
-                    labelText: 'Email',
+                    labelText: l10n.email,
                     keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                        return 'Please enter a valid email';
-                      }
-                      return null;
-                    },
+                    maxLength: StringUtils.maxEmailLength,
+                    onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
+                        _handleSignIn() : null,
+                    validator: (value) => StringUtils.validateEmail(value, l10n),
                   ),
                   const SizedBox(height: 20),
                   AuthFormField(
                     controller: _passwordController,
-                    labelText: 'Password',
+                    labelText: l10n.password,
                     obscureText: true,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
-                      }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
-                    },
+                    maxLength: StringUtils.maxPasswordLength,
+                    onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
+                        _handleSignIn() : null,
+                    validator: (value) => StringUtils.validatePassword(value, l10n),
                   ),
                   const SizedBox(height: 30),
                   if (loginState.isLoading)
@@ -112,12 +95,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       children: [
                         ElevatedButton(
                           onPressed: _handleSignIn,
-                          child: const Text('Sign In', style: TextStyle(fontSize: 18)),
+                          child: Text(l10n.signIn, style: const TextStyle(
+                              fontSize: 18)),
                         ),
                         const SizedBox(height: 10),
                         TextButton(
                           onPressed: () => context.go('/register'),
-                          child: const Text('Register'),
+                          child: Text(l10n.register),
                         ),
                         if (loginState.errorMessage != null)
                           Padding(
@@ -141,14 +125,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final loginState = ref.watch(loginViewModelProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: ref.watch(authStateProvider).when(
-        data: (user) => user != null
-            ? _buildLoggedInView(user)
-            : _buildLoginForm(loginState),
+        data: (user) {
+          if (user != null) {
+            _navigateToHome(context);
+            return const Center(child: CircularProgressIndicator());
+          }
+          return Stack(
+            children: [
+              _buildLoginForm(loginState, context),
+              if (!AppConfig.isProduction)
+                Positioned(
+                  bottom: 20,
+                  left: 16,
+                  child: Text(
+                    l10n.devEnvironment,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.normal,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        error: (err, stack) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ErrorDialog.show(context, err);
+          });
+          return const Center(child: CircularProgressIndicator());
+        },
       ),
     );
   }

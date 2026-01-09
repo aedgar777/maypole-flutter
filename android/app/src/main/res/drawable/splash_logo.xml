@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?><!-- Wrapper to center the splash logo -->
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:src="@drawable/ic_logo_splash"
+    android:gravity="center" />

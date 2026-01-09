@@ -1,18 +1,25 @@
-import 'package:maypole/features/chat/domain/thread_metadata.dart';
+import 'package:maypole/features/maypolechat/domain/maypole.dart';
+import 'package:maypole/features/identity/domain/blocked_user.dart';
 
 class DomainUser {
   String username;
   String email;
   String firebaseID;
   String profilePictureUrl;
-  List<ThreadMetadata> threads;
+  List<MaypoleMetaData> maypoleChatThreads;
+  List<BlockedUser> blockedUsers;
+  String? fcmToken;
+  bool emailVerified;
 
   DomainUser({
     required this.username,
     required this.email,
     required this.firebaseID,
     this.profilePictureUrl = '',
-    this.threads = const [],
+    this.maypoleChatThreads = const [],
+    this.blockedUsers = const [],
+    this.fcmToken,
+    this.emailVerified = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -21,7 +28,10 @@ class DomainUser {
       'email': email,
       'firebaseID': firebaseID,
       'profilePictureUrl': profilePictureUrl,
-      'threads': threads,
+      'maypoleChatThreads': maypoleChatThreads.map((e) => e.toMap()).toList(),
+      'blockedUsers': blockedUsers.map((e) => e.toMap()).toList(),
+      'fcmToken': fcmToken,
+      'emailVerified': emailVerified,
     };
   }
 
@@ -31,7 +41,13 @@ class DomainUser {
       email: map['email'],
       firebaseID: map['firebaseID'],
       profilePictureUrl: map['profilePictureUrl'] ?? '',
-      threads: List<ThreadMetadata>.from(map['threads'] ?? []),
+      maypoleChatThreads: List<MaypoleMetaData>.from(
+          map['maypoleChatThreads']?.map((x) => MaypoleMetaData.fromMap(x)) ??
+              []),
+      blockedUsers: List<BlockedUser>.from(
+          map['blockedUsers']?.map((x) => BlockedUser.fromMap(x)) ?? []),
+      fcmToken: map['fcmToken'] as String?,
+      emailVerified: map['emailVerified'] ?? false,
     );
   }
 }

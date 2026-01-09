@@ -1,4 +1,29 @@
 {
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "venv",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "__pycache__"
+      ],
+      "runtime": "python312"
+    },
+    {
+      "source": "functions-js",
+      "codebase": "auth-functions",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log"
+      ],
+      "runtime": "nodejs20"
+    }
+  ],
   "hosting": {
     "public": "build/web",
     "ignore": [
@@ -20,6 +45,8 @@
     "database": "(default)",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
   }
-
 }

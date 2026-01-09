@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Theme for Android 12+ using the new Splash Screen API -->
+    <style name="LaunchTheme" parent="Theme.SplashScreen">
+        <!-- Set the splash screen background color -->
+        <item name="windowSplashScreenBackground">@color/dark_purple</item>
+        <!-- Set the splash screen icon -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_logo_splash</item>
+        <!-- Optional: Set icon background color (if you want a circle behind the icon) -->
+        <!-- <item name="windowSplashScreenIconBackgroundColor">@color/dark_purple</item> -->
+        <!-- Post splash screen theme -->
+        <item name="postSplashScreenTheme">@style/NormalTheme</item>
+    </style>
+
+    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">?android:colorBackground</item>
+    </style>
+</resources>

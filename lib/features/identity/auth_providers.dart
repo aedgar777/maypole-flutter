@@ -8,15 +8,14 @@ final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService();
 });
 
-final loginViewModelProvider = StateNotifierProvider<LoginViewModel, LoginState>((ref) {
-  final authService = ref.watch(authServiceProvider);
-  return LoginViewModel(authService: authService);
-});
+final loginViewModelProvider = NotifierProvider<LoginViewModel, LoginState>(
+  LoginViewModel.new,
+);
 
-final registrationViewModelProvider = StateNotifierProvider<RegistrationViewModel, RegistrationState>((ref) {
-  final authService = ref.watch(authServiceProvider);
-  return RegistrationViewModel(authService: authService);
-});
+final registrationViewModelProvider =
+    NotifierProvider<RegistrationViewModel, RegistrationState>(
+      RegistrationViewModel.new,
+    );
 
 final authStateProvider = StreamProvider((ref) {
   return ref.read(authServiceProvider).user;
