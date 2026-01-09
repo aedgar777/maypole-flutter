@@ -166,17 +166,18 @@ jobs:
 
       - name: Create GoogleService-Info.plist for prod
         run: |
-          mkdir -p ios/Runner
-          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_PROD }}" > ios/Runner/GoogleService-Info.plist
+          # Create Firebase config in the location expected by firebase-setup.sh script
+          mkdir -p ios/Firebase/prod
+          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_PROD }}" > ios/Firebase/prod/GoogleService-Info.plist
           
           # Validate the plist is well-formed
-          if ! plutil -lint ios/Runner/GoogleService-Info.plist > /dev/null 2>&1; then
+          if ! plutil -lint ios/Firebase/prod/GoogleService-Info.plist > /dev/null 2>&1; then
             echo "Error: GoogleService-Info.plist is not valid"
-            cat ios/Runner/GoogleService-Info.plist
+            cat ios/Firebase/prod/GoogleService-Info.plist
             exit 1
           fi
           
-          echo "GoogleService-Info.plist created successfully"
+          echo "✅ GoogleService-Info.plist created successfully at ios/Firebase/prod/"
 
       - name: Setup Google Cloud credentials for Match
         run: |
