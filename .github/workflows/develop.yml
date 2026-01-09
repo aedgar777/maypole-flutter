@@ -21,7 +21,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.0'
+          flutter-version: '3.35.7'
           channel: 'stable'
 
       - name: Get dependencies
@@ -61,7 +61,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.0'
+          flutter-version: '3.35.7'
           channel: 'stable'
 
       - name: Flutter pub get
@@ -181,7 +181,7 @@ jobs:
   #     - name: Setup Flutter
   #       uses: subosito/flutter-action@v2
   #       with:
-  #         flutter-version: '3.32.0'
+#                   flutter-version: '3.35.7'
   #         channel: 'stable'
   #
   #     - name: Get dependencies
@@ -246,20 +246,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2'
-          bundler-cache: false
-
+      - name: Select Xcode version
+        run: |
+          # Use the latest stable Xcode available on the runner
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer || \
+          sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer || \
+          sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer
+          xcodebuild -version
+          
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.0'
+          flutter-version: '3.35.7'
           channel: 'stable'
 
       - name: Get dependencies
         run: flutter pub get
+      
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2.0'
+          bundler-cache: true
+          working-directory: ios
 
       - name: Create .env file from secrets
         run: |
@@ -293,46 +302,15 @@ jobs:
           
           echo "GoogleService-Info.plist created successfully"
 
-      - name: Setup Google Cloud credentials for Match
-        run: |
-          mkdir -p ~/.config/gcloud
-          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > ~/.config/gcloud/application_default_credentials.json
-          
-          # Verify the credentials file was created
-          if [ -f ~/.config/gcloud/application_default_credentials.json ]; then
-            echo "✅ GCP credentials file created successfully"
-            ls -la ~/.config/gcloud/
-          else
-            echo "❌ Failed to create GCP credentials file"
-            exit 1
-          fi
-
-      - name: Setup App Store Connect API Key
-        run: |
-          # Create the AuthKey_<KEY_ID>.p8 file that Fastlane expects
-          mkdir -p ~/private_keys
-          echo "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}" > ~/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
-          
-          # Verify the key file was created
-          ls -la ~/private_keys/
-          echo "✅ API Key file created successfully"
-
-      - name: Install Fastlane
-        working-directory: ios
-        run: |
-          bundle config set --local path 'vendor/bundle'
-          bundle install
-
       - name: Install CocoaPods dependencies
-        # timeout-minutes: 10  # Temporarily removed
         working-directory: ios
         run: |
           echo "==================== INSTALLING PODS ===================="
+          # bundler-cache already installed Fastlane gems
           pod install
           echo "✅ Pods installed"
 
       - name: Build Flutter iOS App
-        # timeout-minutes: 20  # Temporarily removed
         run: |
           echo "==================== BUILDING FLUTTER IOS APP ===================="
           flutter build ios --release --no-codesign \
@@ -345,8 +323,7 @@ jobs:
             --dart-define=FIREBASE_DEV_STORAGE_BUCKET=${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }}
           echo "✅ Flutter iOS build completed"
 
-      - name: Archive and Deploy to TestFlight with Fastlane
-        timeout-minutes: 120  # 2 hours
+      - name: Setup credentials and deploy to TestFlight
         working-directory: ios
         env:
           MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
@@ -358,17 +335,33 @@ jobs:
           APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
           GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
         run: |
-          echo "==================== FASTLANE DEPLOYMENT ===================="
+          echo "==================== SETUP CREDENTIALS ===================="
           set -e
           
-          # Setup GCP credentials for Match
-          printf '%s' "$GCP_SERVICE_ACCOUNT_KEY" > "${{ github.workspace }}/../gcp-credentials.json"
-          export GOOGLE_APPLICATION_CREDENTIALS="${{ github.workspace }}/../gcp-credentials.json"
+          # Disable output buffering to prevent hangs in CI
+          export PYTHONUNBUFFERED=1
+          export FASTLANE_DISABLE_OUTPUT_BUFFERING=1
           
-          # Setup App Store Connect API key
-          export APP_STORE_CONNECT_API_KEY_KEY_FILEPATH="${HOME}/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8"
+          # Setup GCP credentials for Match (matching local script exactly)
+          mkdir -p ~/.config/gcloud
+          echo "$GCP_SERVICE_ACCOUNT_KEY" > ~/.config/gcloud/application_default_credentials.json
+          export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/gcloud/application_default_credentials.json"
+          echo "✅ GCP credentials configured"
           
+          # Setup App Store Connect API key (matching local script exactly)
+          mkdir -p ~/private_keys
+          echo "$APP_STORE_CONNECT_API_KEY_CONTENT" > ~/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_KEY_ID}.p8
+          export APP_STORE_CONNECT_API_KEY_KEY_FILEPATH="$HOME/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_KEY_ID}.p8"
+          echo "✅ App Store Connect API key configured"
+          
+          echo ""
+          echo "==================== FASTLANE DEPLOYMENT ===================="
           echo "🚀 Starting Fastlane deploy_dev..."
-          bundle exec fastlane ios deploy_dev
+          
+          # Run fastlane with all environment variables set (matching local script)
+          # Use stdbuf to ensure line-buffered output and prevent hanging
+          stdbuf -oL -eL bundle exec fastlane ios deploy_dev
+          
           echo "✅ Deployment completed!"
