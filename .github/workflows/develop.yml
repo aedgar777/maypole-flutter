@@ -21,7 +21,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.3'
+          flutter-version: '3.35.7'
           channel: 'stable'
 
       - name: Get dependencies
@@ -61,7 +61,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.3'
+          flutter-version: '3.35.7'
           channel: 'stable'
 
       - name: Flutter pub get
@@ -181,7 +181,7 @@ jobs:
   #     - name: Setup Flutter
   #       uses: subosito/flutter-action@v2
   #       with:
-#                   flutter-version: '3.24.3'
+#                   flutter-version: '3.35.7'
   #         channel: 'stable'
   #
   #     - name: Get dependencies
@@ -272,9 +272,8 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          # Using 3.24.3 - a well-established stable version available on GitHub Actions
-          # Your local version (3.35.7) is newer but may cause issues if not available on runners
-          flutter-version: '3.24.3'
+          # Must use 3.35.7 to get Dart 3.9.2 (project requires Dart ^3.8.0)
+          flutter-version: '3.35.7'
           channel: 'stable'
 
       - name: Get dependencies
