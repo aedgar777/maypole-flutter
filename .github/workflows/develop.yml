@@ -331,6 +331,17 @@ jobs:
       - name: Build Flutter frameworks  
         run: |
           echo "==================== BUILDING FLUTTER FRAMEWORKS ===================="
+          echo "⏰ Start time: $(date)"
+          
+          # Create a background process that prints progress every 30s
+          (
+            while true; do
+              sleep 30
+              echo "⏳ Still building Flutter frameworks... $(date)"
+            done
+          ) &
+          PROGRESS_PID=$!
+          
           # Flutter must build iOS frameworks to generate Runner.xcworkspace
           # Even if the build fails, pod install will create the workspace
           flutter build ios --release --no-codesign \
@@ -341,6 +352,11 @@ jobs:
             --dart-define=FIREBASE_DEV_PROJECT_ID=${{ secrets.FIREBASE_DEV_PROJECT_ID }} \
             --dart-define=FIREBASE_DEV_AUTH_DOMAIN=${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }} \
             --dart-define=FIREBASE_DEV_STORAGE_BUCKET=${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }} || true
+          
+          # Kill the progress indicator
+          kill $PROGRESS_PID 2>/dev/null || true
+          
+          echo "⏰ Flutter build completed at: $(date)"
           
           # Check if workspace exists, if not create it with pod install
           if [ ! -f "ios/Runner.xcworkspace/contents.xcworkspacedata" ]; then
