@@ -119,16 +119,18 @@ jobs:
       - name: Build Android App Bundle (prodRelease)
         run: flutter build appbundle --release --flavor prod
 
-      - name: Deploy to Play Store Beta Track
+      - name: Deploy to Play Store Production Track (Draft)
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
           packageName: app.maypole.maypole
           releaseFiles: build/app/outputs/bundle/prodRelease/app-prod-release.aab
-          track: beta
+          track: production
           status: draft
+          # IMPORTANT: Draft apps must upload to 'production' track, not 'beta'
+          # After your first production release is live, you can switch this to 'beta'
           # Draft releases automatically replace previous drafts with the same or lower version code
-          # After upload, manually review and complete the release in Play Console
+          # After upload, manually review and roll out in Play Console
           inAppUpdatePriority: 0
 
   build_web_beta:
