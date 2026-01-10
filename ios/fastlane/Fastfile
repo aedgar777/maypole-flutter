@@ -215,6 +215,102 @@ platform :ios do
     puts "🎉 Deployment completed successfully!"
   end
 
+  desc "CI-specific build with aggressive monitoring"
+  lane :deploy_dev_ci_debug do
+    puts "==================== CI DEBUG DEPLOYMENT ===================="
+    puts "⏰ Start: #{Time.now}"
+    
+    # Sync certificates
+    puts "📜 Step 1/4: Syncing certificates..."
+    sync_dev_signing
+    puts "✅ Certificates synced at #{Time.now}"
+    
+    profile_name = "match AppStore #{ENV['IOS_BUNDLE_ID']}"
+    team_id = ENV["APPLE_TEAM_ID"]
+    bundle_id = ENV["IOS_BUNDLE_ID"]
+    
+    # Archive with timeout and monitoring
+    puts "📦 Step 2/4: Creating archive with xcodebuild..."
+    puts "   This is where CI usually hangs. Monitoring closely..."
+    
+    begin
+      # Use Timeout to forcefully kill if it hangs
+      require 'timeout'
+      
+      Timeout.timeout(2400) do  # 40 minute timeout for archive
+        sh(
+          "set -euo pipefail",
+          "&&",
+          "(",
+          "while true; do sleep 30; echo '💓 Archive still building...'; done",
+          ")",
+          "&",
+          "HEARTBEAT_PID=$!",
+          "&&",
+          "xcodebuild",
+          "-workspace Runner.xcworkspace",
+          "-scheme Runner",
+          "-configuration Release",
+          "-destination 'generic/platform=iOS'",
+          "-archivePath ../build/ios/Runner.xcarchive",
+          "archive",
+          "CODE_SIGN_STYLE=Manual",
+          "PROVISIONING_PROFILE_SPECIFIER='#{profile_name}'",
+          "DEVELOPMENT_TEAM=#{team_id}",
+          "-allowProvisioningUpdates",
+          "2>&1 | tee ../build/ios/archive.log",
+          ";",
+          "ARCHIVE_EXIT=$?",
+          ";",
+          "kill $HEARTBEAT_PID 2>/dev/null || true",
+          ";",
+          "exit $ARCHIVE_EXIT"
+        )
+      end
+    rescue Timeout::Error
+      puts "❌ TIMEOUT: Archive step hung for 40 minutes!"
+      puts "📋 Last 100 lines of archive log:"
+      sh("tail -100 ../build/ios/archive.log || echo 'No log found'")
+      puts "💻 System state:"
+      sh("ps aux | grep -E '(xcodebuild|clang|ld)' | grep -v grep || echo 'No build processes'")
+      raise "Archive timed out"
+    end
+    
+    puts "✅ Archive created at #{Time.now}"
+    
+    # Export
+    puts "📤 Step 3/4: Exporting IPA..."
+    sh(
+      "xcodebuild",
+      "-exportArchive",
+      "-archivePath ../build/ios/Runner.xcarchive",
+      "-exportPath ../build/ios/ipa",
+      "-exportOptionsPlist ../ExportOptions.plist",
+      "-allowProvisioningUpdates"
+    )
+    puts "✅ IPA exported at #{Time.now}"
+    
+    # Upload
+    puts "☁️  Step 4/4: Uploading to TestFlight..."
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
+      key_filepath: ENV["APP_STORE_CONNECT_API_KEY_KEY_FILEPATH"],
+      in_house: false
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: "../build/ios/ipa/Runner.ipa",
+      skip_waiting_for_build_processing: true,
+      distribute_external: false,
+      notify_external_testers: false
+    )
+    
+    puts "✅ Upload completed at #{Time.now}"
+    puts "🎉 DEPLOYMENT SUCCESSFUL!"
+  end
+
   desc "Build and upload production to TestFlight/App Store"
   lane :deploy_prod do
     # Sync certificates

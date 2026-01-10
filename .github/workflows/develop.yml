@@ -331,6 +331,17 @@ jobs:
       - name: Build Flutter frameworks  
         run: |
           echo "==================== BUILDING FLUTTER FRAMEWORKS ===================="
+          echo "⏰ Start time: $(date)"
+          
+          # Create a background process that prints progress every 30s
+          (
+            while true; do
+              sleep 30
+              echo "⏳ Still building Flutter frameworks... $(date)"
+            done
+          ) &
+          PROGRESS_PID=$!
+          
           # Flutter must build iOS frameworks to generate Runner.xcworkspace
           # Even if the build fails, pod install will create the workspace
           flutter build ios --release --no-codesign \
@@ -341,6 +352,11 @@ jobs:
             --dart-define=FIREBASE_DEV_PROJECT_ID=${{ secrets.FIREBASE_DEV_PROJECT_ID }} \
             --dart-define=FIREBASE_DEV_AUTH_DOMAIN=${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }} \
             --dart-define=FIREBASE_DEV_STORAGE_BUCKET=${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }} || true
+          
+          # Kill the progress indicator
+          kill $PROGRESS_PID 2>/dev/null || true
+          
+          echo "⏰ Flutter build completed at: $(date)"
           
           # Check if workspace exists, if not create it with pod install
           if [ ! -f "ios/Runner.xcworkspace/contents.xcworkspacedata" ]; then
@@ -398,15 +414,46 @@ jobs:
           echo "==================== FASTLANE DEPLOYMENT ===================="
           echo "🚀 Starting Fastlane deploy_dev..."
           echo "⏱️  Started at: $(date)"
+          echo "📍 Current directory: $(pwd)"
+          echo "📂 Files in ios/:"
+          ls -la ios/ | head -20
           
-          # Run fastlane with progress monitoring
-          # Using script command to force unbuffered output
-          script -q /dev/null bundle exec fastlane ios deploy_dev 2>&1 | while IFS= read -r line; do
+          # Create a background heartbeat that shows we're alive
+          (
+            while true; do
+              sleep 15
+              echo "💓 Heartbeat: $(date +%H:%M:%S) - Fastlane still running..."
+            done
+          ) &
+          HEARTBEAT_PID=$!
+          
+          # Create a file to track progress through the build phases
+          echo "$(date): Starting Match" > /tmp/build-progress.txt
+          
+          # Run fastlane with line-by-line output and progress tracking
+          bundle exec fastlane ios deploy_dev 2>&1 | while IFS= read -r line; do
             echo "$line"
-            echo "⏳ [$(date +%H:%M:%S)] Progress..." >&2
+            
+            # Track which phase we're in
+            if echo "$line" | grep -q "sync_dev_signing"; then
+              echo "$(date): In Match/Signing phase" >> /tmp/build-progress.txt
+            elif echo "$line" | grep -q "Building IPA"; then
+              echo "$(date): Building IPA with gym" >> /tmp/build-progress.txt
+            elif echo "$line" | grep -q "Running script"; then
+              echo "$(date): Running Xcode build script - $line" >> /tmp/build-progress.txt
+            elif echo "$line" | grep -q "Compiling"; then
+              echo "$(date): Compiling..." >> /tmp/build-progress.txt
+            fi
           done
           
           FASTLANE_EXIT_CODE=${PIPESTATUS[0]}
+          
+          # Kill the heartbeat
+          kill $HEARTBEAT_PID 2>/dev/null || true
+          
+          echo ""
+          echo "📊 Build Progress Log:"
+          cat /tmp/build-progress.txt || echo "No progress log found"
           
           if [ $FASTLANE_EXIT_CODE -eq 0 ]; then
             echo "✅ Deployment completed at: $(date)"
@@ -418,5 +465,13 @@ jobs:
               echo "Last 100 lines of build logs:"
               find fastlane/logs -type f -name "*.log" -exec tail -100 {} \;
             fi
+            
+            # Show system resources at time of failure
+            echo ""
+            echo "💻 System state at failure:"
+            echo "Memory: $(vm_stat | grep "Pages free" || echo "unknown")"
+            echo "Disk: $(df -h . | tail -1 || echo "unknown")"
+            echo "Processes: $(ps aux | wc -l || echo "unknown")"
+            
             exit $FASTLANE_EXIT_CODE
           fi
