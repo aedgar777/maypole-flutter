@@ -414,46 +414,15 @@ jobs:
           echo "==================== FASTLANE DEPLOYMENT ===================="
           echo "🚀 Starting Fastlane deploy_dev..."
           echo "⏱️  Started at: $(date)"
-          echo "📍 Current directory: $(pwd)"
-          echo "📂 Files in ios/:"
-          ls -la ios/ | head -20
           
-          # Create a background heartbeat that shows we're alive
-          (
-            while true; do
-              sleep 15
-              echo "💓 Heartbeat: $(date +%H:%M:%S) - Fastlane still running..."
-            done
-          ) &
-          HEARTBEAT_PID=$!
-          
-          # Create a file to track progress through the build phases
-          echo "$(date): Starting Match" > /tmp/build-progress.txt
-          
-          # Run fastlane with line-by-line output and progress tracking
-          bundle exec fastlane ios deploy_dev 2>&1 | while IFS= read -r line; do
+          # Run fastlane with progress monitoring
+          # Using script command to force unbuffered output
+          script -q /dev/null bundle exec fastlane ios deploy_dev 2>&1 | while IFS= read -r line; do
             echo "$line"
-            
-            # Track which phase we're in
-            if echo "$line" | grep -q "sync_dev_signing"; then
-              echo "$(date): In Match/Signing phase" >> /tmp/build-progress.txt
-            elif echo "$line" | grep -q "Building IPA"; then
-              echo "$(date): Building IPA with gym" >> /tmp/build-progress.txt
-            elif echo "$line" | grep -q "Running script"; then
-              echo "$(date): Running Xcode build script - $line" >> /tmp/build-progress.txt
-            elif echo "$line" | grep -q "Compiling"; then
-              echo "$(date): Compiling..." >> /tmp/build-progress.txt
-            fi
+            echo "⏳ [$(date +%H:%M:%S)] Progress..." >&2
           done
           
           FASTLANE_EXIT_CODE=${PIPESTATUS[0]}
-          
-          # Kill the heartbeat
-          kill $HEARTBEAT_PID 2>/dev/null || true
-          
-          echo ""
-          echo "📊 Build Progress Log:"
-          cat /tmp/build-progress.txt || echo "No progress log found"
           
           if [ $FASTLANE_EXIT_CODE -eq 0 ]; then
             echo "✅ Deployment completed at: $(date)"
@@ -465,13 +434,5 @@ jobs:
               echo "Last 100 lines of build logs:"
               find fastlane/logs -type f -name "*.log" -exec tail -100 {} \;
             fi
-            
-            # Show system resources at time of failure
-            echo ""
-            echo "💻 System state at failure:"
-            echo "Memory: $(vm_stat | grep "Pages free" || echo "unknown")"
-            echo "Disk: $(df -h . | tail -1 || echo "unknown")"
-            echo "Processes: $(ps aux | wc -l || echo "unknown")"
-            
             exit $FASTLANE_EXIT_CODE
           fi

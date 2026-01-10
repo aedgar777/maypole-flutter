@@ -126,10 +126,7 @@ jobs:
           packageName: app.maypole.maypole
           releaseFiles: build/app/outputs/bundle/prodRelease/app-prod-release.aab
           track: beta
-          status: draft
-          # Draft releases automatically replace previous drafts with the same or lower version code
-          # After upload, manually review and complete the release in Play Console
-          inAppUpdatePriority: 0
+          status: completed
 
   build_web_beta:
     name: Build and Deploy Web (Beta Channel)
