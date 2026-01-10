@@ -119,7 +119,7 @@ jobs:
       - name: Build Android App Bundle (prodRelease)
         run: flutter build appbundle --release --flavor prod
 
-      - name: Deploy to Play Store Beta Track (Draft)
+      - name: Deploy to Play Store Beta Track
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
@@ -127,6 +127,9 @@ jobs:
           releaseFiles: build/app/outputs/bundle/prodRelease/app-prod-release.aab
           track: beta
           status: draft
+          # Draft releases automatically replace previous drafts with the same or lower version code
+          # After upload, manually review and complete the release in Play Console
+          inAppUpdatePriority: 0
 
   build_web_beta:
     name: Build and Deploy Web (Beta Channel)
