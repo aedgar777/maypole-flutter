@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
@@ -18,6 +19,44 @@ class MaypoleSearchService {
     } else {
       // Mobile/Desktop platforms: call Google API directly for better performance
       return 'https://places.googleapis.com/v1/places:autocomplete';
+    }
+  }
+
+  /// Fetch place details including coordinates
+  Future<Map<String, dynamic>?> getPlaceDetails(String placeId) async {
+    debugPrint('📍 Fetching Place Details for: $placeId');
+    
+    final url = 'https://places.googleapis.com/v1/places/$placeId';
+    
+    final headers = {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': _apiKey,
+      'X-Goog-FieldMask': 'id,displayName,formattedAddress,location',
+    };
+
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: headers,
+      );
+
+      debugPrint('📡 Place Details Response Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        debugPrint("✅ Place Details Response: ${response.body.substring(
+            0, response.body.length > 200 ? 200 : response.body.length)}...");
+        
+        // Parse the response to extract coordinates
+        final Map<String, dynamic> data = json.decode(response.body);
+        
+        return data;
+      } else {
+        debugPrint('❌ Error Response: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('💥 Exception during place details fetch: $e');
+      return null;
     }
   }
 

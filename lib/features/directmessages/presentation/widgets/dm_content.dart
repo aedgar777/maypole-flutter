@@ -42,17 +42,36 @@ class _DmContentState extends ConsumerState<DmContent> {
   final ScrollController _scrollController = ScrollController();
   final FocusNode _messageFocusNode = FocusNode();
   final Set<String> _animatedMessageIds = {};
+  bool _isFirstLoad = true; // Track if this is the first load
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
 
+    // Mark thread as read when opening
+    _markAsRead();
+
     // Auto-focus if requested
     if (widget.autoFocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _messageFocusNode.requestFocus();
       });
+    }
+  }
+
+  Future<void> _markAsRead() async {
+    final currentUser = AppSession().currentUser;
+    if (currentUser == null) return;
+
+    try {
+      await ref.read(dmThreadServiceProvider).markThreadAsRead(
+        widget.thread.id,
+        currentUser.firebaseID,
+      );
+    } catch (e) {
+      // Silently fail - not critical
+      debugPrint('Error marking thread as read: $e');
     }
   }
 
@@ -116,50 +135,62 @@ class _DmContentState extends ConsumerState<DmContent> {
       children: [
         Expanded(
           child: messagesAsyncValue.when(
-            data: (messages) => ListView.builder(
-              controller: _scrollController,
-              reverse: true,
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                final message = messages[index];
-                final bool isMe = message.sender == currentUser!.username;
-                final bool isDeleted = message.isDeletedFor(currentUser.firebaseID);
-                
-                // Determine if this message is grouped with adjacent messages
-                // Note: ListView is reversed, so visual "above" is index - 1, "below" is index + 1
-                final bool isGroupedWithNext = _isGroupedWith(
-                  messages, index, index - 1, isMe,
-                );
-                final bool isGroupedWithPrevious = _isGroupedWith(
-                  messages, index, index + 1, isMe,
-                );
-                
-                // Use message ID or a combination of sender + timestamp as unique key
-                final messageKey = message.id ?? '${message.sender}_${message.timestamp.millisecondsSinceEpoch}';
-                final isNew = !_animatedMessageIds.contains(messageKey);
-                
-                // Mark this message as seen
-                if (isNew) {
+            data: (messages) {
+              // On first load, mark all existing messages as already seen
+              // This prevents the stutter from animating all cached messages
+              if (_isFirstLoad && messages.isNotEmpty) {
+                _isFirstLoad = false;
+                for (final message in messages) {
+                  final messageKey = message.id ?? '${message.sender}_${message.timestamp.millisecondsSinceEpoch}';
                   _animatedMessageIds.add(messageKey);
                 }
-                
-                return _AnimatedMessageItem(
-                  key: ValueKey(messageKey),
-                  isNew: isNew,
-                  child: DmMessageBubble(
-                    message: message,
-                    isOwnMessage: isMe,
-                    partnerId: partner?.id ?? '',
-                    partnerUsername: partner?.username ?? '',
-                    partnerProfilePicUrl: partner?.profilePicUrl ?? '',
-                    onDelete: isMe && !isDeleted ? () => _showMessageContextMenu(context, message) : null,
-                    isGroupedWithNext: isGroupedWithNext,
-                    isGroupedWithPrevious: isGroupedWithPrevious,
-                    isDeleted: isDeleted,
-                  ),
-                );
-              },
-            ),
+              }
+              
+              return ListView.builder(
+                controller: _scrollController,
+                reverse: true,
+                itemCount: messages.length,
+                itemBuilder: (context, index) {
+                  final message = messages[index];
+                  final bool isMe = message.sender == currentUser!.username;
+                  final bool isDeleted = message.isDeletedFor(currentUser.firebaseID);
+                  
+                  // Determine if this message is grouped with adjacent messages
+                  // Note: ListView is reversed, so visual "above" is index - 1, "below" is index + 1
+                  final bool isGroupedWithNext = _isGroupedWith(
+                    messages, index, index - 1, isMe,
+                  );
+                  final bool isGroupedWithPrevious = _isGroupedWith(
+                    messages, index, index + 1, isMe,
+                  );
+                  
+                  // Use message ID or a combination of sender + timestamp as unique key
+                  final messageKey = message.id ?? '${message.sender}_${message.timestamp.millisecondsSinceEpoch}';
+                  final isNew = !_animatedMessageIds.contains(messageKey);
+                  
+                  // Mark this message as seen
+                  if (isNew) {
+                    _animatedMessageIds.add(messageKey);
+                  }
+                  
+                  return _AnimatedMessageItem(
+                    key: ValueKey(messageKey),
+                    isNew: isNew,
+                    child: DmMessageBubble(
+                      message: message,
+                      isOwnMessage: isMe,
+                      partnerId: partner?.id ?? '',
+                      partnerUsername: partner?.username ?? '',
+                      partnerProfilePicUrl: partner?.profilePicUrl ?? '',
+                      onDelete: isMe && !isDeleted ? () => _showMessageContextMenu(context, message) : null,
+                      isGroupedWithNext: isGroupedWithNext,
+                      isGroupedWithPrevious: isGroupedWithPrevious,
+                      isDeleted: isDeleted,
+                    ),
+                  );
+                },
+              );
+            },
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, stack) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
