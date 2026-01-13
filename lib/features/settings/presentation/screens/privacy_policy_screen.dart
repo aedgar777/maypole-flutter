@@ -80,11 +80,28 @@ class PrivacyPolicyScreen extends StatelessWidget {
 
             _buildSection(
               context,
+              'Location Information',
+              'With your explicit permission, we may collect and use your device\'s location data for the following optional feature:\n\n'
+                  '• "Show When at Location": When enabled, this feature allows you to show others that you were physically present at a location when sending messages. Your approximate location coordinates are stored with your messages only when you have this feature enabled and are within 100 meters of a place.\n\n'
+                  'Important details about location data:\n\n'
+                  '• Location permission is entirely optional - you can use Maypole without it\n'
+                  '• We only collect location data when you have explicitly enabled "Show When at Location" in Preferences\n'
+                  '• Your exact coordinates are never shared publicly - we only store whether you were within 100 meters of a specific place\n'
+                  '• Location data is only used to determine proximity to places and display a location indicator badge\n'
+                  '• You can disable this feature at any time in app Preferences\n'
+                  '• When disabled, no location data is collected or stored\n'
+                  '• Previously stored location data associated with your messages remains until those messages are deleted',
+            ),
+
+            _buildSection(
+              context,
               'How We Use Your Information',
               'We use the information we collect to:\n\n'
                   '• Provide, maintain, and improve our services\n'
                   '• Create and manage your account\n'
                   '• Enable you to communicate with other users\n'
+                  '• Verify proximity to locations (when "Show When at Location" is enabled)\n'
+                  '• Display location indicator badges on messages (when enabled)\n'
                   '• Send you technical notices and support messages\n'
                   '• Respond to your comments and questions\n'
                   '• Monitor and analyze trends, usage, and activities\n'

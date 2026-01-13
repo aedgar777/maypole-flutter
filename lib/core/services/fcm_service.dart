@@ -119,4 +119,19 @@ class FCMService {
   Future<RemoteMessage?> getInitialMessage() async {
     return await _messaging.getInitialMessage();
   }
+
+  /// Mark a DM thread as read from a notification action
+  /// This can be called when the user taps a "Mark as Read" button in the notification
+  /// Note: On iOS, notification actions require additional setup in the native code
+  /// On Android, this works with notification reply actions
+  Future<void> markDmThreadAsReadFromNotification(String threadId, String userId) async {
+    try {
+      await _firestore.collection('DMThreads').doc(threadId).update({
+        'unreadBy.$userId': false,
+      });
+      debugPrint('✓ Marked DM thread $threadId as read from notification for user $userId');
+    } catch (e) {
+      debugPrint('❌ Error marking DM thread as read from notification: $e');
+    }
+  }
 }

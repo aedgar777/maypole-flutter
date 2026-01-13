@@ -47,6 +47,10 @@
 	<true/>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>We need your permission to send you notifications about tags and direct messages</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We need your location to verify you're near a place before posting pictures and to show location badges on messages</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>We need your location to verify you're near a place before posting pictures and to show location badges on messages</string>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-9803674282352310~6862207571</string>
 	<key>SKAdNetworkItems</key>

@@ -13,7 +13,7 @@ import '../features/directmessages/presentation/screens/dm_screen.dart';
 import '../features/directmessages/domain/dm_thread.dart';
 import '../features/settings/presentation/screens/settings_screen.dart';
 import '../features/settings/presentation/screens/privacy_policy_screen.dart';
-import '../features/settings/presentation/screens/notification_settings_screen.dart';
+import '../features/settings/presentation/screens/preferences_screen.dart';
 import '../features/settings/presentation/screens/account_settings_screen.dart';
 import '../features/settings/presentation/screens/blocked_users_screen.dart';
 import '../features/identity/auth_providers.dart';
@@ -76,19 +76,27 @@ final routerProvider = Provider<GoRouter>((ref) {
           final extra = state.extra;
           final String maypoleName;
           final String? address;
-          
+          final double? latitude;
+          final double? longitude;
+
           if (extra is Map<String, dynamic>) {
             maypoleName = extra['name'] as String? ?? 'Unknown';
             address = extra['address'] as String?;
+            latitude = extra['latitude'] as double?;
+            longitude = extra['longitude'] as double?;
           } else {
             maypoleName = extra as String? ?? 'Unknown';
             address = null;
+            latitude = null;
+            longitude = null;
           }
-          
+
           return MaypoleChatScreen(
             threadId: threadId,
             maypoleName: maypoleName,
             address: address,
+            latitude: latitude,
+            longitude: longitude,
           );
         },
       ),
@@ -104,8 +112,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
-        path: '/settings/notifications',
-        builder: (context, state) => const NotificationSettingsScreen(),
+        path: '/settings/preferences',
+        builder: (context, state) => const PreferencesScreen(),
       ),
       GoRoute(
         path: '/settings/account',

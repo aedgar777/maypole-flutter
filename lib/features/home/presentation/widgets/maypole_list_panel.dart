@@ -21,7 +21,7 @@ class MaypoleListPanel extends ConsumerStatefulWidget {
   final DomainUser user;
   final VoidCallback onSettingsPressed;
   final VoidCallback onAddPressed;
-  final Function(String threadId, String maypoleName, String address) onMaypoleThreadSelected;
+  final Function(String threadId, String maypoleName, String address, double? latitude, double? longitude) onMaypoleThreadSelected;
   final Function(String threadId) onDmThreadSelected;
   final Function(int tabIndex)? onTabChanged;
   final String? selectedThreadId;
@@ -183,36 +183,42 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
         final thread = filteredMaypoleThreads[threadIndex];
         final isSelected = widget.selectedThreadId == thread.id && widget.isMaypoleThread;
 
-        return Material(
-          color: Colors.transparent,
-          child: ListTile(
-            selected: isSelected,
-            selectedTileColor: Colors.grey.withValues(alpha: 0.15),
-            leading: const Icon(Icons.location_on),
-            title: Text(
-              thread.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+        return GestureDetector(
+          key: ValueKey('maypole_${thread.id}_$isSelected'),
+          onTap: () {
+            widget.onMaypoleThreadSelected(
+              thread.id, 
+              thread.name, 
+              thread.address,
+              thread.latitude,
+              thread.longitude,
+            );
+          },
+          onLongPress: () {
+            _showMaypoleThreadContextMenu(
+              context,
+              thread,
+              widget.user.firebaseID,
+            );
+          },
+          child: Container(
+            color: isSelected ? Colors.grey.withValues(alpha: 0.15) : Colors.transparent,
+            child: ListTile(
+              leading: const Icon(Icons.location_on),
+              title: Text(
+                thread.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: thread.address.isNotEmpty
+                  ? Text(
+                      thread.address,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.5),
+                      ),
+                    )
+                  : null,
             ),
-            subtitle: thread.address.isNotEmpty
-                ? Text(
-                    thread.address,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.5),
-                    ),
-                  )
-                : null,
-            onTap: () {
-              // Allow the ripple animation to complete before navigating
-              Future.microtask(() => widget.onMaypoleThreadSelected(thread.id, thread.name, thread.address));
-            },
-            onLongPress: () {
-              _showMaypoleThreadContextMenu(
-                context,
-                thread,
-                widget.user.firebaseID,
-              );
-            },
           ),
         );
       },
@@ -285,35 +291,63 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
                 ? '$formattedTimestamp • ${threadMetadata.lastMessageBody}'
                 : formattedTimestamp;
 
-            return Material(
-              color: Colors.transparent,
-              child: ListTile(
-                selected: isSelected,
-                selectedTileColor: Colors.grey.withValues(alpha: 0.15),
-                leading: LazyProfileAvatar(
-                  userId: threadMetadata.partnerId,
-                  initialProfilePictureUrl: threadMetadata.partnerProfpic,
-                ),
-                title: Text(threadMetadata.partnerName),
-                subtitle: Text(
-                  subtitleText,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
+            return GestureDetector(
+              key: ValueKey('dm_${threadMetadata.id}_$isSelected'),
+              onTap: () {
+                widget.onDmThreadSelected(threadMetadata.id);
+              },
+              onLongPress: () {
+                _showThreadContextMenu(
+                  context,
+                  threadMetadata,
+                  userId,
+                );
+              },
+              child: Container(
+                color: isSelected ? Colors.grey.withValues(alpha: 0.15) : Colors.transparent,
+                child: ListTile(
+                  leading: Stack(
+                    children: [
+                      LazyProfileAvatar(
+                        userId: threadMetadata.partnerId,
+                        initialProfilePictureUrl: threadMetadata.partnerProfpic,
+                      ),
+                      // Unread indicator badge
+                      if (threadMetadata.hasUnread)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Theme.of(context).scaffoldBackgroundColor,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  title: Text(
+                    threadMetadata.partnerName,
+                    style: TextStyle(
+                      fontWeight: threadMetadata.hasUnread ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                  subtitle: Text(
+                    subtitleText,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(threadMetadata.hasUnread ? 0.9 : 0.5),
+                      fontWeight: threadMetadata.hasUnread ? FontWeight.w500 : FontWeight.normal,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                onTap: () {
-                  // Allow the ripple animation to complete before navigating
-                  Future.microtask(() => widget.onDmThreadSelected(threadMetadata.id));
-                },
-                onLongPress: () {
-                  _showThreadContextMenu(
-                    context,
-                    threadMetadata,
-                    userId,
-                  );
-                },
               ),
             );
           },

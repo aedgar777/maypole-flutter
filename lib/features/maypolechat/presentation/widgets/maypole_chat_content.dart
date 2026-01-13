@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
+import 'package:maypole/core/services/location_provider.dart';
+import 'package:maypole/core/services/location_service.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/core/widgets/app_toast.dart';
@@ -15,6 +18,7 @@ import 'package:maypole/features/maypolechat/presentation/viewmodels/mention_con
 import 'package:maypole/features/maypolechat/presentation/widgets/mention_text_field.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/message_with_mentions.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/image_upload_notification.dart';
+import 'package:maypole/features/settings/settings_providers.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import 'package:maypole/core/ads/widgets/banner_ad_widget.dart';
 import 'package:maypole/core/ads/ad_config.dart';
@@ -27,6 +31,8 @@ class MaypoleChatContent extends ConsumerStatefulWidget {
   final String threadId;
   final String maypoleName;
   final String? address;
+  final double? latitude;
+  final double? longitude;
   final bool showAppBar;
   final bool autoFocus;
 
@@ -35,6 +41,8 @@ class MaypoleChatContent extends ConsumerStatefulWidget {
     required this.threadId,
     required this.maypoleName,
     this.address,
+    this.latitude,
+    this.longitude,
     this.showAppBar = true,
     this.autoFocus = false,
   });
@@ -50,11 +58,18 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
   final Set<String> _animatedMessageIds = {};
   final ImagePicker _picker = ImagePicker();
   bool _isUploadingImage = false;
+  Position? _currentPosition;
+  bool _isFirstLoad = true; // Track if this is the first load
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _updateCurrentPosition();
+
+    debugPrint('🏠 MaypoleChatContent initialized:');
+    debugPrint('   Place: ${widget.maypoleName}');
+    debugPrint('   Coordinates: lat=${widget.latitude}, lon=${widget.longitude}');
 
     // Auto-focus if requested
     if (widget.autoFocus) {
@@ -62,6 +77,87 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
         _messageFocusNode.requestFocus();
       });
     }
+  }
+  
+  Future<void> _updateCurrentPosition() async {
+    final locationService = ref.read(locationServiceProvider);
+    final position = await locationService.getCurrentPosition();
+    debugPrint('📍 Current position: lat=${position?.latitude}, lon=${position?.longitude}');
+    if (mounted) {
+      setState(() {
+        _currentPosition = position;
+      });
+    }
+  }
+  
+  bool get _isWithinProximity {
+    debugPrint('🔍 Checking proximity:');
+    debugPrint('   Place coords: lat=${widget.latitude}, lon=${widget.longitude}');
+    debugPrint('   Current position: lat=${_currentPosition?.latitude}, lon=${_currentPosition?.longitude}');
+    
+    // Check if user has enabled "Show When at Location" feature
+    final locationState = ref.watch(locationSettingsViewModelProvider);
+    final showWhenAtLocationEnabled = locationState.preferences.showWhenAtLocation;
+    
+    debugPrint('   Show when at location enabled: $showWhenAtLocationEnabled');
+    
+    // If feature is not enabled, allow uploads anywhere
+    if (!showWhenAtLocationEnabled) {
+      debugPrint('   ✅ Show when at location disabled - allowing image upload');
+      return true;
+    }
+    
+    if (widget.latitude == null || widget.longitude == null) {
+      debugPrint('   ⚠️ No place coordinates - allowing image upload by default');
+      // If no coordinates for the place, allow image upload
+      return true;
+    }
+    
+    if (_currentPosition == null) {
+      debugPrint('   ❌ No current position - denying image upload');
+      // If can't get position, deny image upload
+      return false;
+    }
+    
+    final locationService = ref.read(locationServiceProvider);
+    final isNearby = locationService.isPositionWithinProximity(
+      targetLat: widget.latitude!,
+      targetLon: widget.longitude!,
+      position: _currentPosition,
+    );
+    
+    debugPrint('   Result: ${isNearby == true ? "✅ Within proximity" : "❌ Not within proximity"}');
+    return isNearby ?? false;
+  }
+  
+  bool _isMessageFromNearby(MaypoleMessage message) {
+    // Check if user has enabled "Show When at Location" feature
+    final locationState = ref.watch(locationSettingsViewModelProvider);
+    final showWhenAtLocation = locationState.preferences.showWhenAtLocation;
+    
+    // If feature is disabled, don't show badges
+    if (!showWhenAtLocation) {
+      return false;
+    }
+    
+    // If no coordinates for the place or message, can't determine
+    if (widget.latitude == null || widget.longitude == null) {
+      return false;
+    }
+    
+    if (message.senderLatitude == null || message.senderLongitude == null) {
+      return false;
+    }
+    
+    final locationService = ref.read(locationServiceProvider);
+    final distance = locationService.calculateDistance(
+      message.senderLatitude!,
+      message.senderLongitude!,
+      widget.latitude!,
+      widget.longitude!,
+    );
+    
+    return distance <= LocationService.proximityThreshold;
   }
 
   @override
@@ -138,28 +234,39 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       children: [
         Expanded(
           child: messagesAsyncValue.when(
-            data: (messages) => ListView.builder(
-              controller: _scrollController,
-              reverse: true,
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                final message = messages[index];
-                final isOwnMessage = currentUser != null && 
-                    message.senderId == currentUser.firebaseID;
-                
-                // Use message ID or a combination of sender + timestamp as unique key
-                final messageKey = message.id ?? '${message.senderId}_${message.timestamp.millisecondsSinceEpoch}';
-                final isNew = !_animatedMessageIds.contains(messageKey);
-                
-                // Mark this message as seen
-                if (isNew) {
+            data: (messages) {
+              // On first load, mark all existing messages as already seen
+              // This prevents the stutter from animating all cached messages
+              if (_isFirstLoad && messages.isNotEmpty) {
+                _isFirstLoad = false;
+                for (final message in messages) {
+                  final messageKey = message.id ?? '${message.senderId}_${message.timestamp.millisecondsSinceEpoch}';
                   _animatedMessageIds.add(messageKey);
                 }
-                
-                return _AnimatedMessageItem(
-                  key: ValueKey(messageKey),
-                  isNew: isNew,
-                  child: message.isImageUpload
+              }
+              
+              return ListView.builder(
+                controller: _scrollController,
+                reverse: true,
+                itemCount: messages.length,
+                itemBuilder: (context, index) {
+                  final message = messages[index];
+                  final isOwnMessage = currentUser != null && 
+                      message.senderId == currentUser.firebaseID;
+                  
+                  // Use message ID or a combination of sender + timestamp as unique key
+                  final messageKey = message.id ?? '${message.senderId}_${message.timestamp.millisecondsSinceEpoch}';
+                  final isNew = !_animatedMessageIds.contains(messageKey);
+                  
+                  // Mark this message as seen
+                  if (isNew) {
+                    _animatedMessageIds.add(messageKey);
+                  }
+                  
+                  return _AnimatedMessageItem(
+                    key: ValueKey(messageKey),
+                    isNew: isNew,
+                    child: message.isImageUpload
                       ? ImageUploadNotification(
                           senderName: message.senderName,
                           maypoleId: widget.threadId,
@@ -183,6 +290,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                               senderProfilePictureUrl: message.senderProfilePictureUrl,
                               body: message.body,
                               timestamp: message.timestamp,
+                              isNearby: _isMessageFromNearby(message),
                               isOwnMessage: isOwnMessage,
                               onTagUser: !isOwnMessage 
                                   ? () => _tagUser(message.senderName, message.senderId)
@@ -193,9 +301,10 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                             ),
                           ),
                         ),
-                );
-              },
-            ),
+                  );
+                },
+              );
+            },
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, stack) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -260,6 +369,10 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
               sender,
               taggedUserIds: mentionedUserIds,
               address: widget.address ?? '',
+              latitude: widget.latitude,
+              longitude: widget.longitude,
+              senderLatitude: _currentPosition?.latitude,
+              senderLongitude: _currentPosition?.longitude,
             );
 
         _messageController.clear();
@@ -287,9 +400,18 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                 )
               : IconButton(
                   icon: const Icon(Icons.image),
-                  color: Colors.white70,
-                  onPressed: () => _pickAndUploadImage(sender),
-                  tooltip: 'Add photo',
+                  color: _isWithinProximity ? Colors.white70 : Colors.white24,
+                  onPressed: _isWithinProximity 
+                      ? () => _pickAndUploadImage(sender)
+                      : () {
+                          AppToast.showError(
+                            context,
+                            'You have "Show When at Location" enabled. You must be within 100m to post pictures. Disable in Preferences to post from anywhere.',
+                          );
+                        },
+                  tooltip: _isWithinProximity 
+                      ? 'Add photo' 
+                      : 'Must be at location to add photo',
                 ),
           Expanded(
             child: MentionTextField(

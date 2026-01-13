@@ -101,7 +101,7 @@ class DMThreadService {
         .collection('messages')
         .orderBy('timestamp', descending: true)
         .limit(_messageLimit)
-        .snapshots(includeMetadataChanges: true)
+        .snapshots(includeMetadataChanges: false) // Only emit when server updates, use cache in build()
         .map((snapshot) {
       // Log cache vs server source for monitoring
       if (snapshot.metadata.isFromCache) {
@@ -195,7 +195,8 @@ class DMThreadService {
     // Remove both users from hiddenFor list (unhide for both when message is sent)
     hiddenFor.removeWhere((id) => id == senderId || id == recipientId);
 
-    // Update thread's lastMessage, lastMessageTime, and unhide for both users
+    // Update thread's lastMessage, lastMessageTime, unhide for both users,
+    // and mark as unread for recipient
     await _firestore
         .collection('DMThreads')
         .doc(threadId)
@@ -203,6 +204,8 @@ class DMThreadService {
       'lastMessage': message.toMap(),
       'lastMessageTime': Timestamp.fromDate(now),
       'hiddenFor': hiddenFor,
+      'unreadBy.$recipientId': true,  // Mark as unread for recipient
+      'unreadBy.$senderId': false,    // Mark as read for sender
     });
 
     debugPrint('✓ Sent DM message to thread: $threadId');
@@ -284,6 +287,7 @@ class DMThreadService {
             partnerId: partner.id,
             partnerProfpic: partner.profilePicUrl,
             lastMessageBody: dmThread.lastMessage?.body,
+            hasUnread: dmThread.hasUnreadMessagesFor(userId),
           );
         } catch (e) {
           debugPrint('Error processing DM thread ${doc.id}: $e');
@@ -291,6 +295,19 @@ class DMThreadService {
         }
       }).whereType<DMThreadMetaData>().toList();
     });
+  }
+
+  /// Marks all messages in a DM thread as read for a specific user
+  Future<void> markThreadAsRead(String threadId, String userId) async {
+    try {
+      await _firestore.collection('DMThreads').doc(threadId).update({
+        'unreadBy.$userId': false,
+      });
+      debugPrint('✓ Marked DM thread $threadId as read for user $userId');
+    } catch (e) {
+      debugPrint('❌ Error marking DM thread as read: $e');
+      rethrow;
+    }
   }
 
   /// Hides a DM thread for a specific user by adding them to the hiddenFor list
