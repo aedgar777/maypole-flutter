@@ -186,9 +186,13 @@
   "@privacy": {
     "description": "Privacy menu item"
   },
-  "help": "Help & Feedback",
+  "help": "Help",
   "@help": {
     "description": "Help menu item"
+  },
+  "feedback": "Feedback",
+  "@feedback": {
+    "description": "Feedback menu item"
   },
   "privacyPolicy": "Privacy Policy",
   "@privacyPolicy": {
@@ -491,7 +495,7 @@
   "@registrationSuccessTitle": {
     "description": "Title for registration success dialog"
   },
-  "registrationSuccessMessage": "Your account has been created successfully. We've sent a verification email to {email}. Please check your inbox and click the verification link to activate all features.",
+  "registrationSuccessMessage": "Your account has been created successfully! We've sent a verification email to {email}. Please check your inbox and verify your email to unlock all features.",
   "@registrationSuccessMessage": {
     "description": "Message shown after successful registration",
     "placeholders": {

@@ -23,6 +23,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _usernameController = TextEditingController();
+  bool _hasShownSuccessDialog = false;
 
   @override
   void dispose() {
@@ -34,6 +35,10 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   }
 
   void _showSuccessDialogAndNavigate(BuildContext context) {
+    // Prevent showing dialog multiple times
+    if (_hasShownSuccessDialog) return;
+    _hasShownSuccessDialog = true;
+    
     // Show success dialog informing user about verification email
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;

@@ -40,7 +40,8 @@
   "accountSettings": "Configuración de cuenta",
   "notifications": "Notificaciones",
   "privacy": "Privacidad",
-  "help": "Ayuda y comentarios",
+  "help": "Ayuda",
+  "feedback": "Comentarios",
   "privacyPolicy": "Política de privacidad",
   "comingSoon": "¡Próximamente!",
   "logoutConfirmation": "¿Está seguro de que desea cerrar sesión?",
@@ -105,7 +106,7 @@
   "resendVerification": "Reenviar verificación",
   "verificationEmailSent": "¡Correo de verificación enviado! Por favor revise su bandeja de entrada.",
   "registrationSuccessTitle": "¡Bienvenido a Maypole!",
-  "registrationSuccessMessage": "Su cuenta ha sido creada exitosamente. Hemos enviado un correo de verificación a {email}. Por favor revise su bandeja de entrada y haga clic en el enlace de verificación para activar todas las funciones.",
+  "registrationSuccessMessage": "¡Su cuenta ha sido creada exitosamente! Hemos enviado un correo de verificación a {email}. Por favor revise su bandeja de entrada y verifique su correo para desbloquear todas las funciones.",
   "gotIt": "Entendido",
   "hasAddedAnImage": "ha añadido una imagen"
 }

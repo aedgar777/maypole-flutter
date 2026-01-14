@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:maypole/core/app_config.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 
 class PrivacyPolicyScreen extends StatelessWidget {
@@ -12,7 +13,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.privacyPolicy),
-        leading: IconButton(
+        leading: AppConfig.isWideScreen ? null : IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             if (context.canPop()) {
@@ -24,6 +25,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             }
           },
         ),
+        automaticallyImplyLeading: !AppConfig.isWideScreen,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),

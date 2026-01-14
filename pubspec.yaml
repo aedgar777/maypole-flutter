@@ -18,7 +18,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # of the product and file versions while build-number is used as the build suffix.
 
 
-version: 1.0.13+40
+version: 1.0.13+50
 
 
 environment:
@@ -60,6 +60,7 @@ dependencies:
   shared_preferences: ^2.3.4
   url_launcher: ^6.3.0
   google_mobile_ads: ^5.2.0
+  flutter_svg: ^2.0.10
 
 
   http: any
@@ -87,6 +88,7 @@ flutter:
 
   assets:
     - assets/icons/
+    - assets/images/badges/
     - .env
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/to/asset-from-package

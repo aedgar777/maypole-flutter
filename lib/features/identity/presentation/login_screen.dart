@@ -6,6 +6,8 @@ import 'package:maypole/core/utils/string_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../domain/states/auth_state.dart';
 import '../auth_providers.dart';
 import './widgets/auth_form_field.dart';
@@ -45,6 +47,116 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         _passwordController.text.trim(),
       );
     }
+  }
+
+  void _openPrivacyPolicy() {
+    context.go('/privacy-policy');
+  }
+
+  void _openHelp() {
+    context.go('/help');
+  }
+
+  Future<void> _openFeedback() async {
+    try {
+      final Uri emailUri = Uri(
+        scheme: 'mailto',
+        path: 'info@maypole.app',
+        query: 'body=Describe your issue or suggestions:',
+      );
+
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      }
+    } catch (e) {
+      // Silently fail for login screen
+    }
+  }
+
+  Widget _buildAppStoreBadges() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Apple App Store Badge
+        InkWell(
+          onTap: () {
+            // TODO: Add Apple App Store link
+          },
+          child: SvgPicture.asset(
+            'assets/images/badges/app_store_badge.svg',
+            height: 40,
+            fit: BoxFit.contain,
+          ),
+        ),
+        const SizedBox(width: 16),
+        // Google Play Store Badge - wrapped in Container with white background
+        // because the SVG has a black background rectangle
+        InkWell(
+          onTap: () {
+            // TODO: Add Google Play Store link
+          },
+          child: Container(
+            height: 40,
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: SvgPicture.asset(
+              'assets/images/badges/play_store_badge.svg',
+              height: 36,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFooterLinks(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        InkWell(
+          onTap: _openPrivacyPolicy,
+          child: Text(
+            l10n.privacy,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Text('•', style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
+        const SizedBox(width: 16),
+        InkWell(
+          onTap: _openHelp,
+          child: Text(
+            l10n.help,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Text('•', style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
+        const SizedBox(width: 16),
+        InkWell(
+          onTap: _openFeedback,
+          child: Text(
+            l10n.feedback,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildLoginForm(AuthState loginState, BuildContext context) {
@@ -118,6 +230,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
         ),
+        // Web-only footer with app store badges and links
+        if (AppConfig.isWideScreen)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 32.0),
+            child: Column(
+              children: [
+                _buildAppStoreBadges(),
+                const SizedBox(height: 16),
+                _buildFooterLinks(context),
+              ],
+            ),
+          ),
       ],
     );
   }

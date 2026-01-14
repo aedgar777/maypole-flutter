@@ -16,6 +16,7 @@ import '../features/settings/presentation/screens/privacy_policy_screen.dart';
 import '../features/settings/presentation/screens/preferences_screen.dart';
 import '../features/settings/presentation/screens/account_settings_screen.dart';
 import '../features/settings/presentation/screens/blocked_users_screen.dart';
+import '../features/settings/presentation/screens/help_screen.dart';
 import '../features/identity/auth_providers.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -30,7 +31,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final currentPath = state.matchedLocation;
       
       // Define public routes that don't require authentication
-      final publicRoutes = ['/login', '/register', '/privacy-policy', '/email-verified'];
+      final publicRoutes = ['/login', '/register', '/privacy-policy', '/help', '/email-verified'];
       final isPublicRoute = publicRoutes.contains(currentPath);
       
       // If user is not authenticated and trying to access a protected route
@@ -38,8 +39,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/login';
       }
       
-      // If user is authenticated and on login screen, redirect to home
-      if (isAuthenticated && currentPath == '/login') {
+      // If user is authenticated and on login/register screen, redirect to home
+      if (isAuthenticated && (currentPath == '/login' || currentPath == '/register')) {
         return '/home';
       }
       
@@ -126,6 +127,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/privacy-policy',
         builder: (context, state) => const PrivacyPolicyScreen(),
+      ),
+      GoRoute(
+        path: '/help',
+        builder: (context, state) => const HelpScreen(),
       ),
       GoRoute(
         path: '/user-profile/:firebaseId',
