@@ -14,6 +14,7 @@ class MessageWithMentions extends StatelessWidget {
   final String body;
   final DateTime timestamp;
   final bool isOwnMessage;
+  final bool isNearby; // Whether sender was near the location
   final VoidCallback? onTagUser;
   final VoidCallback? onDelete;
 
@@ -27,6 +28,7 @@ class MessageWithMentions extends StatelessWidget {
     this.isOwnMessage = false,
     this.onTagUser,
     this.onDelete,
+    this.isNearby = false,
   });
 
   /// Calculate opacity based on message age
@@ -64,7 +66,7 @@ class MessageWithMentions extends StatelessWidget {
             style: theme.textTheme.bodyMedium,
             children: [
               TextSpan(
-                text: '$senderName: ',
+                text: senderName,
                 style: const TextStyle(
                   fontFamily: 'Lato',
                   fontWeight: FontWeight.bold,
@@ -73,6 +75,19 @@ class MessageWithMentions extends StatelessWidget {
                 recognizer: TapGestureRecognizer()
                   ..onTap = () => _navigateToProfile(context),
               ),
+              if (isNearby)
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 2.0, right: 2.0),
+                    child: Icon(
+                      Icons.location_on,
+                      size: 14,
+                      color: brightTeal,
+                    ),
+                  ),
+                ),
+              const TextSpan(text: ' '),
               ...mentions,
             ],
           ),

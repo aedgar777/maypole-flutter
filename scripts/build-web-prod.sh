@@ -8,7 +8,6 @@ set +a
 echo "🌐 Building Flutter Web for PRODUCTION environment..."
 
 flutter build web \
-  --web-renderer html \
   --dart-define=ENVIRONMENT=production \
   --dart-define=FIREBASE_PROD_WEB_API_KEY="${FIREBASE_PROD_WEB_API_KEY}" \
   --dart-define=FIREBASE_PROD_WEB_APP_ID="${FIREBASE_PROD_WEB_APP_ID}" \

@@ -18,37 +18,46 @@ class DmViewModel extends AsyncNotifier<List<DirectMessage>> {
   Future<List<DirectMessage>> build() async {
     _threadService = ref.read(dmThreadServiceProvider);
 
+    // Keep this provider alive even when not actively watched
+    // This prevents rebuilding and allows instant cache access when returning
+    ref.keepAlive();
+
     // Cancel subscription when the provider is disposed
     ref.onDispose(() {
       _messagesSubscription?.cancel();
     });
 
-    // Try to load from cache first for instant display
-    await _initWithCache();
-
-    // Return empty list initially, cache or stream will update it
-    return [];
-  }
-
-  /// Initialize with cache-first strategy
-  /// Shows cached data immediately, then sets up stream for real-time updates
-  Future<void> _initWithCache() async {
-    try {
-      // First, try to load from cache for instant display
-      final cachedMessages = await _threadService.getCachedDmMessages(_threadId);
+    // First, try to get messages from the global preloader
+    final preloader = ref.read(dmMessagePreloaderProvider);
+    final preloadedMessages = preloader.getCachedMessages(_threadId);
+    
+    if (preloadedMessages != null && preloadedMessages.isNotEmpty) {
+      developer.log('⚡ Returning ${preloadedMessages.length} preloaded DM messages INSTANTLY', name: 'DmViewModel');
       
-      if (cachedMessages.isNotEmpty) {
-        // Show cached data immediately
-        state = AsyncValue.data(cachedMessages);
-        developer.log('Loaded ${cachedMessages.length} cached messages', name: 'DmViewModel');
-      }
-    } catch (e) {
-      developer.log('Error loading cached messages: $e', name: 'DmViewModel');
-      // Continue to stream setup even if cache fails
+      // Still set up stream for this specific view model to handle updates
+      _initStream();
+      
+      // Return preloaded data immediately - zero delay!
+      return preloadedMessages;
     }
     
-    // Now set up the stream for real-time updates
-    _initStream();
+    // Fallback: Try to load from Firestore cache
+    final cachedMessages = await _threadService.getCachedDmMessages(_threadId);
+    
+    if (cachedMessages.isNotEmpty) {
+      developer.log('📦 Returning ${cachedMessages.length} cached DM messages from Firestore', name: 'DmViewModel');
+      
+      // Set up stream in background (don't await)
+      _initStream();
+      
+      // Return cached data immediately - no loading state!
+      return cachedMessages;
+    } else {
+      // No cache - set up stream and return empty (will load from server)
+      developer.log('📭 No cache - initializing DMs from server', name: 'DmViewModel');
+      _initStream();
+      return [];
+    }
   }
 
   void _initStream() {

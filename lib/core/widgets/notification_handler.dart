@@ -2,7 +2,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/services/fcm_service.dart';
+import 'package:maypole/features/directmessages/presentation/dm_providers.dart';
 
 /// Widget that handles Firebase Cloud Messaging notifications
 /// Place this at the root of your app to handle notification taps and foreground messages
@@ -61,6 +63,9 @@ class _NotificationHandlerState extends ConsumerState<NotificationHandler> {
 
     // Navigate to the appropriate screen based on notification type
     if (type == 'dm') {
+      // Mark DM thread as read when notification is tapped
+      _markDmThreadAsRead(threadId);
+      
       // Navigate to DM thread
       context.go('/home'); // Will navigate to DM tab
       // Note: You might need to pass additional navigation state to open specific thread
@@ -70,6 +75,21 @@ class _NotificationHandlerState extends ConsumerState<NotificationHandler> {
       final maypoleName = message.data['maypoleName'] ?? 'Maypole';
       context.go('/chat/$threadId', extra: maypoleName);
       debugPrint('Navigating to maypole thread: $threadId');
+    }
+  }
+
+  Future<void> _markDmThreadAsRead(String threadId) async {
+    final currentUser = AppSession().currentUser;
+    if (currentUser == null) return;
+
+    try {
+      await ref.read(dmThreadServiceProvider).markThreadAsRead(
+        threadId,
+        currentUser.firebaseID,
+      );
+      debugPrint('✓ Marked DM thread as read from notification: $threadId');
+    } catch (e) {
+      debugPrint('❌ Error marking DM thread as read: $e');
     }
   }
 

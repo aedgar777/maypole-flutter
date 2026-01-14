@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/services/fcm_service.dart';
 import 'package:maypole/core/services/user_data_prefetch_service.dart';
@@ -25,13 +26,48 @@ class AuthService {
           .collection('users')
           .doc(firebaseUser.uid)
           .snapshots()
-          .map((docSnapshot) {
+          .asyncMap((docSnapshot) async {
         if (docSnapshot.exists) {
           final userData = docSnapshot.data() as Map<String, dynamic>;
           final user = DomainUser.fromMap(userData);
           _session.currentUser = user;
           return user;
         } else {
+          // User document doesn't exist but Firebase Auth user does
+          // This can happen if:
+          // 1. User was just created and Firestore document is being written (registration in progress)
+          // 2. User was created in Firebase Auth but Firestore write failed
+          // 3. User document was manually deleted
+          // 4. Old test data exists
+          
+          // Wait a moment to allow registration to complete
+          // If the user was just created, the Firestore document should appear within 2-3 seconds
+          debugPrint('⚠️ Firebase Auth user exists but Firestore document missing for ${firebaseUser.uid}');
+          debugPrint('   Display name: ${firebaseUser.displayName}');
+          debugPrint('   Email: ${firebaseUser.email}');
+          debugPrint('⏳ Waiting 3 seconds for Firestore document to be created (may be registration in progress)...');
+          
+          await Future.delayed(const Duration(seconds: 3));
+          
+          // Check again if document exists now
+          final recheckSnapshot = await _firestore
+              .collection('users')
+              .doc(firebaseUser.uid)
+              .get();
+          
+          if (recheckSnapshot.exists) {
+            debugPrint('✅ Firestore document appeared - registration completed successfully');
+            final userData = recheckSnapshot.data() as Map<String, dynamic>;
+            final user = DomainUser.fromMap(userData);
+            _session.currentUser = user;
+            return user;
+          }
+          
+          // Document still doesn't exist after waiting - sign out the user
+          debugPrint('❌ Firestore document still missing after 3 seconds');
+          debugPrint('🔄 Signing out user due to missing Firestore document');
+          await signOut();
+          
           _session.currentUser = null;
           return null;
         }
@@ -150,18 +186,29 @@ class AuthService {
       await result.user!.updateDisplayName(username);
       debugPrint('✓ Set display name to: $username');
 
-      // Create domain user
+      // Reload the user to ensure authentication token is fresh
+      // This prevents "Caller does not have permission" errors in Firestore
+      await result.user!.reload();
+      final freshUser = _firebaseAuth.currentUser;
+      if (freshUser == null) {
+        throw Exception('User authentication state lost during registration');
+      }
+      
+      // Get fresh ID token to ensure Firestore has latest auth state
+      await freshUser.getIdToken(true);
+      debugPrint('✓ Refreshed authentication token');
 
+      // Create domain user
       final DomainUser user = DomainUser(
         username: username,
         email: email,
-        firebaseID: result.user!.uid,
+        firebaseID: freshUser.uid,
       );
 
       // Store in Firestore
       await _firestore
           .collection('users')
-          .doc(result.user!.uid)
+          .doc(freshUser.uid)
           .set(user.toMap());
 
       // Set current user in session
@@ -173,32 +220,38 @@ class AuthService {
           .doc(username.toLowerCase())
           .set({
         'taken': true,
-        'owner': result.user!.uid,
+        'owner': freshUser.uid,
       });
 
       // Send email verification immediately after registration
+      debugPrint('📧 Attempting to send verification email...');
       try {
         await sendEmailVerification();
-        debugPrint('✓ Verification email sent to new user');
+        debugPrint('✅ Verification email sent successfully');
       } catch (e) {
-        debugPrint('⚠️ Failed to send verification email (non-critical): $e');
+        debugPrint('❌ Failed to send verification email: $e');
+        debugPrint('   Error type: ${e.runtimeType}');
+        if (e is FirebaseAuthException) {
+          debugPrint('   Firebase error code: ${e.code}');
+          debugPrint('   Firebase error message: ${e.message}');
+        }
         // Don't fail registration if email sending fails
       }
 
       // Setup FCM for new user
       try {
-        await _fcmService.setupForUser(result.user!.uid);
+        await _fcmService.setupForUser(freshUser.uid);
         debugPrint('✓ FCM initialized for new user');
       } catch (e) {
         debugPrint('⚠️ FCM setup failed (non-critical): $e');
       }
 
       // Prefetch user data in background (new users won't have much data yet)
-      _prefetchService.prefetchUserData(result.user!.uid).catchError((e) {
+      _prefetchService.prefetchUserData(freshUser.uid).catchError((e) {
         debugPrint('⚠️ Prefetch failed (non-critical): $e');
       });
 
-      return result.user?.uid;
+      return freshUser.uid;
     } on FirebaseAuthException {
       rethrow;
     } catch (e) {
@@ -416,12 +469,27 @@ class AuthService {
         throw Exception('Email is already verified');
       }
 
-      // Send verification email with default Firebase settings
-      // To add a custom redirect URL, you need to:
-      // 1. Add the domain to Firebase Console → Authentication → Settings → Authorized domains
-      // 2. Then uncomment and configure ActionCodeSettings below
-      await user.sendEmailVerification();
-      debugPrint('✓ Verification email sent to ${user.email}');
+      // Send verification email with custom landing page
+      // The continueUrl is where users will be redirected after verifying their email
+      final projectId = AppConfig.isProduction 
+          ? 'maypole-flutter-ce6c3' 
+          : 'maypole-flutter-dev';
+      
+      final actionCodeSettings = ActionCodeSettings(
+        // Users will land on this page after clicking the verification link in their email
+        url: 'https://$projectId.web.app/email-verified',
+        // For mobile apps, this ensures the link opens in the app if installed
+        handleCodeInApp: false,
+        // iOS app settings (optional - allows deep linking to app)
+        iOSBundleId: 'app.maypole.maypole',
+        // Android app settings (optional - allows deep linking to app)
+        androidPackageName: 'app.maypole.maypole',
+        androidInstallApp: false,
+        androidMinimumVersion: '1',
+      );
+      
+      await user.sendEmailVerification(actionCodeSettings);
+      debugPrint('✓ Verification email sent to ${user.email} with redirect to https://$projectId.web.app/email-verified');
     } on FirebaseAuthException {
       rethrow;
     } catch (e) {

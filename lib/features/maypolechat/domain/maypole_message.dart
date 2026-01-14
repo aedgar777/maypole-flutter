@@ -13,6 +13,8 @@ class MaypoleMessage {
   final List<String> taggedUserIds; // New field for multiple mentions
   final String? messageType; // Type of message: 'text', 'image_upload'
   final String? imageId; // For image upload messages, the ID of the uploaded image
+  final double? senderLatitude; // Sender's latitude when message was sent
+  final double? senderLongitude; // Sender's longitude when message was sent
 
   const MaypoleMessage({
     this.id,
@@ -25,6 +27,8 @@ class MaypoleMessage {
     this.taggedUserIds = const [],
     this.messageType,
     this.imageId,
+    this.senderLatitude,
+    this.senderLongitude,
   });
 
   factory MaypoleMessage.fromMap(Map<String, dynamic> map, {String? documentId}) {
@@ -44,6 +48,8 @@ class MaypoleMessage {
           [],
       messageType: map['messageType'] as String?,
       imageId: map['imageId'] as String?,
+      senderLatitude: map['senderLatitude'] as double?,
+      senderLongitude: map['senderLongitude'] as double?,
     );
   }
 
@@ -65,6 +71,12 @@ class MaypoleMessage {
     }
     if (imageId != null) {
       map['imageId'] = imageId!;
+    }
+    if (senderLatitude != null) {
+      map['senderLatitude'] = senderLatitude!;
+    }
+    if (senderLongitude != null) {
+      map['senderLongitude'] = senderLongitude!;
     }
     
     return map;

@@ -18,84 +18,71 @@ class MaypoleChatViewModel extends AsyncNotifier<List<MaypoleMessage>> {
   Future<List<MaypoleMessage>> build() async {
     _threadService = ref.read(maypoleChatThreadServiceProvider);
 
+    // Keep this provider alive even when not actively watched
+    // This prevents rebuilding and allows instant cache access when returning
+    ref.keepAlive();
+
     // Cancel subscription when the provider is disposed
     ref.onDispose(() {
       _messagesSubscription?.cancel();
     });
 
-    // Use smart cache-first strategy for maypole messages
-    await _initWithSmartCache();
-
-    // Return empty list initially, cache or stream will update it
-    return [];
+    // Try to load from cache synchronously first
+    final cachedMessages = await _threadService.getCachedMessages(_threadId);
+    
+    if (cachedMessages != null && cachedMessages.isNotEmpty) {
+      debugPrint('📦 Returning ${cachedMessages.length} cached messages immediately');
+      
+      // Set up stream and validation in background (don't await)
+      _validateAndSetupStream(cachedMessages);
+      
+      // Return cached data immediately - no loading state!
+      return cachedMessages;
+    } else {
+      // No cache - set up stream and return empty (will load from server)
+      debugPrint('📭 No cache - initializing from server');
+      _init();
+      return [];
+    }
   }
 
-  /// Smart cache initialization that handles both scenarios:
-  /// 1. Cache is still current (show immediately)
-  /// 2. Cache is stale due to many new messages (fetch fresh, show transition)
-  Future<void> _initWithSmartCache() async {
+  /// Validates cache and sets up stream in background
+  Future<void> _validateAndSetupStream(List<MaypoleMessage> cachedMessages) async {
     try {
-      // Step 1: Try to load from cache for instant display
-      final cachedMessages = await _threadService.getCachedMessages(_threadId);
+      // Validate cache in background (only 1 document read!)
+      final validationResult = await _threadService.validateCachedMessages(
+        _threadId,
+        cachedMessages,
+      );
       
-      if (cachedMessages != null && cachedMessages.isNotEmpty) {
-        // Show cached messages immediately
-        state = AsyncValue.data(cachedMessages);
-        debugPrint('📦 Displaying ${cachedMessages.length} cached messages');
-        
-        // Step 2: Validate cache in background (only 1 document read!)
-        final validationResult = await _threadService.validateCachedMessages(
-          _threadId,
-          cachedMessages,
-        );
-        
-        switch (validationResult) {
-          case CacheValidationResult.cacheValid:
-            // Cache is current, just set up stream for future updates
-            debugPrint('✅ Cache validated - setting up stream for real-time updates');
-            _initStream();
-            break;
-            
-          case CacheValidationResult.cacheStale:
-            // Cache is stale - need to fetch fresh messages
-            debugPrint('🔄 Cache stale - fetching fresh messages');
-            
-            // Fetch fresh messages from server
-            final freshMessages = await _threadService.getFreshMessages(_threadId);
-            
-            // Check if any cached messages are still in the fresh set
-            final cachedIds = cachedMessages.map((m) => m.id).toSet();
-            final freshIds = freshMessages.map((m) => m.id).toSet();
-            final hasOverlap = cachedIds.intersection(freshIds).isNotEmpty;
-            
-            if (hasOverlap) {
-              // Some cached messages still in top 100 - smooth transition
-              debugPrint('✅ Smooth transition: some cached messages still relevant');
-              state = AsyncValue.data(freshMessages);
-            } else {
-              // No overlap - hundreds of new messages pushed old ones out
-              debugPrint('⚠️ Cache completely outdated - hundreds of new messages');
-              state = AsyncValue.data(freshMessages);
-            }
-            
-            // Now set up stream for real-time updates
-            _initStream();
-            break;
-            
-          case CacheValidationResult.noCache:
-            // Shouldn't happen since we checked above, but handle gracefully
-            _initStream();
-            break;
-        }
-      } else {
-        // No cache available, use standard initialization
-        debugPrint('📭 No cache available - loading from server');
-        _init();
+      switch (validationResult) {
+        case CacheValidationResult.cacheValid:
+          // Cache is current, just set up stream for future updates
+          debugPrint('✅ Cache validated - setting up stream for real-time updates');
+          _initStream();
+          break;
+          
+        case CacheValidationResult.cacheStale:
+          // Cache is stale - need to fetch fresh messages
+          debugPrint('🔄 Cache stale - fetching fresh messages');
+          
+          // Fetch fresh messages from server
+          final freshMessages = await _threadService.getFreshMessages(_threadId);
+          
+          // Update state with fresh messages
+          state = AsyncValue.data(freshMessages);
+          
+          // Now set up stream for real-time updates
+          _initStream();
+          break;
+          
+        case CacheValidationResult.noCache:
+          _initStream();
+          break;
       }
     } catch (e) {
-      debugPrint('⚠️ Error in smart cache init: $e');
-      // Fallback to standard initialization
-      _init();
+      debugPrint('⚠️ Error validating cache: $e');
+      _initStream();
     }
   }
 
@@ -128,6 +115,10 @@ class MaypoleChatViewModel extends AsyncNotifier<List<MaypoleMessage>> {
       DomainUser sender, {
         List<String> taggedUserIds = const [],
         String address = '',
+        double? latitude,
+        double? longitude,
+        double? senderLatitude,
+        double? senderLongitude,
       }) async {
     try {
       await _threadService.sendMessage(
@@ -137,6 +128,10 @@ class MaypoleChatViewModel extends AsyncNotifier<List<MaypoleMessage>> {
         sender,
         taggedUserIds: taggedUserIds,
         address: address,
+        latitude: latitude,
+        longitude: longitude,
+        senderLatitude: senderLatitude,
+        senderLongitude: senderLongitude,
       );
     } catch (e, st) {
       state = AsyncValue.error(e, st);

@@ -40,7 +40,7 @@ class MaypoleChatService {
         .collection('messages')
         .orderBy('timestamp', descending: true)
         .limit(_messageLimit)
-        .snapshots(includeMetadataChanges: true)
+        .snapshots(includeMetadataChanges: false) // Only emit when server updates, use cache in build()
         .map((snapshot) {
       // Log cache vs server source for monitoring
       if (snapshot.metadata.isFromCache) {
@@ -194,6 +194,10 @@ class MaypoleChatService {
     DomainUser sender, {
         List<String> taggedUserIds = const [],
         String address = '',
+        double? latitude,
+        double? longitude,
+        double? senderLatitude,
+        double? senderLongitude,
       }) async {
     final now = DateTime.now();
     final message = MaypoleMessage(
@@ -204,6 +208,8 @@ class MaypoleChatService {
       body: body,
       taggedUser: '',
       taggedUserIds: taggedUserIds,
+      senderLatitude: senderLatitude,
+      senderLongitude: senderLongitude,
     );
 
     final maypoleRef = _firestore.collection('maypoles').doc(threadId);
@@ -212,14 +218,21 @@ class MaypoleChatService {
     final batch = _firestore.batch();
 
     // "Upsert" the maypole document: create if it doesn't exist, update if it does
-    batch.set(
-        maypoleRef,
-        {
-          'id': threadId,
-          'name': maypoleName,
-          'address': address,
-        },
-        SetOptions(merge: true));
+    final Map<String, dynamic> maypoleData = {
+      'id': threadId,
+      'name': maypoleName,
+      'address': address,
+    };
+    
+    // Add coordinates if provided
+    if (latitude != null) {
+      maypoleData['latitude'] = latitude;
+    }
+    if (longitude != null) {
+      maypoleData['longitude'] = longitude;
+    }
+    
+    batch.set(maypoleRef, maypoleData, SetOptions(merge: true));
 
     // Add the new message to the subcollection
     batch.set(messageRef, message.toMap());
@@ -230,6 +243,8 @@ class MaypoleChatService {
         id: threadId,
         name: maypoleName,
         address: address,
+        latitude: latitude,
+        longitude: longitude,
       );
       final userRef = _firestore.collection('users').doc(sender.firebaseID);
       batch.update(userRef, {

@@ -38,6 +38,7 @@ class DMThread {
   final DirectMessage? lastMessage;
   final Map<String, DMParticipant> participants;  // Map of userId -> participant info
   final List<String> hiddenFor;  // List of userIds who have hidden this thread
+  final Map<String, bool> unreadBy;  // Map of userId -> has unread messages
 
   const DMThread({
     required this.id,
@@ -45,6 +46,7 @@ class DMThread {
     required this.participants,
     this.lastMessage,
     this.hiddenFor = const [],
+    this.unreadBy = const {},
   });
 
   // Helper to get participantIds as a list (for Firestore queries)
@@ -52,11 +54,19 @@ class DMThread {
   
   // Check if thread is hidden for a specific user
   bool isHiddenFor(String userId) => hiddenFor.contains(userId);
+  
+  // Check if thread has unread messages for a specific user
+  bool hasUnreadMessagesFor(String userId) => unreadBy[userId] ?? false;
 
   factory DMThread.fromMap(Map<String, dynamic> map) {
     final participantsMap = (map['participants'] as Map<String, dynamic>?) ?? {};
     final participants = participantsMap.map(
       (key, value) => MapEntry(key, DMParticipant.fromMap(value as Map<String, dynamic>)),
+    );
+
+    final unreadByMap = (map['unreadBy'] as Map<String, dynamic>?) ?? {};
+    final unreadBy = unreadByMap.map(
+      (key, value) => MapEntry(key, value as bool),
     );
 
     return DMThread(
@@ -67,6 +77,7 @@ class DMThread {
           ? DirectMessage.fromMap(map['lastMessage'] as Map<String, dynamic>)
           : null,
       hiddenFor: List<String>.from(map['hiddenFor'] ?? []),
+      unreadBy: unreadBy,
     );
   }
 
@@ -78,6 +89,7 @@ class DMThread {
       'participantIds': participantIds,  // Denormalized for queries
       'lastMessage': lastMessage?.toMap(),
       'hiddenFor': hiddenFor,
+      'unreadBy': unreadBy,
     };
   }
 
@@ -97,6 +109,7 @@ class DMThreadMetaData {
   final String partnerId;
   final String partnerProfpic;
   final String? lastMessageBody;
+  final bool hasUnread;
 
   const DMThreadMetaData({
     required this.id,
@@ -106,6 +119,7 @@ class DMThreadMetaData {
     required this.partnerId,
     required this.partnerProfpic,
     this.lastMessageBody,
+    this.hasUnread = false,
   });
 
   factory DMThreadMetaData.fromMap(Map<String, dynamic> map) {
@@ -117,6 +131,7 @@ class DMThreadMetaData {
       partnerId: map['partnerId'] ?? '',
       partnerProfpic: map['partnerProfpic'] ?? '',
       lastMessageBody: map['lastMessageBody'],
+      hasUnread: map['hasUnread'] ?? false,
     );
   }
 
@@ -129,6 +144,7 @@ class DMThreadMetaData {
       'partnerId': partnerId,
       'partnerProfpic': partnerProfpic,
       'lastMessageBody': lastMessageBody,
+      'hasUnread': hasUnread,
     };
   }
 }

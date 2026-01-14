@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/widgets/cached_profile_avatar.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/identity/auth_providers.dart';
@@ -71,12 +72,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  Future<void> _openHelpAndFeedback() async {
+  Future<void> _openFeedback() async {
     try {
       final Uri emailUri = Uri(
         scheme: 'mailto',
         path: 'info@maypole.app',
-        query: 'body=Describe your issue:',
+        query: 'body=Describe your issue or suggestions:',
       );
 
       if (await canLaunchUrl(emailUri)) {
@@ -106,10 +107,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.settings),
-        leading: IconButton(
+        leading: AppConfig.isWideScreen ? null : IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/home'),
         ),
+        automaticallyImplyLeading: !AppConfig.isWideScreen,
       ),
       body: authState.when(
         data: (user) {
@@ -182,43 +184,71 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const SizedBox(height: 32),
                 Divider(color: Colors.white.withValues(alpha: 0.1)),
                 // Settings sections
-                ListTile(
-                  leading: const Icon(Icons.person),
-                  title: Text(l10n.accountSettings),
-                  trailing: const Icon(Icons.chevron_right),
+                GestureDetector(
                   onTap: () {
                     context.push('/settings/account');
                   },
+                  child: Container(
+                    color: Colors.transparent,
+                    child: ListTile(
+                      leading: const Icon(Icons.person),
+                      title: Text(l10n.accountSettings),
+                      trailing: const Icon(Icons.chevron_right),
+                    ),
+                  ),
                 ),
-                ListTile(
-                  leading: const Icon(Icons.notifications),
-                  title: Text(l10n.notifications),
-                  trailing: const Icon(Icons.chevron_right),
+                GestureDetector(
                   onTap: () {
-                    context.push('/settings/notifications');
+                    context.push('/settings/preferences');
                   },
+                  child: Container(
+                    color: Colors.transparent,
+                    child: const ListTile(
+                      leading: Icon(Icons.settings),
+                      title: Text('Preferences'),
+                      trailing: Icon(Icons.chevron_right),
+                    ),
+                  ),
                 ),
-                ListTile(
-                  leading: const Icon(Icons.privacy_tip),
-                  title: Text(l10n.privacy),
-                  trailing: const Icon(Icons.chevron_right),
+                GestureDetector(
                   onTap: () {
                     context.push('/privacy-policy');
                   },
+                  child: Container(
+                    color: Colors.transparent,
+                    child: ListTile(
+                      leading: const Icon(Icons.privacy_tip),
+                      title: Text(l10n.privacy),
+                      trailing: const Icon(Icons.chevron_right),
+                    ),
+                  ),
                 ),
-                ListTile(
-                  leading: const Icon(Icons.help_outline),
-                  title: Text(l10n.help),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: _openHelpAndFeedback,
+                GestureDetector(
+                  onTap: () {
+                    context.push('/help');
+                  },
+                  child: Container(
+                    color: Colors.transparent,
+                    child: ListTile(
+                      leading: const Icon(Icons.help_outline),
+                      title: Text(l10n.help),
+                      trailing: const Icon(Icons.chevron_right),
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: _openFeedback,
+                  child: Container(
+                    color: Colors.transparent,
+                    child: ListTile(
+                      leading: const Icon(Icons.feedback_outlined),
+                      title: Text(l10n.feedback),
+                      trailing: const Icon(Icons.chevron_right),
+                    ),
+                  ),
                 ),
                 Divider(color: Colors.white.withValues(alpha: 0.1)),
-                ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.red),
-                  title: Text(
-                    l10n.logout,
-                    style: const TextStyle(color: Colors.red),
-                  ),
+                GestureDetector(
                   onTap: () async {
                     final navigator = GoRouter.of(context);
                     final confirm = await showDialog<bool>(
@@ -250,6 +280,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       navigator.go('/login');
                     }
                   },
+                  child: Container(
+                    color: Colors.transparent,
+                    child: ListTile(
+                      leading: const Icon(Icons.logout, color: Colors.red),
+                      title: Text(
+                        l10n.logout,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 32),
               ],

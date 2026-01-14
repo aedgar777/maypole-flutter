@@ -140,7 +140,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get privacy => 'Privacy';
 
   @override
-  String get help => 'Help & Feedback';
+  String get help => 'Help';
+
+  @override
+  String get feedback => 'Feedback';
 
   @override
   String get privacyPolicy => 'Privacy Policy';
@@ -362,7 +365,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String registrationSuccessMessage(String email) {
-    return 'Your account has been created successfully. We\'ve sent a verification email to $email. Please check your inbox and click the verification link to activate all features.';
+    return 'Your account has been created successfully! We\'ve sent a verification email to $email. Please check your inbox and verify your email to unlock all features.';
   }
 
   @override
