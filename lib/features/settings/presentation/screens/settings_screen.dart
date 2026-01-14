@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/widgets/cached_profile_avatar.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/identity/auth_providers.dart';
@@ -71,12 +72,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  Future<void> _openHelpAndFeedback() async {
+  Future<void> _openFeedback() async {
     try {
       final Uri emailUri = Uri(
         scheme: 'mailto',
         path: 'info@maypole.app',
-        query: 'body=Describe your issue:',
+        query: 'body=Describe your issue or suggestions:',
       );
 
       if (await canLaunchUrl(emailUri)) {
@@ -106,10 +107,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.settings),
-        leading: IconButton(
+        leading: AppConfig.isWideScreen ? null : IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/home'),
         ),
+        automaticallyImplyLeading: !AppConfig.isWideScreen,
       ),
       body: authState.when(
         data: (user) {
@@ -222,12 +224,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
                 GestureDetector(
-                  onTap: _openHelpAndFeedback,
+                  onTap: () {
+                    context.push('/help');
+                  },
                   child: Container(
                     color: Colors.transparent,
                     child: ListTile(
                       leading: const Icon(Icons.help_outline),
                       title: Text(l10n.help),
+                      trailing: const Icon(Icons.chevron_right),
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: _openFeedback,
+                  child: Container(
+                    color: Colors.transparent,
+                    child: ListTile(
+                      leading: const Icon(Icons.feedback_outlined),
+                      title: Text(l10n.feedback),
                       trailing: const Icon(Icons.chevron_right),
                     ),
                   ),

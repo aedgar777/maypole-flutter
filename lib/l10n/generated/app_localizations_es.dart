@@ -143,7 +143,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get privacy => 'Privacidad';
 
   @override
-  String get help => 'Ayuda y comentarios';
+  String get help => 'Ayuda';
+
+  @override
+  String get feedback => 'Comentarios';
 
   @override
   String get privacyPolicy => 'Política de privacidad';
@@ -367,7 +370,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String registrationSuccessMessage(String email) {
-    return 'Su cuenta ha sido creada exitosamente. Hemos enviado un correo de verificación a $email. Por favor revise su bandeja de entrada y haga clic en el enlace de verificación para activar todas las funciones.';
+    return '¡Su cuenta ha sido creada exitosamente! Hemos enviado un correo de verificación a $email. Por favor revise su bandeja de entrada y verifique su correo para desbloquear todas las funciones.';
   }
 
   @override

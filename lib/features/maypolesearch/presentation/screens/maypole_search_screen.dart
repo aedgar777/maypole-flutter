@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
@@ -43,6 +44,7 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.searchMaypoles),
+        automaticallyImplyLeading: !AppConfig.isWideScreen,
       ),
       body: Column(
         children: [

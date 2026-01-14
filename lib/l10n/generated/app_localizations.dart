@@ -341,8 +341,14 @@ abstract class AppLocalizations {
   /// Help menu item
   ///
   /// In en, this message translates to:
-  /// **'Help & Feedback'**
+  /// **'Help'**
   String get help;
+
+  /// Feedback menu item
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback'**
+  String get feedback;
 
   /// Privacy Policy screen title
   ///
@@ -731,7 +737,7 @@ abstract class AppLocalizations {
   /// Message shown after successful registration
   ///
   /// In en, this message translates to:
-  /// **'Your account has been created successfully. We\'ve sent a verification email to {email}. Please check your inbox and click the verification link to activate all features.'**
+  /// **'Your account has been created successfully! We\'ve sent a verification email to {email}. Please check your inbox and verify your email to unlock all features.'**
   String registrationSuccessMessage(String email);
 
   /// Button text to acknowledge a message
