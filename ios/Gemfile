@@ -1,5 +1,13 @@
 source "https://rubygems.org"
 
-gem "fastlane", "~> 2.220"
+# Fastlane for iOS deployment automation
+gem "fastlane", "~> 2.230"
+
+# CocoaPods for iOS dependency management
 gem "cocoapods", "~> 1.16"
+
+# Pretty terminal output for Xcode builds
 gem "xcpretty", "~> 0.3"
+
+# Bundler version constraint (Fastlane 2.x requires < 3.0)
+# GitHub Actions uses ruby/setup-ruby with bundler-cache which handles this automatically
