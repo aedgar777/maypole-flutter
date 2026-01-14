@@ -78,6 +78,7 @@ jobs:
       - name: Build Web
         run: |
           flutter build web --release \
+            --web-renderer html \
             --dart-define=ENVIRONMENT=production \
             --dart-define=FIREBASE_PROD_WEB_API_KEY=${{ secrets.FIREBASE_PROD_WEB_API_KEY }} \
             --dart-define=FIREBASE_PROD_WEB_APP_ID=${{ secrets.FIREBASE_PROD_WEB_APP_ID }} \

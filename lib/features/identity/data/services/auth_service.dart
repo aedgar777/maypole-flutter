@@ -25,13 +25,27 @@ class AuthService {
           .collection('users')
           .doc(firebaseUser.uid)
           .snapshots()
-          .map((docSnapshot) {
+          .asyncMap((docSnapshot) async {
         if (docSnapshot.exists) {
           final userData = docSnapshot.data() as Map<String, dynamic>;
           final user = DomainUser.fromMap(userData);
           _session.currentUser = user;
           return user;
         } else {
+          // User document doesn't exist but Firebase Auth user does
+          // This can happen if:
+          // 1. User was created in Firebase Auth but Firestore write failed
+          // 2. User document was manually deleted
+          // 3. Old test data exists
+          debugPrint('⚠️ Firebase Auth user exists but Firestore document missing for ${firebaseUser.uid}');
+          debugPrint('   Display name: ${firebaseUser.displayName}');
+          debugPrint('   Email: ${firebaseUser.email}');
+          
+          // Sign out the user - they need to re-register
+          // This prevents the app from being stuck in a bad state
+          debugPrint('🔄 Signing out user due to missing Firestore document');
+          await signOut();
+          
           _session.currentUser = null;
           return null;
         }

@@ -6,230 +6,232 @@ on:
       - beta
 
 jobs:
-  build_android:
-    name: Build and Deploy Android (Beta)
-    runs-on: ubuntu-latest
-    environment: production
-    permissions:
-      contents: write  # Required to push version bump commits
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
+  # TEMPORARILY COMMENTED OUT - Android Build
+  # build_android:
+  #   name: Build and Deploy Android (Beta)
+  #   runs-on: ubuntu-latest
+  #   environment: production
+  #   permissions:
+  #     contents: write  # Required to push version bump commits
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v3
+  #       with:
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         fetch-depth: 0
+  #
+  #     - name: Bump patch version
+  #       run: |
+  #         chmod +x scripts/auto-bump-version.sh scripts/get-version.sh
+  #         git config user.name "github-actions[bot]"
+  #         git config user.email "github-actions[bot]@users.noreply.github.com"
+  #         
+  #         echo "📱 Bumping patch version for Android Beta..."
+  #         ./scripts/auto-bump-version.sh patch
+  #         
+  #         NEW_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+  #         echo "✅ Version bumped to: $NEW_VERSION"
+  #         
+  #         if ! git diff --quiet pubspec.yaml; then
+  #           git add pubspec.yaml
+  #           git commit -m "chore: bump version to $NEW_VERSION (Android Beta) [skip ci]"
+  #           git push origin beta || echo "Push failed, continuing anyway"
+  #         fi
+  #
+  #     - name: Setup Java
+  #       uses: actions/setup-java@v3
+  #       with:
+  #         distribution: 'temurin'
+  #         java-version: '17'
+  #
+  #     - name: Setup Flutter
+  #       uses: subosito/flutter-action@v2
+  #       with:
+  #         flutter-version: '3.35.7'
+  #         channel: 'stable'
+  #
+  #     - name: Get dependencies
+  #       run: flutter pub get
+  #
+  #     - name: Create .env file from secrets
+  #       run: |
+  #         cat > .env << EOF
+  #         ENVIRONMENT=production
+  #         FIREBASE_PROD_WEB_API_KEY=${{ secrets.FIREBASE_PROD_WEB_API_KEY }}
+  #         FIREBASE_PROD_WEB_APP_ID=${{ secrets.FIREBASE_PROD_WEB_APP_ID }}
+  #         FIREBASE_PROD_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_PROD_WEB_MEASUREMENT_ID }}
+  #         FIREBASE_PROD_ANDROID_API_KEY=${{ secrets.FIREBASE_PROD_ANDROID_API_KEY }}
+  #         FIREBASE_PROD_ANDROID_APP_ID=${{ secrets.FIREBASE_PROD_ANDROID_APP_ID }}
+  #         FIREBASE_PROD_IOS_API_KEY=${{ secrets.FIREBASE_PROD_IOS_API_KEY }}
+  #         FIREBASE_PROD_IOS_APP_ID=${{ secrets.FIREBASE_PROD_IOS_APP_ID }}
+  #         FIREBASE_PROD_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_PROD_MESSAGING_SENDER_ID }}
+  #         FIREBASE_PROD_PROJECT_ID=${{ secrets.FIREBASE_PROD_PROJECT_ID }}
+  #         FIREBASE_PROD_AUTH_DOMAIN=${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }}
+  #         FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }}
+  #         IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
+  #         EOF
+  #
+  #     - name: Create google-services.json for prod flavor
+  #       env:
+  #         GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON_PROD }}
+  #       run: |
+  #         mkdir -p android/app/src/prod
+  #         echo "$GOOGLE_SERVICES_JSON" > android/app/src/prod/google-services.json
+  #         python3 -m json.tool android/app/src/prod/google-services.json > /dev/null 2>&1 || { echo "❌ Error: Invalid JSON"; exit 1; }
+  #         echo "✅ google-services.json created and validated"
+  #
+  #     - name: Setup Android Signing
+  #       run: |
+  #         echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | tr -d '\n\r ' | base64 -d > android/app/upload-keystore.jks
+  #         cat > android/key.properties << 'KEYSTORE_EOF'
+  #         storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
+  #         keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+  #         keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+  #         storeFile=upload-keystore.jks
+  #         KEYSTORE_EOF
+  #
+  #     - name: Build Android App Bundle (prodRelease)
+  #       run: flutter build appbundle --release --flavor prod --dart-define=ENVIRONMENT=production
+  #
+  #     - name: Setup Ruby for Fastlane
+  #       uses: ruby/setup-ruby@v1
+  #       with:
+  #         ruby-version: '3.2.0'
+  #         bundler-cache: true
+  #         working-directory: android
+  #
+  #     - name: Deploy to Play Store Open Testing with Fastlane
+  #       working-directory: android
+  #       env:
+  #         GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
+  #       run: |
+  #         # Create temp file for service account JSON
+  #         echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > ../play-store-service-account.json
+  #         export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="../play-store-service-account.json"
+  #         
+  #         bundle exec fastlane deploy_beta_open
 
-      - name: Bump patch version
-        run: |
-          chmod +x scripts/auto-bump-version.sh scripts/get-version.sh
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          echo "📱 Bumping patch version for Android Beta..."
-          ./scripts/auto-bump-version.sh patch
-          
-          NEW_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
-          echo "✅ Version bumped to: $NEW_VERSION"
-          
-          if ! git diff --quiet pubspec.yaml; then
-            git add pubspec.yaml
-            git commit -m "chore: bump version to $NEW_VERSION (Android Beta) [skip ci]"
-            git push origin beta || echo "Push failed, continuing anyway"
-          fi
-
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.35.7'
-          channel: 'stable'
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Create .env file from secrets
-        run: |
-          cat > .env << EOF
-          ENVIRONMENT=production
-          FIREBASE_PROD_WEB_API_KEY=${{ secrets.FIREBASE_PROD_WEB_API_KEY }}
-          FIREBASE_PROD_WEB_APP_ID=${{ secrets.FIREBASE_PROD_WEB_APP_ID }}
-          FIREBASE_PROD_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_PROD_WEB_MEASUREMENT_ID }}
-          FIREBASE_PROD_ANDROID_API_KEY=${{ secrets.FIREBASE_PROD_ANDROID_API_KEY }}
-          FIREBASE_PROD_ANDROID_APP_ID=${{ secrets.FIREBASE_PROD_ANDROID_APP_ID }}
-          FIREBASE_PROD_IOS_API_KEY=${{ secrets.FIREBASE_PROD_IOS_API_KEY }}
-          FIREBASE_PROD_IOS_APP_ID=${{ secrets.FIREBASE_PROD_IOS_APP_ID }}
-          FIREBASE_PROD_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_PROD_MESSAGING_SENDER_ID }}
-          FIREBASE_PROD_PROJECT_ID=${{ secrets.FIREBASE_PROD_PROJECT_ID }}
-          FIREBASE_PROD_AUTH_DOMAIN=${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }}
-          FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }}
-          IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
-          EOF
-
-      - name: Create google-services.json for prod flavor
-        env:
-          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON_PROD }}
-        run: |
-          mkdir -p android/app/src/prod
-          echo "$GOOGLE_SERVICES_JSON" > android/app/src/prod/google-services.json
-          python3 -m json.tool android/app/src/prod/google-services.json > /dev/null 2>&1 || { echo "❌ Error: Invalid JSON"; exit 1; }
-          echo "✅ google-services.json created and validated"
-
-      - name: Setup Android Signing
-        run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | tr -d '\n\r ' | base64 -d > android/app/upload-keystore.jks
-          cat > android/key.properties << 'KEYSTORE_EOF'
-          storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
-          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-          storeFile=upload-keystore.jks
-          KEYSTORE_EOF
-
-      - name: Build Android App Bundle (prodRelease)
-        run: flutter build appbundle --release --flavor prod --dart-define=ENVIRONMENT=production
-
-      - name: Setup Ruby for Fastlane
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2.0'
-          bundler-cache: true
-          working-directory: android
-
-      - name: Deploy to Play Store Open Testing with Fastlane
-        working-directory: android
-        env:
-          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
-        run: |
-          # Create temp file for service account JSON
-          echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > ../play-store-service-account.json
-          export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="../play-store-service-account.json"
-          
-          bundle exec fastlane deploy_beta_open
-
-  build_ios:
-    name: Build and Deploy iOS (Beta TestFlight)
-    runs-on: macos-latest
-    timeout-minutes: 60
-    environment: production
-    permissions:
-      contents: write  # Required to push version bump commits
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-
-      - name: Bump patch version
-        run: |
-          chmod +x scripts/auto-bump-version.sh scripts/get-version.sh
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          echo "📱 Bumping patch version for iOS Beta..."
-          ./scripts/auto-bump-version.sh patch
-          
-          NEW_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
-          echo "✅ Version bumped to: $NEW_VERSION"
-          
-          if ! git diff --quiet pubspec.yaml; then
-            git add pubspec.yaml
-            git commit -m "chore: bump version to $NEW_VERSION (iOS Beta) [skip ci]"
-            git push origin beta || echo "Push failed, continuing anyway"
-          fi
-
-      - name: Select Xcode version
-        run: |
-          if [ -d "/Applications/Xcode_15.4.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
-          elif [ -d "/Applications/Xcode_15.3.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_15.3.app/Contents/Developer
-          fi
-          echo "Selected Xcode:"
-          xcodebuild -version
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.35.7'
-          channel: 'stable'
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Setup Ruby for Fastlane
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2.0'
-          bundler-cache: true
-          working-directory: ios
-
-      - name: Create .env file from secrets
-        run: |
-          cat > .env << EOF
-          ENVIRONMENT=production
-          FIREBASE_PROD_IOS_API_KEY=${{ secrets.FIREBASE_PROD_IOS_API_KEY }}
-          FIREBASE_PROD_IOS_APP_ID=${{ secrets.FIREBASE_PROD_IOS_APP_ID }}
-          FIREBASE_PROD_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_PROD_MESSAGING_SENDER_ID }}
-          FIREBASE_PROD_PROJECT_ID=${{ secrets.FIREBASE_PROD_PROJECT_ID }}
-          FIREBASE_PROD_AUTH_DOMAIN=${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }}
-          FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }}
-          IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
-          EOF
-
-      - name: Create GoogleService-Info.plist for prod
-        run: |
-          mkdir -p ios/Firebase/prod
-          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_PROD }}" > ios/Firebase/prod/GoogleService-Info.plist
-          plutil -lint ios/Firebase/prod/GoogleService-Info.plist
-          echo "✅ GoogleService-Info.plist created"
-
-      - name: Install CocoaPods dependencies
-        working-directory: ios
-        run: pod install
-
-      - name: Build Flutter frameworks
-        run: |
-          flutter build ios --release --no-codesign \
-            --dart-define=ENVIRONMENT=production \
-            --dart-define=FIREBASE_PROD_IOS_API_KEY=${{ secrets.FIREBASE_PROD_IOS_API_KEY }} \
-            --dart-define=FIREBASE_PROD_IOS_APP_ID=${{ secrets.FIREBASE_PROD_IOS_APP_ID }} \
-            --dart-define=FIREBASE_PROD_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_PROD_MESSAGING_SENDER_ID }} \
-            --dart-define=FIREBASE_PROD_PROJECT_ID=${{ secrets.FIREBASE_PROD_PROJECT_ID }} \
-            --dart-define=FIREBASE_PROD_AUTH_DOMAIN=${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }} \
-            --dart-define=FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }} || true
-
-      - name: Deploy to TestFlight Beta with Fastlane
-        working-directory: ios
-        timeout-minutes: 50
-        env:
-          MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
-          MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
-          APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
-          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
-        run: |
-          # Setup GCP credentials for Match
-          mkdir -p ~/.config/gcloud
-          echo "$GCP_SERVICE_ACCOUNT_KEY" > ~/.config/gcloud/application_default_credentials.json
-          export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/gcloud/application_default_credentials.json"
-          
-          # Setup App Store Connect API key
-          mkdir -p ~/private_keys
-          echo "$APP_STORE_CONNECT_API_KEY_CONTENT" > ~/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_KEY_ID}.p8
-          export APP_STORE_CONNECT_API_KEY_KEY_FILEPATH="$HOME/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_KEY_ID}.p8"
-          
-          # Deploy with Fastlane
-          bundle exec fastlane ios deploy_beta
+  # TEMPORARILY COMMENTED OUT - iOS Build
+  # build_ios:
+  #   name: Build and Deploy iOS (Beta TestFlight)
+  #   runs-on: macos-latest
+  #   timeout-minutes: 60
+  #   environment: production
+  #   permissions:
+  #     contents: write  # Required to push version bump commits
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v3
+  #       with:
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         fetch-depth: 0
+  #
+  #     - name: Bump patch version
+  #       run: |
+  #         chmod +x scripts/auto-bump-version.sh scripts/get-version.sh
+  #         git config user.name "github-actions[bot]"
+  #         git config user.email "github-actions[bot]@users.noreply.github.com"
+  #         
+  #         echo "📱 Bumping patch version for iOS Beta..."
+  #         ./scripts/auto-bump-version.sh patch
+  #         
+  #         NEW_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+  #         echo "✅ Version bumped to: $NEW_VERSION"
+  #         
+  #         if ! git diff --quiet pubspec.yaml; then
+  #           git add pubspec.yaml
+  #           git commit -m "chore: bump version to $NEW_VERSION (iOS Beta) [skip ci]"
+  #           git push origin beta || echo "Push failed, continuing anyway"
+  #         fi
+  #
+  #     - name: Select Xcode version
+  #       run: |
+  #         if [ -d "/Applications/Xcode_15.4.app" ]; then
+  #           sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+  #         elif [ -d "/Applications/Xcode_15.3.app" ]; then
+  #           sudo xcode-select -s /Applications/Xcode_15.3.app/Contents/Developer
+  #         fi
+  #         echo "Selected Xcode:"
+  #         xcodebuild -version
+  #
+  #     - name: Setup Flutter
+  #       uses: subosito/flutter-action@v2
+  #       with:
+  #         flutter-version: '3.35.7'
+  #         channel: 'stable'
+  #
+  #     - name: Get dependencies
+  #       run: flutter pub get
+  #
+  #     - name: Setup Ruby for Fastlane
+  #       uses: ruby/setup-ruby@v1
+  #       with:
+  #         ruby-version: '3.2.0'
+  #         bundler-cache: true
+  #         working-directory: ios
+  #
+  #     - name: Create .env file from secrets
+  #       run: |
+  #         cat > .env << EOF
+  #         ENVIRONMENT=production
+  #         FIREBASE_PROD_IOS_API_KEY=${{ secrets.FIREBASE_PROD_IOS_API_KEY }}
+  #         FIREBASE_PROD_IOS_APP_ID=${{ secrets.FIREBASE_PROD_IOS_APP_ID }}
+  #         FIREBASE_PROD_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_PROD_MESSAGING_SENDER_ID }}
+  #         FIREBASE_PROD_PROJECT_ID=${{ secrets.FIREBASE_PROD_PROJECT_ID }}
+  #         FIREBASE_PROD_AUTH_DOMAIN=${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }}
+  #         FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }}
+  #         IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
+  #         EOF
+  #
+  #     - name: Create GoogleService-Info.plist for prod
+  #       run: |
+  #         mkdir -p ios/Firebase/prod
+  #         echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_PROD }}" > ios/Firebase/prod/GoogleService-Info.plist
+  #         plutil -lint ios/Firebase/prod/GoogleService-Info.plist
+  #         echo "✅ GoogleService-Info.plist created"
+  #
+  #     - name: Install CocoaPods dependencies
+  #       working-directory: ios
+  #       run: pod install
+  #
+  #     - name: Build Flutter frameworks
+  #       run: |
+  #         flutter build ios --release --no-codesign \
+  #           --dart-define=ENVIRONMENT=production \
+  #           --dart-define=FIREBASE_PROD_IOS_API_KEY=${{ secrets.FIREBASE_PROD_IOS_API_KEY }} \
+  #           --dart-define=FIREBASE_PROD_IOS_APP_ID=${{ secrets.FIREBASE_PROD_IOS_APP_ID }} \
+  #           --dart-define=FIREBASE_PROD_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_PROD_MESSAGING_SENDER_ID }} \
+  #           --dart-define=FIREBASE_PROD_PROJECT_ID=${{ secrets.FIREBASE_PROD_PROJECT_ID }} \
+  #           --dart-define=FIREBASE_PROD_AUTH_DOMAIN=${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }} \
+  #           --dart-define=FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }} || true
+  #
+  #     - name: Deploy to TestFlight Beta with Fastlane
+  #       working-directory: ios
+  #       timeout-minutes: 50
+  #       env:
+  #         MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
+  #         MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
+  #         MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+  #         APPLE_ID: ${{ secrets.APPLE_ID }}
+  #         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+  #         IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+  #         APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+  #         APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+  #         GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+  #         APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+  #       run: |
+  #         # Setup GCP credentials for Match
+  #         mkdir -p ~/.config/gcloud
+  #         echo "$GCP_SERVICE_ACCOUNT_KEY" > ~/.config/gcloud/application_default_credentials.json
+  #         export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/gcloud/application_default_credentials.json"
+  #         
+  #         # Setup App Store Connect API key
+  #         mkdir -p ~/private_keys
+  #         echo "$APP_STORE_CONNECT_API_KEY_CONTENT" > ~/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_KEY_ID}.p8
+  #         export APP_STORE_CONNECT_API_KEY_KEY_FILEPATH="$HOME/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_KEY_ID}.p8"
+  #         
+  #         # Deploy with Fastlane
+  #         bundle exec fastlane ios deploy_beta
 
   build_web_beta:
     name: Build and Deploy Web (Beta Channel)
@@ -288,6 +290,7 @@ jobs:
       - name: Build Web (Beta)
         run: |
           flutter build web --release \
+            --web-renderer html \
             --dart-define=ENVIRONMENT=production \
             --dart-define=FIREBASE_PROD_WEB_API_KEY=${{ secrets.FIREBASE_PROD_WEB_API_KEY }} \
             --dart-define=FIREBASE_PROD_WEB_APP_ID=${{ secrets.FIREBASE_PROD_WEB_APP_ID }} \
@@ -304,7 +307,7 @@ jobs:
           npm install -g firebase-tools
           
           # Create beta channel if it doesn't exist
-          firebase hosting:channel:create beta --project maypole-flutter-dev --non-interactive || true
+          firebase hosting:channel:create beta --project maypole-flutter-ce6c3 --non-interactive || true
           
           # Deploy to persistent beta channel
-          firebase hosting:channel:deploy beta --project maypole-flutter-dev --non-interactive
+          firebase hosting:channel:deploy beta --project maypole-flutter-ce6c3 --non-interactive
