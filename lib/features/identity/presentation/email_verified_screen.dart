@@ -47,14 +47,17 @@ class _EmailVerifiedScreenState extends ConsumerState<EmailVerifiedScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     if (_isChecking) {
-      return const Scaffold(
+      return Scaffold(
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Verifying your email...'),
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Verifying your email...',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
             ],
           ),
         ),
@@ -62,21 +65,30 @@ class _EmailVerifiedScreenState extends ConsumerState<EmailVerifiedScreen> {
     }
 
     return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                _verificationSuccess 
-                    ? Icons.check_circle_outline 
-                    : Icons.info_outline,
-                size: 100,
-                color: _verificationSuccess ? Colors.green : Colors.orange,
-              ),
-              const SizedBox(height: 32),
-              Text(
+      body: SafeArea(
+        child: Column(
+          children: [
+            const Spacer(flex: 1),
+            // Logo
+            Image.asset(
+              'assets/icons/ic_logo_main.png',
+              width: 200,
+              height: 200,
+            ),
+            const SizedBox(height: 32),
+            // Success/Info Icon
+            Icon(
+              _verificationSuccess 
+                  ? Icons.check_circle_outline 
+                  : Icons.info_outline,
+              size: 80,
+              color: _verificationSuccess ? Colors.green : Colors.orange,
+            ),
+            const SizedBox(height: 24),
+            // Title
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32.0),
+              child: Text(
                 _verificationSuccess 
                     ? 'Email Verified!' 
                     : 'Email Verification',
@@ -85,21 +97,30 @@ class _EmailVerifiedScreenState extends ConsumerState<EmailVerifiedScreen> {
                     ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 16),
-              Text(
+            ),
+            const SizedBox(height: 16),
+            // Description
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32.0),
+              child: Text(
                 _verificationSuccess
                     ? 'Your email has been successfully verified. You can now access all features of Maypole.'
                     : 'If you clicked the verification link, your email should be verified. Please sign in again to see the updated status.',
                 style: Theme.of(context).textTheme.bodyLarge,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 48),
-              ElevatedButton(
-                onPressed: () => context.go('/home'),
-                child: const Text('Go to Home'),
+            ),
+            const SizedBox(height: 48),
+            // Action Button
+            ElevatedButton(
+              onPressed: () => context.go('/home'),
+              child: Text(
+                _verificationSuccess ? 'Go to Home' : 'Sign In',
+                style: const TextStyle(fontSize: 18),
               ),
-            ],
-          ),
+            ),
+            const Spacer(flex: 2),
+          ],
         ),
       ),
     );

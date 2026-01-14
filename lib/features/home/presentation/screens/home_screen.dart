@@ -13,6 +13,7 @@ import 'package:maypole/features/maypolesearch/data/models/autocomplete_response
 import 'package:maypole/features/settings/settings_providers.dart';
 import 'package:maypole/core/ads/widgets/interstitial_ad_manager.dart';
 import 'package:maypole/core/ads/ad_config.dart';
+import 'package:maypole/core/services/permissions_provider.dart';
 import '../../../identity/auth_providers.dart';
 import '../../../directmessages/presentation/dm_providers.dart';
 import '../widgets/maypole_list_panel.dart';
@@ -22,6 +23,8 @@ class _SelectedThreadState {
   final String? threadId;
   final String? maypoleName;
   final String? address;
+  final double? latitude;
+  final double? longitude;
   final DMThread? dmThread;
   final bool isMaypoleThread;
 
@@ -29,6 +32,8 @@ class _SelectedThreadState {
     this.threadId,
     this.maypoleName,
     this.address,
+    this.latitude,
+    this.longitude,
     this.dmThread,
     this.isMaypoleThread = true,
   });
@@ -37,6 +42,8 @@ class _SelectedThreadState {
     String? threadId,
     String? maypoleName,
     String? address,
+    double? latitude,
+    double? longitude,
     DMThread? dmThread,
     bool? isMaypoleThread,
   }) {
@@ -44,6 +51,8 @@ class _SelectedThreadState {
       threadId: threadId ?? this.threadId,
       maypoleName: maypoleName ?? this.maypoleName,
       address: address ?? this.address,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       dmThread: dmThread ?? this.dmThread,
       isMaypoleThread: isMaypoleThread ?? this.isMaypoleThread,
     );
@@ -71,25 +80,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Request notification permissions and initialize FCM after the first frame
+    // Request permissions and initialize services after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _requestNotificationPermissionsIfNeeded();
+      _requestPermissionsIfNeeded();
       _initializeFcm();
       _prefetchUserDataIfNeeded();
       _checkEmailVerificationIfNeeded();
+      _initializeDmPreloader();
     });
   }
 
-  Future<void> _requestNotificationPermissionsIfNeeded() async {
+  /// Initialize the global DM message preloader
+  /// This loads all DM messages in the background for instant access
+  Future<void> _initializeDmPreloader() async {
+    final authState = ref.read(authStateProvider);
+    final user = authState.value;
+    
+    if (user == null) return;
+
+    try {
+      final preloader = ref.read(dmMessagePreloaderProvider);
+      await preloader.preloadAllDmThreads(user.firebaseID);
+      debugPrint('✅ DM preloader initialized for user: ${user.firebaseID}');
+    } catch (e) {
+      debugPrint('⚠️ Error initializing DM preloader: $e');
+    }
+  }
+
+  Future<void> _requestPermissionsIfNeeded() async {
     // Only request once per session
     if (_hasRequestedPermissions) return;
     _hasRequestedPermissions = true;
 
-    final handler = ref.read(firstTimeNotificationHandlerProvider);
+    final handler = ref.read(firstTimePermissionsHandlerProvider);
 
     if (!mounted) return;
 
-    await handler.requestPermissionIfNeeded(context);
+    await handler.requestPermissionsIfNeeded(context);
   }
 
   Future<void> _initializeFcm() async {
@@ -199,12 +226,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               isMaypoleThread: _selectedThread.isMaypoleThread,
               onSettingsPressed: () => context.push('/settings'),
               onAddPressed: () => _handleAddPressed(context),
-              onMaypoleThreadSelected: (threadId, maypoleName, address) =>
+              onMaypoleThreadSelected: (threadId, maypoleName, address, latitude, longitude) =>
                   _handleMaypoleThreadSelected(
                     context,
                     threadId,
                     maypoleName,
                     address,
+                    latitude,
+                    longitude,
                     isWideScreen,
                   ),
               onDmThreadSelected: (threadId) =>
@@ -257,6 +286,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         threadId: _selectedThread.threadId!,
         maypoleName: _selectedThread.maypoleName!,
         address: _selectedThread.address,
+        latitude: _selectedThread.latitude,
+        longitude: _selectedThread.longitude,
         showAppBar: false,
         autoFocus: true,
       );
@@ -285,6 +316,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             threadId: result.placeId,
             maypoleName: result.placeName,
             address: result.address,
+            latitude: result.latitude,
+            longitude: result.longitude,
             isMaypoleThread: true,
           );
         });
@@ -294,6 +327,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           context.push('/chat/${result.placeId}', extra: {
             'name': result.placeName,
             'address': result.address,
+            'latitude': result.latitude,
+            'longitude': result.longitude,
           });
         }
       }
@@ -305,6 +340,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     String threadId,
     String maypoleName,
     String address,
+    double? latitude,
+    double? longitude,
     bool isWideScreen,
   ) async {
     // Increment counter and show interstitial ad based on Remote Config frequency
@@ -324,15 +361,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           threadId: threadId,
           maypoleName: maypoleName,
           address: address,
+          latitude: latitude,
+          longitude: longitude,
           isMaypoleThread: true,
         );
       });
     } else {
-      // On mobile, navigate to the chat screen
-      context.push('/chat/$threadId', extra: {
-        'name': maypoleName,
-        'address': address,
-      });
+      // On mobile, navigate immediately
+      if (context.mounted) {
+        context.push('/chat/$threadId', extra: {
+          'name': maypoleName,
+          'address': address,
+          'latitude': latitude,
+          'longitude': longitude,
+        });
+      }
     }
   }
 
@@ -357,7 +400,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           );
         });
       } else {
-        // On mobile, navigate to the DM screen
+        // On mobile, navigate immediately
         if (context.mounted) {
           context.push('/dm/$threadId', extra: dmThread);
         }

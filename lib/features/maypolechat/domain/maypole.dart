@@ -40,11 +40,15 @@ class MaypoleMetaData {
   final String id;
   final String name;
   final String address;
+  final double? latitude;
+  final double? longitude;
 
   const MaypoleMetaData({
     required this.id,
     required this.name,
     this.address = '',
+    this.latitude,
+    this.longitude,
   });
 
   factory MaypoleMetaData.fromMap(Map<String, dynamic> map) {
@@ -52,14 +56,25 @@ class MaypoleMetaData {
       id: map['id'] ?? '',
       name: map['name'] ?? '',
       address: map['address'] ?? '',
+      latitude: map['latitude'] as double?,
+      longitude: map['longitude'] as double?,
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {
+    final Map<String, dynamic> mapData = {
       'id': id,
       'name': name,
       'address': address,
     };
+    
+    if (latitude != null) {
+      mapData['latitude'] = latitude!;
+    }
+    if (longitude != null) {
+      mapData['longitude'] = longitude!;
+    }
+    
+    return mapData;
   }
 }

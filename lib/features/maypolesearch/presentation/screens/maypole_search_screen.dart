@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../../data/models/autocomplete_response.dart';
+import '../../data/services/maypole_search_service_provider.dart';
 import '../../maypole_search_providers.dart';
 
 class MaypoleSearchScreen extends ConsumerStatefulWidget {
@@ -42,6 +44,7 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.searchMaypoles),
+        automaticallyImplyLeading: !AppConfig.isWideScreen,
       ),
       body: Column(
         children: [
@@ -106,12 +109,78 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
         final prediction = predictions[index];
         return ListTile(
           title: Text(prediction.place),
-          onTap: () {
-            context.pop(prediction);
+          onTap: () async {
+            // Fetch place details to get coordinates
+            await _fetchPlaceDetailsAndReturn(prediction);
           },
         );
       },
     );
+  }
+
+  Future<void> _fetchPlaceDetailsAndReturn(PlacePrediction prediction) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Fetch place details including coordinates
+      final searchService = ref.read(maypoleSearchServiceProvider);
+      final placeDetails = await searchService.getPlaceDetails(prediction.placeId);
+
+      if (!mounted) return;
+
+      // Close loading dialog
+      Navigator.pop(context);
+
+      if (placeDetails != null) {
+        debugPrint('🗺️ Place Details: $placeDetails');
+        
+        // Extract coordinates from place details
+        // Google Places API v1 structure: { "location": { "latitude": X, "longitude": Y } }
+        final location = placeDetails['location'] as Map<String, dynamic>?;
+        final latitude = location?['latitude'] as double?;
+        final longitude = location?['longitude'] as double?;
+
+        debugPrint('📍 Extracted coordinates: lat=$latitude, lon=$longitude');
+
+        // Return prediction with coordinates
+        final updatedPrediction = prediction.copyWith(
+          latitude: latitude,
+          longitude: longitude,
+        );
+        
+        debugPrint('✅ Returning prediction with coordinates: ${updatedPrediction.latitude}, ${updatedPrediction.longitude}');
+        
+        if (mounted) {
+          context.pop(updatedPrediction);
+        }
+      } else {
+        debugPrint('⚠️ No place details returned, using prediction without coordinates');
+        // If we couldn't get details, return prediction without coordinates
+        if (mounted) {
+          context.pop(prediction);
+        }
+      }
+    } catch (e) {
+      debugPrint('💥 Error fetching place details: $e');
+      if (!mounted) return;
+      
+      // Close loading dialog if open
+      Navigator.pop(context);
+      
+      // Show error but still return the prediction without coordinates
+      ErrorDialog.show(context, e);
+      
+      if (mounted) {
+        context.pop(prediction);
+      }
+    }
   }
 
   void _onSearchChanged() {

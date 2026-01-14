@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/features/directmessages/data/dm_thread_service.dart';
+import 'package:maypole/features/directmessages/data/dm_message_preloader.dart';
 import 'package:maypole/features/directmessages/presentation/viewmodels/dm_viewmodel.dart';
 
 import '../domain/direct_message.dart';
@@ -7,6 +8,19 @@ import '../domain/dm_thread.dart';
 
 final dmThreadServiceProvider = Provider<DMThreadService>((ref) {
   return DMThreadService();
+});
+
+/// Global DM message preloader that loads all DM messages in the background
+/// This ensures instant message display when opening any DM thread
+final dmMessagePreloaderProvider = Provider<DmMessagePreloader>((ref) {
+  final dmThreadService = ref.watch(dmThreadServiceProvider);
+  final preloader = DmMessagePreloader(dmThreadService, ref);
+  
+  ref.onDispose(() {
+    preloader.dispose();
+  });
+  
+  return preloader;
 });
 
 /// Streams all DM threads for a specific user ID

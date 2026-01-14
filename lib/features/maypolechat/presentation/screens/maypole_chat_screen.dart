@@ -17,12 +17,16 @@ class MaypoleChatScreen extends ConsumerStatefulWidget {
   final String threadId;
   final String maypoleName;
   final String? address;
+  final double? latitude;
+  final double? longitude;
 
   const MaypoleChatScreen({
     super.key,
     required this.threadId,
     required this.maypoleName,
     this.address,
+    this.latitude,
+    this.longitude,
   });
 
   @override
@@ -33,6 +37,8 @@ class _MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
   late String _currentThreadId;
   late String _currentMaypoleName;
   String? _currentAddress;
+  double? _currentLatitude;
+  double? _currentLongitude;
   bool _isMaypoleThread = true;
   DMThread? _currentDmThread;
 
@@ -42,6 +48,8 @@ class _MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
     _currentThreadId = widget.threadId;
     _currentMaypoleName = widget.maypoleName;
     _currentAddress = widget.address;
+    _currentLatitude = widget.latitude;
+    _currentLongitude = widget.longitude;
   }
 
   @override
@@ -71,8 +79,8 @@ class _MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
                         isMaypoleThread: _isMaypoleThread,
                         onSettingsPressed: () => context.push('/settings'),
                         onAddPressed: () => _handleAddPressed(context),
-                        onMaypoleThreadSelected: (threadId, maypoleName, address) =>
-                            _handleMaypoleThreadSelected(threadId, maypoleName),
+                        onMaypoleThreadSelected: (threadId, maypoleName, address, latitude, longitude) =>
+                            _handleMaypoleThreadSelected(threadId, maypoleName, address, latitude, longitude),
                         onDmThreadSelected: (threadId) =>
                             _handleDmThreadSelected(threadId),
                         onTabChanged: (tabIndex) => setState(() {
@@ -92,6 +100,8 @@ class _MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
                     threadId: _currentThreadId,
                     maypoleName: _currentMaypoleName,
                     address: _currentAddress,
+                    latitude: _currentLatitude,
+                    longitude: _currentLongitude,
                     showAppBar: true,
                   );
                 } else if (!_isMaypoleThread && _currentDmThread != null) {
@@ -106,6 +116,8 @@ class _MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
                   threadId: widget.threadId,
                   maypoleName: widget.maypoleName,
                   address: widget.address,
+                  latitude: widget.latitude,
+                  longitude: widget.longitude,
                   showAppBar: true,
                 );
               },
@@ -131,6 +143,8 @@ class _MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
         threadId: _currentThreadId,
         maypoleName: _currentMaypoleName,
         address: _currentAddress,
+        latitude: _currentLatitude,
+        longitude: _currentLongitude,
         showAppBar: false,
         autoFocus: true,
       );
@@ -153,15 +167,26 @@ class _MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
         context.go('/chat/${result.placeId}', extra: {
           'name': result.placeName,
           'address': result.address,
+          'latitude': result.latitude,
+          'longitude': result.longitude,
         });
       }
     }
   }
 
-  void _handleMaypoleThreadSelected(String threadId, String maypoleName) {
+  void _handleMaypoleThreadSelected(
+    String threadId, 
+    String maypoleName, 
+    String address,
+    double? latitude,
+    double? longitude,
+  ) {
     setState(() {
       _currentThreadId = threadId;
       _currentMaypoleName = maypoleName;
+      _currentAddress = address;
+      _currentLatitude = latitude;
+      _currentLongitude = longitude;
       _isMaypoleThread = true;
       _currentDmThread = null;
     });

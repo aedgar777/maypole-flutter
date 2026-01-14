@@ -130,7 +130,10 @@ class MockAppLocalizations extends AppLocalizations {
   String get privacy => 'Privacy';
 
   @override
-  String get help => 'Help & Feedback';
+  String get help => 'Help';
+
+  @override
+  String get feedback => 'Feedback';
 
   @override
   String get privacyPolicy => 'Privacy Policy';

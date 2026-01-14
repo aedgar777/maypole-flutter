@@ -56,9 +56,11 @@ dependencies:
   cached_network_image: ^3.4.1
   flutter_cache_manager: ^3.4.1
   permission_handler: ^11.3.1
+  geolocator: ^12.0.0
   shared_preferences: ^2.3.4
   url_launcher: ^6.3.0
   google_mobile_ads: ^5.2.0
+  flutter_svg: ^2.0.10
 
 
   http: any
@@ -86,6 +88,7 @@ flutter:
 
   assets:
     - assets/icons/
+    - assets/images/badges/
     - .env
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/to/asset-from-package

@@ -7,7 +7,15 @@ import 'utils/platform_info.dart';
 /// and provides the correct keys based on whether the app is in
 /// 'prod' or 'dev' mode.
 class AppConfig {
-  static String get _environment => dotenv.env['ENVIRONMENT'] ?? 'dev';
+  static String get _environment {
+    // Check dart-define first (baked into the compiled app at build time)
+    const dartDefineEnv = String.fromEnvironment('ENVIRONMENT');
+    if (dartDefineEnv.isNotEmpty) {
+      return dartDefineEnv;
+    }
+    // Fall back to dotenv (used in web and local development)
+    return dotenv.env['ENVIRONMENT'] ?? 'dev';
+  }
 
   /// Returns true if the app is running on desktop platforms (Windows, Linux, macOS).
   static bool get isDesktop {

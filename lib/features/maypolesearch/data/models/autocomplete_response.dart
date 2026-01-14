@@ -23,12 +23,16 @@ class PlacePrediction {
   final String placeName; // Just the business name for the chat screen
   final String placeId;
   final String address; // Secondary text (address) from structured format
+  final double? latitude; // Place latitude
+  final double? longitude; // Place longitude
 
   PlacePrediction({
     required this.place,
     required this.placeName,
     required this.placeId,
     this.address = '',
+    this.latitude,
+    this.longitude,
   });
 
   factory PlacePrediction.fromMap(Map<String, dynamic> map) {
@@ -43,6 +47,27 @@ class PlacePrediction {
           prediction?['text']?['text'] as String? ?? '',
       placeId: prediction?['placeId'] as String? ?? '',
       address: structuredFormat?['secondaryText']?['text'] as String? ?? '',
+      latitude: map['latitude'] as double?,
+      longitude: map['longitude'] as double?,
+    );
+  }
+  
+  /// Create a copy with updated coordinates
+  PlacePrediction copyWith({
+    String? place,
+    String? placeName,
+    String? placeId,
+    String? address,
+    double? latitude,
+    double? longitude,
+  }) {
+    return PlacePrediction(
+      place: place ?? this.place,
+      placeName: placeName ?? this.placeName,
+      placeId: placeId ?? this.placeId,
+      address: address ?? this.address,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
     );
   }
 

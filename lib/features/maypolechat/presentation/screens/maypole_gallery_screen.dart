@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
@@ -85,6 +86,7 @@ class _MaypoleGalleryScreenState extends ConsumerState<MaypoleGalleryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.maypoleName} Gallery'),
+        automaticallyImplyLeading: !AppConfig.isWideScreen,
       ),
       body: imagesAsyncValue.when(
         data: (images) {
@@ -321,6 +323,7 @@ class _ImageFullscreenViewState extends State<_ImageFullscreenView> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        automaticallyImplyLeading: !AppConfig.isWideScreen,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

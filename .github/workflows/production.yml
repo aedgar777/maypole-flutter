@@ -7,8 +7,8 @@ on:
       - main
 
 jobs:
-  build_web:
-    name: Build and Deploy Web (Production)
+  deploy_firebase:
+    name: Deploy Firebase Tools (Production)
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -24,10 +24,31 @@ jobs:
           echo "📱 Current version:"
           ./scripts/get-version.sh
 
+      - name: Deploy Firebase Tools
+        run: |
+          echo '${{ secrets.MAYPOLE_FIREBASE_SERVICE_ACCOUNT }}' > $HOME/gcloud-service-key.json
+          export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud-service-key.json
+          npm install -g firebase-tools
+          
+          # Deploy all Firebase tools to production
+          firebase deploy \
+            --only firestore:rules,firestore:indexes,storage,functions \
+            --project maypole-flutter-ce6c3 \
+            --non-interactive
+
+  build_web:
+    name: Build and Deploy Web (Production)
+    needs: deploy_firebase
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.0'
+          flutter-version: '3.35.7'
           channel: 'stable'
 
       - name: Flutter pub get
@@ -57,6 +78,7 @@ jobs:
       - name: Build Web
         run: |
           flutter build web --release \
+            --web-renderer html \
             --dart-define=ENVIRONMENT=production \
             --dart-define=FIREBASE_PROD_WEB_API_KEY=${{ secrets.FIREBASE_PROD_WEB_API_KEY }} \
             --dart-define=FIREBASE_PROD_WEB_APP_ID=${{ secrets.FIREBASE_PROD_WEB_APP_ID }} \
@@ -66,15 +88,6 @@ jobs:
             --dart-define=FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }} \
             --dart-define=FIREBASE_PROD_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_PROD_WEB_MEASUREMENT_ID }}
 
-      - name: Deploy Firebase Services (Production)
-        run: |
-          echo '${{ secrets.MAYPOLE_FIREBASE_SERVICE_ACCOUNT }}' > $HOME/gcloud-service-key.json
-          export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud-service-key.json
-          npm install -g firebase-tools
-          
-          # Deploy all Firebase services to production
-          firebase deploy --only firestore:indexes,firestore:rules,storage:rules --project maypole-flutter-ce6c3 --non-interactive
-
       - name: Deploy to Firebase Hosting (Production)
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
@@ -83,275 +96,6 @@ jobs:
           projectId: maypole-flutter-ce6c3
           channelId: live
 
-  build_android:
-    name: Build and Deploy Android (Production)
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write  # Required to push version bump commits
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-
-      - name: Auto-Bump Build Number
-        run: |
-          chmod +x scripts/auto-bump-build.sh scripts/get-version.sh
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin master || echo "⚠️ Pull failed, but continuing..."
-          echo "📱 Current version:"
-          ./scripts/get-version.sh
-          ./scripts/auto-bump-build.sh
-          echo "✅ New version:"
-          ./scripts/get-version.sh
-          if git diff --quiet pubspec.yaml; then
-            echo "ℹ️ No version changes detected, skipping commit"
-            exit 0
-          fi
-          git add pubspec.yaml
-          git commit -m "chore: auto-bump build number to $(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ') [skip ci]"
-          for i in {1..3}; do
-            if git push origin master; then
-              echo "✅ Successfully pushed version bump"
-              exit 0
-            else
-              echo "⚠️ Push failed (attempt $i/3), pulling and retrying..."
-              git pull --rebase origin master
-            fi
-          done
-          echo "❌ Failed to push after 3 attempts"
-          exit 1
-
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Cache Gradle
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-minsdk23-${{ hashFiles('**/*.gradle*', '**/*.gradle.kts', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-minsdk23-
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.32.0'
-          channel: 'stable'
-
-      - name: Get dependencies
-        run: flutter pub get
-
-      - name: Clean build cache aggressively
-        run: |
-          flutter clean
-          rm -rf build
-          rm -rf android/.gradle
-          rm -rf android/app/build
-
-      - name: Create .env file from secrets
-        run: |
-          cat > .env << EOF
-          ENVIRONMENT=prod
-          FIREBASE_PROD_WEB_API_KEY=${{ secrets.FIREBASE_PROD_WEB_API_KEY }}
-          FIREBASE_PROD_WEB_APP_ID=${{ secrets.FIREBASE_PROD_WEB_APP_ID }}
-          FIREBASE_PROD_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_PROD_WEB_MEASUREMENT_ID }}
-          FIREBASE_PROD_ANDROID_API_KEY=${{ secrets.FIREBASE_PROD_ANDROID_API_KEY }}
-          FIREBASE_PROD_ANDROID_APP_ID=${{ secrets.FIREBASE_PROD_ANDROID_APP_ID }}
-          FIREBASE_PROD_IOS_API_KEY=${{ secrets.FIREBASE_PROD_IOS_API_KEY }}
-          FIREBASE_PROD_IOS_APP_ID=${{ secrets.FIREBASE_PROD_IOS_APP_ID }}
-          FIREBASE_PROD_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_PROD_MESSAGING_SENDER_ID }}
-          FIREBASE_PROD_PROJECT_ID=${{ secrets.FIREBASE_PROD_PROJECT_ID }}
-          FIREBASE_PROD_AUTH_DOMAIN=${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }}
-          FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }}
-          IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
-          EOF
-
-      - name: Create google-services.json for prod flavor
-        env:
-          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON_PROD }}
-        run: |
-          mkdir -p android/app/src/prod
-          echo "$GOOGLE_SERVICES_JSON" > android/app/src/prod/google-services.json
-          python3 -m json.tool android/app/src/prod/google-services.json > /dev/null 2>&1 || { echo "❌ Error: Invalid JSON"; exit 1; }
-          echo "✅ google-services.json created and validated successfully"
-
-      - name: Setup Android Signing
-        run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | tr -d '\n\r ' | base64 -d > android/app/upload-keystore.jks
-          cat > android/key.properties << 'KEYSTORE_EOF'
-          storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
-          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-          storeFile=upload-keystore.jks
-          KEYSTORE_EOF
-
-      - name: Build Android App Bundle (prodRelease)
-        run: flutter build appbundle --release --flavor prod
-
-      - name: Upload to Play Store Production Track (Draft)
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
-          packageName: app.maypole.maypole
-          releaseFiles: build/app/outputs/bundle/prodRelease/app-prod-release.aab
-          track: production
-          status: draft
-
-  # iOS deployment temporarily disabled
-  # build_ios:
-  #   name: Build and Deploy iOS (Production)
-  #   runs-on: macos-latest
-  #   timeout-minutes: 60  # Prevent 6-hour hangs
-  #   environment: production
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v3
-  #
-  #     - name: Setup Ruby
-  #       uses: ruby/setup-ruby@v1
-  #       with:
-  #         ruby-version: '3.2'
-  #         bundler-cache: false
-  #
-  #     - name: Setup Flutter
-  #       uses: subosito/flutter-action@v2
-  #       with:
-  #         flutter-version: '3.32.0'
-  #         channel: 'stable'
-  #
-  #     - name: Get dependencies
-  #       run: flutter pub get
-  #
-  #     - name: Create .env file from secrets
-  #       run: |
-  #         cat > .env << EOF
-  #         ENVIRONMENT=prod
-  #         FIREBASE_PROD_WEB_API_KEY=${{ secrets.FIREBASE_PROD_WEB_API_KEY }}
-  #         FIREBASE_PROD_WEB_APP_ID=${{ secrets.FIREBASE_PROD_WEB_APP_ID }}
-  #         FIREBASE_PROD_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_PROD_WEB_MEASUREMENT_ID }}
-  #         FIREBASE_PROD_ANDROID_API_KEY=${{ secrets.FIREBASE_PROD_ANDROID_API_KEY }}
-  #         FIREBASE_PROD_ANDROID_APP_ID=${{ secrets.FIREBASE_PROD_ANDROID_APP_ID }}
-  #         FIREBASE_PROD_IOS_API_KEY=${{ secrets.FIREBASE_PROD_IOS_API_KEY }}
-  #         FIREBASE_PROD_IOS_APP_ID=${{ secrets.FIREBASE_PROD_IOS_APP_ID }}
-  #         FIREBASE_PROD_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_PROD_MESSAGING_SENDER_ID }}
-  #         FIREBASE_PROD_PROJECT_ID=${{ secrets.FIREBASE_PROD_PROJECT_ID }}
-  #         FIREBASE_PROD_AUTH_DOMAIN=${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }}
-  #         FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }}
-  #         IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
-  #         EOF
-  #
-  #     - name: Create GoogleService-Info.plist for prod
-  #       run: |
-  #         # Create Firebase config in the location expected by firebase-setup.sh script
-  #         mkdir -p ios/Firebase/prod
-  #         echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_PROD }}" > ios/Firebase/prod/GoogleService-Info.plist
-  #         
-  #         # Validate the plist is well-formed
-  #         if ! plutil -lint ios/Firebase/prod/GoogleService-Info.plist > /dev/null 2>&1; then
-  #           echo "Error: GoogleService-Info.plist is not valid"
-  #           cat ios/Firebase/prod/GoogleService-Info.plist
-  #           exit 1
-  #         fi
-  #         
-  #         echo "✅ GoogleService-Info.plist created successfully at ios/Firebase/prod/"
-  #
-  #     - name: Setup Google Cloud credentials for Match
-  #       run: |
-  #         mkdir -p ~/.config/gcloud
-  #         echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > ~/.config/gcloud/application_default_credentials.json
-  #         
-  #         # Verify the credentials file was created
-  #         if [ -f ~/.config/gcloud/application_default_credentials.json ]; then
-  #           echo "✅ GCP credentials file created successfully"
-  #           ls -la ~/.config/gcloud/
-  #         else
-  #           echo "❌ Failed to create GCP credentials file"
-  #           exit 1
-  #         fi
-  #
-  #     - name: Setup App Store Connect API Key
-  #       run: |
-  #         # Create the AuthKey_<KEY_ID>.p8 file that Fastlane expects
-  #         mkdir -p ~/private_keys
-  #         echo "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}" > ~/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
-  #         
-  #         # Verify the key file was created
-  #         ls -la ~/private_keys/
-  #         echo "✅ API Key file created successfully"
-  #
-  #     - name: Install Fastlane
-  #       working-directory: ios
-  #       run: |
-  #         bundle config set --local path 'vendor/bundle'
-  #         bundle install
-  #
-  #     - name: Build Flutter for iOS
-  #       timeout-minutes: 20  # Build should complete in 15-20 minutes
-  #       run: |
-  #         echo "🔨 Starting Flutter iOS build..."
-  #         flutter build ios --release --no-codesign
-  #         echo "✅ Flutter iOS build completed successfully"
-  #
-  #     - name: Deploy to App Store with Fastlane
-  #       working-directory: ios
-  #       timeout-minutes: 30  # Timeout for this specific step
-  #       env:
-  #         MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
-  #         MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
-  #         MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-  #         APPLE_ID: ${{ secrets.APPLE_ID }}
-  #         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-  #         IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
-  #         APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-  #         APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
-  #         FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
-  #         GOOGLE_CLOUD_KEYS_FILE: ${{ github.workspace }}/../gcp-credentials.json
-  #         GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-  #       run: |
-  #         echo "==================== FASTLANE DEPLOYMENT STARTING ===================="
-  #         echo "Timestamp: $(date)"
-  #         echo "Working directory: $(pwd)"
-  #         
-  #         set -e  # Exit on any error
-  #         
-  #         # Check if GCP secret is set
-  #         if [ -z "$GCP_SERVICE_ACCOUNT_KEY" ]; then
-  #           echo "❌ ERROR: GCP_SERVICE_ACCOUNT_KEY secret is not set!"
-  #           echo "Please add this secret to GitHub: Settings → Secrets → Actions → GCP_SERVICE_ACCOUNT_KEY"
-  #           exit 1
-  #         fi
-  #         
-  #         echo "✅ GCP_SERVICE_ACCOUNT_KEY secret is set (length: ${#GCP_SERVICE_ACCOUNT_KEY} characters)"
-  #         
-  #         echo "📁 Creating GCP credentials file..."
-  #         printf '%s' "$GCP_SERVICE_ACCOUNT_KEY" > "${{ github.workspace }}/../gcp-credentials.json"
-  #         echo "✅ GCP credentials file created"
-  #         
-  #         echo "🔧 Setting environment variables..."
-  #         export GOOGLE_APPLICATION_CREDENTIALS="${{ github.workspace }}/../gcp-credentials.json"
-  #         export APP_STORE_CONNECT_API_KEY_KEY_FILEPATH="${HOME}/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8"
-  #         echo "✅ Environment variables set"
-  #         
-  #         echo "📋 Verifying credentials files exist..."
-  #         ls -la "${GOOGLE_APPLICATION_CREDENTIALS}" || { echo "❌ GCP credentials not found at ${GOOGLE_APPLICATION_CREDENTIALS}"; exit 1; }
-  #         echo "✅ GCP credentials found"
-  #         
-  #         ls -la "${APP_STORE_CONNECT_API_KEY_KEY_FILEPATH}" || { echo "❌ API key not found at ${APP_STORE_CONNECT_API_KEY_KEY_FILEPATH}"; exit 1; }
-  #         echo "✅ API key found"
-  #         
-  #         echo "📦 Checking Fastlane installation..."
-  #         bundle exec fastlane --version
-  #         
-  #         echo "🚀 Starting Fastlane deployment..."
-  #         echo "==================== FASTLANE OUTPUT BEGINS ===================="
-  #         bundle exec fastlane deploy_prod --verbose
-  #         echo "==================== FASTLANE OUTPUT ENDS ===================="
-  #         echo "✅ Deployment completed successfully!"
+# Note: Production mobile apps (Android & iOS) are NOT built here.
+# They are promoted from beta through the Play Console and App Store Connect UIs.
+# This ensures the exact tested beta builds go to production without rebuilding.

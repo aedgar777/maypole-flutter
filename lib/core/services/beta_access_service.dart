@@ -5,8 +5,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// Service to check if a user has beta access to the web app
 /// Only enforced when ENVIRONMENT=beta on web platform
 class BetaAccessService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  // Use lazy getters to avoid accessing Firebase instances during construction
+  // This is critical for web where Firebase Auth needs async initialization
+  FirebaseAuth get _auth => FirebaseAuth.instance;
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
 
   /// Check if the current environment requires beta access
   bool get isBetaEnvironment {

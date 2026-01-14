@@ -5,6 +5,7 @@ import 'package:maypole/features/settings/data/services/first_time_notification_
 import 'package:maypole/features/settings/data/services/fcm_service.dart';
 import 'package:maypole/features/settings/domain/settings_state.dart';
 import 'package:maypole/features/settings/presentation/viewmodels/settings_viewmodel.dart';
+import 'package:maypole/features/settings/presentation/viewmodels/location_settings_viewmodel.dart';
 
 final storageServiceProvider = Provider<StorageService>((ref) {
   return StorageService();
@@ -29,4 +30,10 @@ final settingsViewModelProvider = NotifierProvider<
     SettingsViewModel,
     SettingsState>(
   SettingsViewModel.new,
+);
+
+final locationSettingsViewModelProvider = NotifierProvider<
+    LocationSettingsViewModel,
+    LocationSettingsState>(
+  LocationSettingsViewModel.new,
 );

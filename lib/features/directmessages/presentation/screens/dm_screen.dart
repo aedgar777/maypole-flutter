@@ -27,6 +27,9 @@ class _DmScreenState extends ConsumerState<DmScreen> {
   late DMThread? _currentDmThread;
   bool _isMaypoleThread = false;
   String _currentMaypoleName = '';
+  String? _currentAddress;
+  double? _currentLatitude;
+  double? _currentLongitude;
 
   @override
   void initState() {
@@ -62,8 +65,8 @@ class _DmScreenState extends ConsumerState<DmScreen> {
                         isMaypoleThread: _isMaypoleThread,
                         onSettingsPressed: () => context.push('/settings'),
                         onAddPressed: () => _handleAddPressed(context),
-                        onMaypoleThreadSelected: (threadId, maypoleName, address) =>
-                            _handleMaypoleThreadSelected(threadId, maypoleName),
+                        onMaypoleThreadSelected: (threadId, maypoleName, address, latitude, longitude) =>
+                            _handleMaypoleThreadSelected(threadId, maypoleName, address, latitude, longitude),
                         onDmThreadSelected: (threadId) =>
                             _handleDmThreadSelected(threadId),
                         onTabChanged: (tabIndex) => setState(() {
@@ -82,6 +85,9 @@ class _DmScreenState extends ConsumerState<DmScreen> {
                   return MaypoleChatContent(
                     threadId: _currentThreadId,
                     maypoleName: _currentMaypoleName,
+                    address: _currentAddress,
+                    latitude: _currentLatitude,
+                    longitude: _currentLongitude,
                     showAppBar: true,
                   );
                 } else if (!_isMaypoleThread && _currentDmThread != null) {
@@ -112,6 +118,9 @@ class _DmScreenState extends ConsumerState<DmScreen> {
       return MaypoleChatContent(
         threadId: _currentThreadId,
         maypoleName: _currentMaypoleName,
+        address: _currentAddress,
+        latitude: _currentLatitude,
+        longitude: _currentLongitude,
         showAppBar: false,
         autoFocus: true,
       );
@@ -131,15 +140,29 @@ class _DmScreenState extends ConsumerState<DmScreen> {
     if (result != null && mounted) {
       // Navigate to the new chat
       if (context.mounted) {
-        context.go('/chat/${result.placeId}', extra: result.placeName);
+        context.go('/chat/${result.placeId}', extra: {
+          'name': result.placeName,
+          'address': result.address,
+          'latitude': result.latitude,
+          'longitude': result.longitude,
+        });
       }
     }
   }
 
-  void _handleMaypoleThreadSelected(String threadId, String maypoleName) {
+  void _handleMaypoleThreadSelected(
+    String threadId, 
+    String maypoleName,
+    String address,
+    double? latitude,
+    double? longitude,
+  ) {
     setState(() {
       _currentThreadId = threadId;
       _currentMaypoleName = maypoleName;
+      _currentAddress = address;
+      _currentLatitude = latitude;
+      _currentLongitude = longitude;
       _isMaypoleThread = true;
       _currentDmThread = null;
     });
