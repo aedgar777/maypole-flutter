@@ -27,6 +27,134 @@ jobs:
           chmod +x scripts/auto-bump-version.sh scripts/get-version.sh
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin beta || echo "⚠️ Pull failed, but continuing..."
+          echo "📱 Current version:"
+          ./scripts/get-version.sh
+          ./scripts/auto-bump-build.sh
+          echo "✅ New version:"
+          ./scripts/get-version.sh
+          if git diff --quiet pubspec.yaml; then
+            echo "ℹ️ No version changes detected, skipping commit"
+            exit 0
+          fi
+          git add pubspec.yaml
+          git commit -m "chore: auto-bump build number to $(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ') [skip ci]"
+          for i in {1..3}; do
+            if git push origin beta; then
+              echo "✅ Successfully pushed version bump"
+              exit 0
+            else
+              echo "⚠️ Push failed (attempt $i/3), pulling and retrying..."
+              git pull --rebase origin beta
+            fi
+          done
+          echo "❌ Failed to push after 3 attempts"
+          exit 1
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Cache Gradle
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-minsdk23-${{ hashFiles('**/*.gradle*', '**/*.gradle.kts', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-minsdk23-
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.0'
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Clean build cache aggressively
+        run: |
+          flutter clean
+          rm -rf build
+          rm -rf android/.gradle
+          rm -rf android/app/build
+
+      - name: Create .env file from secrets
+        run: |
+          cat > .env << EOF
+          ENVIRONMENT=prod
+          FIREBASE_PROD_WEB_API_KEY=${{ secrets.FIREBASE_PROD_WEB_API_KEY }}
+          FIREBASE_PROD_WEB_APP_ID=${{ secrets.FIREBASE_PROD_WEB_APP_ID }}
+          FIREBASE_PROD_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_PROD_WEB_MEASUREMENT_ID }}
+          FIREBASE_PROD_ANDROID_API_KEY=${{ secrets.FIREBASE_PROD_ANDROID_API_KEY }}
+          FIREBASE_PROD_ANDROID_APP_ID=${{ secrets.FIREBASE_PROD_ANDROID_APP_ID }}
+          FIREBASE_PROD_IOS_API_KEY=${{ secrets.FIREBASE_PROD_IOS_API_KEY }}
+          FIREBASE_PROD_IOS_APP_ID=${{ secrets.FIREBASE_PROD_IOS_APP_ID }}
+          FIREBASE_PROD_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_PROD_MESSAGING_SENDER_ID }}
+          FIREBASE_PROD_PROJECT_ID=${{ secrets.FIREBASE_PROD_PROJECT_ID }}
+          FIREBASE_PROD_AUTH_DOMAIN=${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }}
+          FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }}
+          IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
+          EOF
+
+      - name: Create google-services.json for prod flavor
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON_PROD }}
+        run: |
+          mkdir -p android/app/src/prod
+          echo "$GOOGLE_SERVICES_JSON" > android/app/src/prod/google-services.json
+          python3 -m json.tool android/app/src/prod/google-services.json > /dev/null 2>&1 || { echo "❌ Error: Invalid JSON"; exit 1; }
+          echo "✅ google-services.json created and validated successfully"
+
+      - name: Setup Android Signing
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | tr -d '\n\r ' | base64 -d > android/app/upload-keystore.jks
+          cat > android/key.properties << 'KEYSTORE_EOF'
+          storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storeFile=upload-keystore.jks
+          KEYSTORE_EOF
+
+      - name: Build Android App Bundle (prodRelease)
+        run: flutter build appbundle --release --flavor prod
+
+      - name: Deploy to Play Store Beta Track
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
+          packageName: app.maypole.maypole
+          releaseFiles: build/app/outputs/bundle/prodRelease/app-prod-release.aab
+          track: beta
+          status: draft
+          inAppUpdatePriority: 0
+
+  build_web_beta:
+    name: Build and Deploy Web (Beta Channel)
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.0'
+          channel: 'stable'
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Create .env file from secrets
+        run: |
+          cat > .env << EOF
+          # Beta Environment Configuration (Generated by GitHub Actions)
+          ENVIRONMENT=beta
           
           echo "📱 Bumping patch version for Beta deployment..."
           ./scripts/auto-bump-version.sh patch
