@@ -6,37 +6,53 @@ on:
       - beta
 
 jobs:
+  # Bump version once at the start
+  bump_version:
+    name: Bump Patch Version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      new_version: ${{ steps.bump.outputs.new_version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Bump patch version
+        id: bump
+        run: |
+          chmod +x scripts/auto-bump-version.sh scripts/get-version.sh
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          echo "📱 Bumping patch version for Beta deployment..."
+          ./scripts/auto-bump-version.sh patch
+          
+          NEW_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Version bumped to: $NEW_VERSION"
+          
+          if ! git diff --quiet pubspec.yaml; then
+            git add pubspec.yaml
+            git commit -m "chore: bump version to $NEW_VERSION (Beta) [skip ci]"
+            git push origin beta || echo "Push failed, continuing anyway"
+          fi
+
   # TEMPORARILY COMMENTED OUT - Android Build
   # build_android:
   #   name: Build and Deploy Android (Beta)
   #   runs-on: ubuntu-latest
+  #   needs: bump_version
   #   environment: production
-  #   permissions:
-  #     contents: write  # Required to push version bump commits
   #   steps:
   #     - name: Checkout repository
   #       uses: actions/checkout@v3
   #       with:
-  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         ref: beta
   #         fetch-depth: 0
-  #
-  #     - name: Bump patch version
-  #       run: |
-  #         chmod +x scripts/auto-bump-version.sh scripts/get-version.sh
-  #         git config user.name "github-actions[bot]"
-  #         git config user.email "github-actions[bot]@users.noreply.github.com"
-  #         
-  #         echo "📱 Bumping patch version for Android Beta..."
-  #         ./scripts/auto-bump-version.sh patch
-  #         
-  #         NEW_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
-  #         echo "✅ Version bumped to: $NEW_VERSION"
-  #         
-  #         if ! git diff --quiet pubspec.yaml; then
-  #           git add pubspec.yaml
-  #           git commit -m "chore: bump version to $NEW_VERSION (Android Beta) [skip ci]"
-  #           git push origin beta || echo "Push failed, continuing anyway"
-  #         fi
   #
   #     - name: Setup Java
   #       uses: actions/setup-java@v3
@@ -115,34 +131,15 @@ jobs:
   # build_ios:
   #   name: Build and Deploy iOS (Beta TestFlight)
   #   runs-on: macos-latest
+  #   needs: bump_version
   #   timeout-minutes: 60
   #   environment: production
-  #   permissions:
-  #     contents: write  # Required to push version bump commits
   #   steps:
   #     - name: Checkout repository
   #       uses: actions/checkout@v3
   #       with:
-  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         ref: beta
   #         fetch-depth: 0
-  #
-  #     - name: Bump patch version
-  #       run: |
-  #         chmod +x scripts/auto-bump-version.sh scripts/get-version.sh
-  #         git config user.name "github-actions[bot]"
-  #         git config user.email "github-actions[bot]@users.noreply.github.com"
-  #         
-  #         echo "📱 Bumping patch version for iOS Beta..."
-  #         ./scripts/auto-bump-version.sh patch
-  #         
-  #         NEW_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
-  #         echo "✅ Version bumped to: $NEW_VERSION"
-  #         
-  #         if ! git diff --quiet pubspec.yaml; then
-  #           git add pubspec.yaml
-  #           git commit -m "chore: bump version to $NEW_VERSION (iOS Beta) [skip ci]"
-  #           git push origin beta || echo "Push failed, continuing anyway"
-  #         fi
   #
   #     - name: Select Xcode version
   #       run: |
@@ -181,6 +178,7 @@ jobs:
   #         FIREBASE_PROD_AUTH_DOMAIN=${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }}
   #         FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }}
   #         IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
+  #         GOOGLE_APPLICATION_CREDENTIALS=$HOME/.config/gcloud/application_default_credentials.json
   #         EOF
   #
   #     - name: Create GoogleService-Info.plist for prod
@@ -194,16 +192,23 @@ jobs:
   #       working-directory: ios
   #       run: pod install
   #
-  #     - name: Build Flutter frameworks
+  #     - name: Setup GCP credentials for Match
   #       run: |
-  #         flutter build ios --release --no-codesign \
+  #         mkdir -p ~/.config/gcloud
+  #         echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" > ~/.config/gcloud/application_default_credentials.json
+  #         export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/gcloud/application_default_credentials.json"
+  #
+  #     - name: Setup App Store Connect API key
+  #       run: |
+  #         mkdir -p ~/private_keys
+  #         echo "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}" > ~/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+  #
+  #     - name: Build iOS IPA with Flutter
+  #       run: |
+  #         flutter build ipa \
+  #           --release \
   #           --dart-define=ENVIRONMENT=production \
-  #           --dart-define=FIREBASE_PROD_IOS_API_KEY=${{ secrets.FIREBASE_PROD_IOS_API_KEY }} \
-  #           --dart-define=FIREBASE_PROD_IOS_APP_ID=${{ secrets.FIREBASE_PROD_IOS_APP_ID }} \
-  #           --dart-define=FIREBASE_PROD_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_PROD_MESSAGING_SENDER_ID }} \
-  #           --dart-define=FIREBASE_PROD_PROJECT_ID=${{ secrets.FIREBASE_PROD_PROJECT_ID }} \
-  #           --dart-define=FIREBASE_PROD_AUTH_DOMAIN=${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }} \
-  #           --dart-define=FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }} || true
+  #           --export-options-plist=ios/ExportOptions.plist
   #
   #     - name: Deploy to TestFlight Beta with Fastlane
   #       working-directory: ios
@@ -217,52 +222,23 @@ jobs:
   #         IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
   #         APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
   #         APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
-  #         GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-  #         APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+  #         GOOGLE_APPLICATION_CREDENTIALS: $HOME/.config/gcloud/application_default_credentials.json
+  #         APP_STORE_CONNECT_API_KEY_KEY_FILEPATH: $HOME/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
   #       run: |
-  #         # Setup GCP credentials for Match
-  #         mkdir -p ~/.config/gcloud
-  #         echo "$GCP_SERVICE_ACCOUNT_KEY" > ~/.config/gcloud/application_default_credentials.json
-  #         export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/gcloud/application_default_credentials.json"
-  #         
-  #         # Setup App Store Connect API key
-  #         mkdir -p ~/private_keys
-  #         echo "$APP_STORE_CONNECT_API_KEY_CONTENT" > ~/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_KEY_ID}.p8
-  #         export APP_STORE_CONNECT_API_KEY_KEY_FILEPATH="$HOME/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_KEY_ID}.p8"
-  #         
   #         # Deploy with Fastlane
-  #         bundle exec fastlane ios deploy_beta
+  #         bundle exec fastlane deploy_beta
 
   build_web_beta:
     name: Build and Deploy Web (Beta Channel)
     runs-on: ubuntu-latest
+    needs: bump_version
     environment: production
-    permissions:
-      contents: write  # Required to push version bump commits
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: beta
           fetch-depth: 0
-
-      - name: Bump patch version
-        run: |
-          chmod +x scripts/auto-bump-version.sh scripts/get-version.sh
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          echo "📱 Bumping patch version for Web Beta..."
-          ./scripts/auto-bump-version.sh patch
-          
-          NEW_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
-          echo "✅ Version bumped to: $NEW_VERSION"
-          
-          if ! git diff --quiet pubspec.yaml; then
-            git add pubspec.yaml
-            git commit -m "chore: bump version to $NEW_VERSION (Web Beta) [skip ci]"
-            git push origin beta || echo "Push failed, continuing anyway"
-          fi
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -289,7 +265,8 @@ jobs:
 
       - name: Build Web (Beta)
         run: |
-          flutter build web --release \
+          flutter build web \
+            --release \
             --web-renderer html \
             --dart-define=ENVIRONMENT=production \
             --dart-define=FIREBASE_PROD_WEB_API_KEY=${{ secrets.FIREBASE_PROD_WEB_API_KEY }} \
@@ -298,7 +275,8 @@ jobs:
             --dart-define=FIREBASE_PROD_PROJECT_ID=${{ secrets.FIREBASE_PROD_PROJECT_ID }} \
             --dart-define=FIREBASE_PROD_AUTH_DOMAIN=${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }} \
             --dart-define=FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }} \
-            --dart-define=FIREBASE_PROD_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_PROD_WEB_MEASUREMENT_ID }}
+            --dart-define=FIREBASE_PROD_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_PROD_WEB_MEASUREMENT_ID }} \
+            --dart-define=GOOGLE_PLACES_API_KEY=${{ secrets.GOOGLE_PLACES_PROD_API_KEY }}
 
       - name: Deploy to Firebase Hosting Beta Channel
         run: |
