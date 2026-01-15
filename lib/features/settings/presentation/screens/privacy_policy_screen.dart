@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_config.dart';
+import 'package:maypole/core/app_theme.dart' as app_theme;
 import 'package:maypole/l10n/generated/app_localizations.dart';
 
 class PrivacyPolicyScreen extends StatelessWidget {
@@ -166,10 +168,13 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   'To exercise these rights, please contact us using the information below.',
             ),
 
-            _buildSection(
+            _buildSectionWithLink(
               context,
               'Children\'s Privacy',
-              'Our service is not intended for children under the age of 13. We do not knowingly collect personal information from children under 13. If you are a parent or guardian and believe your child has provided us with personal information, please contact us so we can delete such information.',
+              'Our service is not intended for children under the age of 13. We do not knowingly collect personal information from children under 13. If you are a parent or guardian and believe your child has provided us with personal information, please contact us so we can delete such information.\n\n'
+                  'For more information about our commitment to child safety, please review our ',
+              'Child Safety Standards',
+              '/child-safety-standards',
             ),
 
             _buildSection(
@@ -222,6 +227,52 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 .bodyMedium
                 ?.copyWith(
               height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionWithLink(
+    BuildContext context,
+    String title,
+    String contentBefore,
+    String linkText,
+    String linkRoute,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 8),
+          RichText(
+            text: TextSpan(
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    height: 1.5,
+                  ),
+              children: [
+                TextSpan(text: contentBefore),
+                TextSpan(
+                  text: linkText,
+                  style: const TextStyle(
+                    color: app_theme.skyBlue,
+                    decoration: TextDecoration.underline,
+                  ),
+                  recognizer: TapGestureRecognizer()
+                    ..onTap = () {
+                      context.push(linkRoute);
+                    },
+                ),
+                const TextSpan(text: '.'),
+              ],
             ),
           ),
         ],

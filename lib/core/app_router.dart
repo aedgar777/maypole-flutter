@@ -13,6 +13,7 @@ import '../features/directmessages/presentation/screens/dm_screen.dart';
 import '../features/directmessages/domain/dm_thread.dart';
 import '../features/settings/presentation/screens/settings_screen.dart';
 import '../features/settings/presentation/screens/privacy_policy_screen.dart';
+import '../features/settings/presentation/screens/child_safety_standards_screen.dart';
 import '../features/settings/presentation/screens/preferences_screen.dart';
 import '../features/settings/presentation/screens/account_settings_screen.dart';
 import '../features/settings/presentation/screens/blocked_users_screen.dart';
@@ -31,7 +32,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final currentPath = state.matchedLocation;
       
       // Define public routes that don't require authentication
-      final publicRoutes = ['/login', '/register', '/privacy-policy', '/help', '/email-verified'];
+      final publicRoutes = ['/login', '/register', '/privacy-policy', '/child-safety-standards', '/help', '/email-verified'];
       final isPublicRoute = publicRoutes.contains(currentPath);
       
       // If user is not authenticated and trying to access a protected route
@@ -127,6 +128,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/privacy-policy',
         builder: (context, state) => const PrivacyPolicyScreen(),
+      ),
+      GoRoute(
+        path: '/child-safety-standards',
+        builder: (context, state) => const ChildSafetyStandardsScreen(),
       ),
       GoRoute(
         path: '/help',

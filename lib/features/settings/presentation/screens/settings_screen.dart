@@ -225,6 +225,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 GestureDetector(
                   onTap: () {
+                    context.push('/child-safety-standards');
+                  },
+                  child: Container(
+                    color: Colors.transparent,
+                    child: const ListTile(
+                      leading: Icon(Icons.shield),
+                      title: Text('Child Safety Standards'),
+                      trailing: Icon(Icons.chevron_right),
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
                     context.push('/help');
                   },
                   child: Container(

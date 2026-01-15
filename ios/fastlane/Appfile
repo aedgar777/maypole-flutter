@@ -1,0 +1,13 @@
+# Fastlane Appfile for iOS
+
+# Apple ID for authentication
+apple_id(ENV["APPLE_ID"])
+
+# App identifier
+app_identifier(ENV["IOS_BUNDLE_ID"])
+
+# Apple Developer Team ID
+team_id(ENV["APPLE_TEAM_ID"])
+
+# App Store Connect Team ID (if different from Apple Developer Team)
+# itc_team_id(ENV["APP_STORE_CONNECT_TEAM_ID"])
