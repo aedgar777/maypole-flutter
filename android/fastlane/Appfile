@@ -1,0 +1,8 @@
+# Fastlane Appfile for Android
+
+# Google Play Package Name
+package_name("app.maypole.maypole")
+
+# Path to Google Play Service Account JSON key file
+# This should be set as an environment variable for security
+# json_key_file(ENV['GOOGLE_PLAY_SERVICE_ACCOUNT_JSON'])

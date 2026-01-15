@@ -1,0 +1,242 @@
+# TEMPORARILY DISABLED
+# This workflow is temporarily disabled
+
+name: iOS Debug Build (Troubleshooting) - DISABLED
+
+on:
+  # TEMPORARILY DISABLED - No triggers enabled
+  push:
+    branches:
+      - DISABLED_BRANCH_THAT_DOES_NOT_EXIST
+  
+jobs:
+  debug_ios:
+    name: Debug iOS Build (Manual)
+    runs-on: macos-latest
+    timeout-minutes: 90
+    environment: development
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: System Information
+        run: |
+          echo "==================== SYSTEM INFO ===================="
+          echo "macOS Version:"
+          sw_vers
+          echo ""
+          echo "Xcode Versions Available:"
+          ls /Applications/ | grep Xcode
+          echo ""
+          echo "CPU Info:"
+          sysctl -n machdep.cpu.brand_string
+          echo "CPU Cores:"
+          sysctl -n hw.ncpu
+          echo "Memory:"
+          sysctl -n hw.memsize | awk '{print $1/1024/1024/1024 " GB"}'
+          echo ""
+          echo "Disk Space:"
+          df -h /
+          echo ""
+          echo "Current User:"
+          whoami
+          echo "User Limits:"
+          ulimit -a
+
+      - name: Select Xcode version
+        run: |
+          echo "Available Xcode versions:"
+          ls /Applications/ | grep Xcode
+          
+          if [ -d "/Applications/Xcode_15.4.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_15.3.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_15.3.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_15.2.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_15.2.app/Contents/Developer
+          else
+            echo "WARNING: No Xcode 15.x found, using default"
+          fi
+          
+          echo "Selected Xcode:"
+          xcodebuild -version
+          echo ""
+          echo "Available SDKs:"
+          xcodebuild -showsdks
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.7'
+          channel: 'stable'
+
+      - name: Flutter Doctor
+        run: |
+          echo "==================== FLUTTER DOCTOR ===================="
+          flutter doctor -v
+
+      - name: Get dependencies
+        run: flutter pub get
+      
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2.0'
+          bundler-cache: true
+          working-directory: ios
+
+      - name: Create Firebase Config
+        run: |
+          mkdir -p ios/Firebase/dev
+          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_DEV }}" > ios/Firebase/dev/GoogleService-Info.plist
+          echo "✅ Firebase config created"
+
+      - name: Install CocoaPods (with timing)
+        working-directory: ios
+        run: |
+          echo "==================== POD INSTALL ===================="
+          echo "⏰ Start: $(date)"
+          
+          # Monitor pod install
+          (
+            while true; do
+              sleep 20
+              echo "⏳ Pod install still running... $(date +%H:%M:%S)"
+            done
+          ) &
+          MONITOR_PID=$!
+          
+          pod install --verbose
+          
+          kill $MONITOR_PID 2>/dev/null || true
+          echo "⏰ Completed: $(date)"
+
+      - name: Test 1 - Flutter Build Only (No Signing)
+        timeout-minutes: 20
+        run: |
+          echo "==================== TEST 1: FLUTTER BUILD ===================="
+          echo "⏰ Start: $(date)"
+          
+          (
+            while true; do
+              sleep 15
+              echo "💓 Flutter build still running... $(date +%H:%M:%S)"
+            done
+          ) &
+          MONITOR_PID=$!
+          
+          flutter build ios --release --no-codesign --verbose 2>&1 | tee /tmp/flutter-build.log
+          
+          kill $MONITOR_PID 2>/dev/null || true
+          echo "⏰ Completed: $(date)"
+          echo "✅ Flutter build completed"
+
+      - name: Test 2 - Xcodebuild Archive Only (No Fastlane)
+        timeout-minutes: 30
+        working-directory: ios
+        env:
+          MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
+          MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+        run: |
+          echo "==================== TEST 2: XCODEBUILD ONLY ===================="
+          echo "⏰ Start: $(date)"
+          
+          # Setup GCP credentials
+          mkdir -p ~/.config/gcloud
+          echo "$GCP_SERVICE_ACCOUNT_KEY" > ~/.config/gcloud/application_default_credentials.json
+          export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/gcloud/application_default_credentials.json"
+          
+          # Get signing certificate from Match
+          echo "Syncing certificates with Match..."
+          bundle exec fastlane match appstore --readonly --verbose
+          
+          PROFILE_NAME="match AppStore ${IOS_BUNDLE_ID}"
+          
+          echo ""
+          echo "Building archive with xcodebuild (THIS IS WHERE IT HANGS)..."
+          echo "Monitoring system resources during build..."
+          
+          # Start system monitoring
+          (
+            while true; do
+              echo "━━━━━━━━━━━━━━━━━���━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "⏰ $(date +%H:%M:%S)"
+              echo "🔨 xcodebuild processes:"
+              ps aux | grep -E '(xcodebuild|clang|swift|ld)' | grep -v grep | awk '{print $2, $3, $11}' || echo "  None"
+              echo "💾 Disk usage:"
+              df -h / | tail -1
+              echo "🧠 Memory:"
+              vm_stat | grep -E "(Pages free|Pages active)" || echo "  Unknown"
+              sleep 30
+            done
+          ) &
+          MONITOR_PID=$!
+          
+          # Run xcodebuild with aggressive output
+          xcodebuild \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath ../build/ios/Runner.xcarchive \
+            archive \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="${PROFILE_NAME}" \
+            DEVELOPMENT_TEAM="${APPLE_TEAM_ID}" \
+            -allowProvisioningUpdates \
+            2>&1 | tee ../build/ios/xcodebuild-ci.log | while IFS= read -r line; do
+              echo "$line"
+              # Highlight important steps
+              if echo "$line" | grep -q "Running script"; then
+                echo "🔍 SCRIPT PHASE: $line"
+              fi
+            done
+          
+          BUILD_EXIT=$?
+          kill $MONITOR_PID 2>/dev/null || true
+          
+          echo "⏰ Completed: $(date)"
+          
+          if [ $BUILD_EXIT -eq 0 ]; then
+            echo "✅ Xcodebuild succeeded!"
+            ls -lh ../build/ios/Runner.xcarchive/
+          else
+            echo "❌ Xcodebuild failed with exit code: $BUILD_EXIT"
+            echo ""
+            echo "Last 200 lines of build log:"
+            tail -200 ../build/ios/xcodebuild-ci.log
+            exit 1
+          fi
+
+      - name: Upload Build Logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ios-debug-logs
+          path: |
+            /tmp/flutter-build.log
+            build/ios/xcodebuild-ci.log
+            build/ios/archive.log
+            ios/fastlane/logs/
+          retention-days: 7
+
+      - name: Summary
+        if: always()
+        run: |
+          echo ""
+          echo "==================== DEBUG SUMMARY ===================="
+          echo "If this workflow succeeds:"
+          echo "  ✅ The problem is in Fastlane/gym, not xcodebuild"
+          echo "  → Use deploy_dev_ci_debug lane instead"
+          echo ""
+          echo "If this workflow hangs at Test 2:"
+          echo "  ❌ The problem is in xcodebuild itself"
+          echo "  → Check the monitoring output to see what's running"
+          echo "  → Check uploaded logs for the exact hang point"
+          echo ""
+          echo "Download the artifacts to see full logs!"
