@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.maypole.maypole",
+      "sha256_cert_fingerprints": [
+        "5DFCA1E450A9C414A7DB4170ACE6671473792FC532FF7903F5B059EBE7AB768E"
+      ]
+    }
+  }
+]

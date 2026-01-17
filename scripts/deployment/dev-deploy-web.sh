@@ -40,6 +40,20 @@ flutter build web \
 echo "✅ Build complete!"
 echo ""
 
+# Copy deeplink verification files to build directory
+echo "🔗 Copying deeplink verification files..."
+mkdir -p build/web/.well-known
+
+# Copy Apple App Site Association files
+cp public/apple-app-site-association build/web/apple-app-site-association
+cp public/.well-known/apple-app-site-association build/web/.well-known/apple-app-site-association
+
+# Copy Android Asset Links file
+cp public/.well-known/assetlinks.json build/web/.well-known/assetlinks.json
+
+echo "✅ Verification files copied!"
+echo ""
+
 # Deploy to Firebase Hosting
 echo "☁️  Deploying to Firebase Hosting (dev)..."
 firebase deploy --only hosting --project maypole-flutter-dev
@@ -47,3 +61,7 @@ firebase deploy --only hosting --project maypole-flutter-dev
 echo ""
 echo "🎉 Web app deployed to Firebase Hosting!"
 echo "   View at: https://maypole-flutter-dev.web.app"
+echo ""
+echo "🔗 Deeplink verification files deployed:"
+echo "   - https://maypole-flutter-dev.web.app/apple-app-site-association"
+echo "   - https://maypole-flutter-dev.web.app/.well-known/assetlinks.json"

@@ -28,15 +28,49 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: GoRouterRefreshStream(authService.user),
     redirect: (context, state) {
       final authState = ref.read(authStateProvider);
-      final isAuthenticated = authState.value != null;
       final currentPath = state.matchedLocation;
+      final uri = state.uri;
+      
+      // Debug logging
+      debugPrint('🔀 Router redirect check:');
+      debugPrint('   URI path: ${uri.path}');
+      debugPrint('   URI toString: ${uri.toString()}');
+      debugPrint('   Matched location: $currentPath');
+      debugPrint('   Full location: ${state.fullPath}');
+      debugPrint('   Auth state: ${authState.runtimeType}');
       
       // Define public routes that don't require authentication
       final publicRoutes = ['/login', '/register', '/privacy-policy', '/child-safety-standards', '/help', '/email-verified'];
-      final isPublicRoute = publicRoutes.contains(currentPath);
+      
+      // Only MAYPOLE chats are public (not DMs - those are private)
+      // Check multiple path sources to ensure we catch the chat route
+      final isMaypoleChat = uri.path.startsWith('/chat/') || 
+                           currentPath.startsWith('/chat/') ||
+                           state.fullPath?.startsWith('/chat/') == true;
+      
+      final isPublicRoute = publicRoutes.contains(currentPath) || isMaypoleChat;
+      
+      debugPrint('   Is maypole chat: $isMaypoleChat');
+      debugPrint('   Is public route: $isPublicRoute');
+      
+      // If auth is still loading AND it's a maypole chat, allow it immediately
+      if (authState.isLoading && isMaypoleChat) {
+        debugPrint('   ⏳ Auth loading but maypole chat detected, allowing route');
+        return null;
+      }
+      
+      // If auth is still loading for other routes, don't redirect yet
+      if (authState.isLoading) {
+        debugPrint('   ⏳ Auth loading, no redirect');
+        return null;
+      }
+      
+      final isAuthenticated = authState.value != null;
+      debugPrint('   Is authenticated: $isAuthenticated');
       
       // If user is not authenticated and trying to access a protected route
       if (!isAuthenticated && !isPublicRoute) {
+        debugPrint('   ➡️  Redirecting to /login');
         return '/login';
       }
       
@@ -93,6 +127,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             longitude = null;
           }
 
+          // Use adaptive screen for both authenticated and anonymous users
+          // It automatically adapts based on auth state
           return MaypoleChatScreen(
             threadId: threadId,
             maypoleName: maypoleName,

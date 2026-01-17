@@ -2,18 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/widgets/adaptive_scaffold.dart';
-import 'package:maypole/core/widgets/error_dialog.dart';
-import 'package:maypole/features/directmessages/domain/dm_thread.dart';
-import 'package:maypole/features/directmessages/presentation/widgets/dm_content.dart';
 import 'package:maypole/features/identity/auth_providers.dart';
-import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
-import 'package:maypole/features/directmessages/presentation/dm_providers.dart';
 import 'package:maypole/features/home/presentation/widgets/maypole_list_panel.dart';
+import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
 import '../widgets/maypole_chat_content.dart';
 
-/// Full-screen wrapper for maypole chat content.
-/// Adapts to show split view when rotated to landscape.
-class MaypoleChatScreen extends ConsumerStatefulWidget {
+/// Maypole chat screen that adapts based on authentication state.
+/// - Anonymous users: View-only mode with "Join conversation" prompt
+/// - Authenticated users: Full interactivity (post, tag, delete, report)
+/// 
+/// This screen works for both deeplinks (public sharing) and authenticated navigation.
+class MaypoleChatScreen extends ConsumerWidget {
   final String threadId;
   final String maypoleName;
   final String? address;
@@ -30,178 +29,87 @@ class MaypoleChatScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<MaypoleChatScreen> createState() => _MaypoleChatScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref.watch(authStateProvider).when(
+      data: (user) {
+        final isAuthenticated = user != null;
 
-class _MaypoleChatScreenState extends ConsumerState<MaypoleChatScreen> {
-  late String _currentThreadId;
-  late String _currentMaypoleName;
-  String? _currentAddress;
-  double? _currentLatitude;
-  double? _currentLongitude;
-  bool _isMaypoleThread = true;
-  DMThread? _currentDmThread;
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isWideScreen = constraints.maxWidth >= 600;
 
-  @override
-  void initState() {
-    super.initState();
-    _currentThreadId = widget.threadId;
-    _currentMaypoleName = widget.maypoleName;
-    _currentAddress = widget.address;
-    _currentLatitude = widget.latitude;
-    _currentLongitude = widget.longitude;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ref
-        .watch(authStateProvider)
-        .when(
-          data: (user) {
-            if (user == null) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                context.go('/login');
-              });
-              return const Center(child: CircularProgressIndicator());
+            // Authenticated users on wide screens see the normal layout
+            if (isAuthenticated && isWideScreen) {
+              return Scaffold(
+                body: AdaptiveScaffold(
+                  navigationPanel: MaypoleListPanel(
+                    user: user,
+                    selectedThreadId: threadId,
+                    isMaypoleThread: true,
+                    onSettingsPressed: () => context.push('/settings'),
+                    onAddPressed: () => _handleAddPressed(context),
+                    onMaypoleThreadSelected: (id, name, addr, lat, lon) {
+                      // Navigate to the regular chat screen (not preview)
+                      context.go('/chat/$id', extra: {
+                        'name': name,
+                        'address': addr,
+                        'latitude': lat,
+                        'longitude': lon,
+                      });
+                    },
+                    onDmThreadSelected: (id) {
+                      context.go('/dm/$id');
+                    },
+                    onTabChanged: (_) {},
+                  ),
+                  contentPanel: MaypoleChatContent(
+                    threadId: threadId,
+                    maypoleName: maypoleName,
+                    address: address,
+                    latitude: latitude,
+                    longitude: longitude,
+                    showAppBar: false,
+                    autoFocus: true,
+                    readOnly: false, // Authenticated users can interact
+                  ),
+                ),
+              );
             }
 
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                final isWideScreen = constraints.maxWidth >= 600;
-
-                if (isWideScreen) {
-                  // Wide screen: show adaptive layout with chat list
-                  return Scaffold(
-                    body: AdaptiveScaffold(
-                      navigationPanel: MaypoleListPanel(
-                        user: user,
-                        selectedThreadId: _currentThreadId,
-                        isMaypoleThread: _isMaypoleThread,
-                        onSettingsPressed: () => context.push('/settings'),
-                        onAddPressed: () => _handleAddPressed(context),
-                        onMaypoleThreadSelected: (threadId, maypoleName, address, latitude, longitude) =>
-                            _handleMaypoleThreadSelected(threadId, maypoleName, address, latitude, longitude),
-                        onDmThreadSelected: (threadId) =>
-                            _handleDmThreadSelected(threadId),
-                        onTabChanged: (tabIndex) => setState(() {
-                          // Clear selection when switching tabs
-                          _currentThreadId = '';
-                        }),
-                      ),
-                      contentPanel: _buildContentPanel(),
-                    ),
-                  );
-                }
-
-                // Narrow screen: show just the chat content
-                // Stay on the current thread (don't navigate back to home)
-                if (_isMaypoleThread && _currentMaypoleName.isNotEmpty) {
-                  return MaypoleChatContent(
-                    threadId: _currentThreadId,
-                    maypoleName: _currentMaypoleName,
-                    address: _currentAddress,
-                    latitude: _currentLatitude,
-                    longitude: _currentLongitude,
-                    showAppBar: true,
-                  );
-                } else if (!_isMaypoleThread && _currentDmThread != null) {
-                  return DmContent(
-                    thread: _currentDmThread!,
-                    showAppBar: true,
-                  );
-                }
-
-                // Fallback to the original thread
-                return MaypoleChatContent(
-                  threadId: widget.threadId,
-                  maypoleName: widget.maypoleName,
-                  address: widget.address,
-                  latitude: widget.latitude,
-                  longitude: widget.longitude,
-                  showAppBar: true,
-                );
-              },
+            // All other cases: show chat content
+            // Anonymous users see read-only version with join prompt
+            return MaypoleChatContent(
+              threadId: threadId,
+              maypoleName: maypoleName,
+              address: address,
+              latitude: latitude,
+              longitude: longitude,
+              showAppBar: true,
+              readOnly: !isAuthenticated, // Read-only for anonymous users
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              ErrorDialog.show(context, err);
-            });
-            return const Center(child: CircularProgressIndicator());
-          },
         );
-  }
-
-  Widget _buildContentPanel() {
-    if (_currentThreadId.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    if (_isMaypoleThread) {
-      return MaypoleChatContent(
-        threadId: _currentThreadId,
-        maypoleName: _currentMaypoleName,
-        address: _currentAddress,
-        latitude: _currentLatitude,
-        longitude: _currentLongitude,
-        showAppBar: false,
-        autoFocus: true,
-      );
-    } else if (_currentDmThread != null) {
-      return DmContent(
-        thread: _currentDmThread!,
-        showAppBar: false,
-        autoFocus: true,
-      );
-    }
-
-    return const SizedBox.shrink();
+      },
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (err, stack) => Scaffold(
+        body: Center(
+          child: Text('Error loading chat: $err'),
+        ),
+      ),
+    );
   }
 
   Future<void> _handleAddPressed(BuildContext context) async {
-    final result = await context.push<PlacePrediction>('/search');
-    if (result != null && mounted) {
-      // Navigate to the new chat
-      if (context.mounted) {
-        context.go('/chat/${result.placeId}', extra: {
-          'name': result.placeName,
-          'address': result.address,
-          'latitude': result.latitude,
-          'longitude': result.longitude,
-        });
-      }
-    }
-  }
-
-  void _handleMaypoleThreadSelected(
-    String threadId, 
-    String maypoleName, 
-    String address,
-    double? latitude,
-    double? longitude,
-  ) {
-    setState(() {
-      _currentThreadId = threadId;
-      _currentMaypoleName = maypoleName;
-      _currentAddress = address;
-      _currentLatitude = latitude;
-      _currentLongitude = longitude;
-      _isMaypoleThread = true;
-      _currentDmThread = null;
-    });
-  }
-
-  Future<void> _handleDmThreadSelected(String threadId) async {
-    final dmThread = await ref
-        .read(dmThreadServiceProvider)
-        .getDMThreadById(threadId);
-
-    if (dmThread != null && mounted) {
-      setState(() {
-        _currentThreadId = threadId;
-        _isMaypoleThread = false;
-        _currentDmThread = dmThread;
+    final Object? result = await context.push('/search');
+    if (result != null && result is PlacePrediction && context.mounted) {
+      final prediction = result as PlacePrediction;
+      context.go('/chat/${prediction.placeId}', extra: {
+        'name': prediction.placeName,
+        'address': prediction.address,
+        'latitude': prediction.latitude,
+        'longitude': prediction.longitude,
       });
     }
   }
