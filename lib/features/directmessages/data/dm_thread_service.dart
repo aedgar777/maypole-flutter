@@ -167,17 +167,21 @@ class DMThreadService {
         .toList();
   }
 
-  Future<void> sendDmMessage(String threadId,
-      String body,
-      String senderId,
-      String senderUsername,
-      String recipientId,) async {
+  Future<void> sendDmMessage(
+    String threadId,
+    String body,
+    String senderId,
+    String senderUsername,
+    String recipientId, {
+    List<String> imageUrls = const [],
+  }) async {
     final now = DateTime.now();
     final message = DirectMessage(
       sender: senderUsername,
       timestamp: now,
       body: body,
       recipient: recipientId,
+      imageUrls: imageUrls,
     );
 
     // Add message to thread's messages subcollection
@@ -406,11 +410,14 @@ class DMThreadService {
       if (!deletedFor.contains(userId)) {
         deletedFor.add(userId);
 
+        // Clear the message body and images when deleting
         await messageRef.update({
           'deletedFor': deletedFor,
+          'body': '', // Clear the text
+          'imageUrls': [], // Clear the images
         });
 
-        debugPrint('✓ Deleted DM message $messageId for user $userId');
+        debugPrint('✓ Deleted DM message $messageId for user $userId (cleared content)');
       }
     } catch (e) {
       debugPrint('❌ Error deleting DM message: $e');

@@ -75,10 +75,13 @@ class DmViewModel extends AsyncNotifier<List<DirectMessage>> {
     });
   }
 
-  Future<void> sendDmMessage(String body,
-      String senderId,
-      String senderUsername,
-      String recipientId,) async {
+  Future<void> sendDmMessage(
+    String body,
+    String senderId,
+    String senderUsername,
+    String recipientId, {
+    List<String> imageUrls = const [],
+  }) async {
     try {
       await _threadService.sendDmMessage(
         _threadId,
@@ -86,6 +89,7 @@ class DmViewModel extends AsyncNotifier<List<DirectMessage>> {
         senderId,
         senderUsername,
         recipientId,
+        imageUrls: imageUrls,
       );
     } catch (e, st) {
       state = AsyncValue.error(e, st);
