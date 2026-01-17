@@ -46,9 +46,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Last Updated: ${DateTime
-                  .now()
-                  .year}',
+              'Last Updated: January 16, 2026',
               style: Theme
                   .of(context)
                   .textTheme
@@ -119,10 +117,27 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   '• Firebase Authentication: For user authentication and account management\n'
                   '• Firebase Cloud Firestore: For storing user data and messages\n'
                   '• Firebase Cloud Storage: For storing user-uploaded images\n'
+                  '• Hive.ai: For AI-powered content moderation\n'
                   '• Google AdMob (planned): For displaying advertisements\n\n'
                   'These services may collect information used to identify you. We recommend reviewing their privacy policies:\n\n'
                   '• Google Privacy Policy: https://policies.google.com/privacy\n'
-                  '• Firebase Privacy Policy: https://firebase.google.com/support/privacy',
+                  '• Firebase Privacy Policy: https://firebase.google.com/support/privacy\n'
+                  '• Hive.ai Privacy Policy: https://thehive.ai/privacy',
+            ),
+
+            _buildSection(
+              context,
+              'Content Moderation and Reporting',
+              'To maintain a safe community, we provide tools for users to report inappropriate content:\n\n'
+                  '• Report Feature: Users can report messages and images they believe violate our community guidelines\n'
+                  '• AI Moderation: When you report content, it is sent to Hive.ai, a third-party AI moderation service, for automated analysis\n'
+                  '• What Gets Sent: The reported content (message text or image URL), your user ID (as the reporter), and contextual information (sender, timestamp, location)\n'
+                  '• Moderation Analysis: Hive.ai analyzes the content for violations including sexual content, violence, hate speech, drugs, and other inappropriate material\n'
+                  '• Storage: Reports and moderation results are stored in our database for moderator review\n'
+                  '• Review Process: Our moderation team reviews reported content and may take action including content removal, user warnings, or account suspension\n'
+                  '• Reporter Privacy: The person who posted the content will NOT be notified of who reported it\n'
+                  '• False Reports: Repeated false or malicious reports may result in account restrictions\n\n'
+                  'Important: By using the report feature, you consent to the reported content being shared with Hive.ai for moderation purposes. Only use the report feature for content that genuinely violates our guidelines.',
             ),
 
             _buildSection(

@@ -10,6 +10,8 @@ import 'package:maypole/core/services/location_service.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/core/widgets/app_toast.dart';
+import 'package:maypole/core/widgets/report_content_dialog.dart';
+import 'package:maypole/core/services/hive_moderation_provider.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/domain/maypole_message.dart';
 import 'package:maypole/features/maypolechat/domain/user_mention.dart';
@@ -274,31 +276,28 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                           imageId: message.imageId ?? '',
                           timestamp: message.timestamp,
                         )
-                      : GestureDetector(
-                          onLongPress: () {
-                            HapticFeedback.mediumImpact();
-                            _showMessageContextMenu(context, message);
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8.0,
-                              vertical: 4.0,
-                            ),
-                            child: MessageWithMentions(
-                              senderName: message.senderName,
-                              senderId: message.senderId,
-                              senderProfilePictureUrl: message.senderProfilePictureUrl,
-                              body: message.body,
-                              timestamp: message.timestamp,
-                              isNearby: _isMessageFromNearby(message),
-                              isOwnMessage: isOwnMessage,
-                              onTagUser: !isOwnMessage 
-                                  ? () => _tagUser(message.senderName, message.senderId)
-                                  : null,
-                              onDelete: isOwnMessage
-                                  ? () => _deleteMessage(message)
-                                  : null,
-                            ),
+                      : Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8.0,
+                            vertical: 4.0,
+                          ),
+                          child: MessageWithMentions(
+                            senderName: message.senderName,
+                            senderId: message.senderId,
+                            senderProfilePictureUrl: message.senderProfilePictureUrl,
+                            body: message.body,
+                            timestamp: message.timestamp,
+                            isNearby: _isMessageFromNearby(message),
+                            isOwnMessage: isOwnMessage,
+                            onTagUser: !isOwnMessage 
+                                ? () => _tagUser(message.senderName, message.senderId)
+                                : null,
+                            onDelete: isOwnMessage
+                                ? () => _deleteMessage(message)
+                                : null,
+                            onReport: !isOwnMessage
+                                ? () => _reportMessage(message)
+                                : null,
                           ),
                         ),
                   );
@@ -431,59 +430,6 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     );
   }
 
-  void _showMessageContextMenu(BuildContext context, MaypoleMessage message) {
-    final currentUser = AppSession().currentUser;
-    if (currentUser == null || message.id == null) return;
-
-    final formattedDateTime = DateTimeUtils.formatFullDateTime(message.timestamp);
-    final bool isMyMessage = message.senderId == currentUser.firebaseID;
-
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Display the timestamp at the top
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  formattedDateTime,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              const Divider(height: 1),
-              // Only show delete option if it's the user's own message
-              if (isMyMessage)
-                ListTile(
-                  leading: const Icon(Icons.delete, color: Colors.red),
-                  title: const Text(
-                    'Delete Message',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _deleteMessage(message);
-                  },
-                ),
-              ListTile(
-                leading: const Icon(Icons.cancel),
-                title: Text(AppLocalizations.of(context)!.cancel),
-                onTap: () {
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> _pickAndUploadImage(DomainUser sender) async {
     if (_isUploadingImage) return;
 
@@ -570,6 +516,58 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         AppToast.showError(context, l10n.errorDeletingMessage(e.toString()));
+      }
+    }
+  }
+
+  Future<void> _reportMessage(MaypoleMessage message) async {
+    final currentUser = AppSession().currentUser;
+    if (currentUser == null || message.id == null) return;
+
+    // Show confirmation dialog
+    final confirmed = await ReportContentDialog.show(
+      context,
+      contentType: 'message',
+    );
+
+    if (!confirmed || !mounted) return;
+
+    try {
+      final hiveModerationService = ref.read(hiveModerationServiceProvider);
+      
+      // Report text content
+      final success = await hiveModerationService.reportTextContent(
+        contentId: message.id!,
+        reporterId: currentUser.firebaseID,
+        textContent: message.body,
+        additionalContext: {
+          'sender_name': message.senderName,
+          'sender_id': message.senderId,
+          'maypole_id': widget.threadId,
+          'maypole_name': widget.maypoleName,
+          'timestamp': message.timestamp.toIso8601String(),
+        },
+      );
+
+      if (mounted) {
+        if (success) {
+          AppToast.showSuccess(
+            context,
+            'Message reported successfully. Thank you for keeping our community safe.',
+          );
+        } else {
+          AppToast.showError(
+            context,
+            'Failed to report message. Please try again later.',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        AppToast.showError(
+          context,
+          'Error reporting message: ${e.toString()}',
+        );
       }
     }
   }

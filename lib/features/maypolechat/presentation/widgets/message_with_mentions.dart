@@ -17,6 +17,7 @@ class MessageWithMentions extends StatelessWidget {
   final bool isNearby; // Whether sender was near the location
   final VoidCallback? onTagUser;
   final VoidCallback? onDelete;
+  final VoidCallback? onReport; // Callback for reporting the message
 
   const MessageWithMentions({
     super.key,
@@ -28,6 +29,7 @@ class MessageWithMentions extends StatelessWidget {
     this.isOwnMessage = false,
     this.onTagUser,
     this.onDelete,
+    this.onReport,
     this.isNearby = false,
   });
 
@@ -126,7 +128,7 @@ class MessageWithMentions extends StatelessWidget {
                 },
               ),
             ] else ...[
-              // Other user's message: Tag and View Profile options
+              // Other user's message: Tag, View Profile, and Report options
               if (onTagUser != null)
                 ListTile(
                   leading: const Icon(Icons.alternate_email),
@@ -144,6 +146,15 @@ class MessageWithMentions extends StatelessWidget {
                   await _navigateToProfile(context);
                 },
               ),
+              if (onReport != null)
+                ListTile(
+                  leading: const Icon(Icons.flag, color: Colors.orange),
+                  title: const Text('Report Message'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onReport?.call();
+                  },
+                ),
             ],
             
             // Cancel option
