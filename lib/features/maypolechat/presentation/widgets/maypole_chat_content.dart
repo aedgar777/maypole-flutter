@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
+import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/services/location_provider.dart';
 import 'package:maypole/core/services/location_service.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
@@ -369,12 +370,16 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 38),
       decoration: BoxDecoration(
-        color: Colors.blue[600],
-        borderRadius: BorderRadius.circular(12),
+        color: lightPurple, // Match the message input background
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: brightTeal, // Bright teal border for visual pop
+          width: 2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 8,
+            color: brightTeal.withOpacity(0.2),
+            blurRadius: 12,
             offset: const Offset(0, 2),
           ),
         ],
@@ -382,7 +387,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(18),
           onTap: () {
             // Navigate to login screen with return path
             context.go('/login?returnTo=${Uri.encodeComponent('/preview/${widget.threadId}')}');
@@ -392,9 +397,9 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
+                Icon(
                   Icons.login,
-                  color: Colors.white,
+                  color: brightTeal,
                   size: 24,
                 ),
                 const SizedBox(width: 12),
@@ -403,9 +408,9 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
+                      const Text(
                         'Join the conversation',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -415,18 +420,12 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                       Text(
                         'Sign up or log in to post messages',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withOpacity(0.85),
                           fontSize: 13,
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.arrow_forward,
-                  color: Colors.white,
-                  size: 20,
                 ),
               ],
             ),

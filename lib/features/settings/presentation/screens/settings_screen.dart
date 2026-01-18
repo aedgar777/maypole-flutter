@@ -263,7 +263,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Divider(color: Colors.white.withValues(alpha: 0.1)),
                 GestureDetector(
                   onTap: () async {
-                    final navigator = GoRouter.of(context);
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (context) =>
@@ -288,9 +287,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                     if (confirm == true) {
                       if (!mounted) return;
+                      
+                      // Sign out
                       await ref.read(authServiceProvider).signOut();
-                      if (!mounted) return;
-                      navigator.go('/login');
+                      
+                      // Invalidate the auth state provider to force router to see the change
+                      ref.invalidate(authStateProvider);
+                      
+                      // The router's redirect will now see the updated auth state
+                      // and automatically redirect to /login
                     }
                   },
                   child: Container(

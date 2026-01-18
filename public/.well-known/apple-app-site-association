@@ -5,8 +5,7 @@
       {
         "appID": "RS5HL4PGW5.app.maypole.maypole",
         "paths": [
-          "/chat/*",
-          "/dm/*"
+          "*"
         ]
       }
     ]

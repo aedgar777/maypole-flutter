@@ -38,12 +38,7 @@
                 
                 <data
                     android:scheme="https"
-                    android:host="maypole.app"
-                    android:pathPrefix="/chat" />
-                <data
-                    android:scheme="https"
-                    android:host="maypole.app"
-                    android:pathPrefix="/dm" />
+                    android:host="maypole.app" />
             </intent-filter>
             
             <!-- App Links for Dev (maypole-flutter-dev.web.app) -->
@@ -54,12 +49,7 @@
                 
                 <data
                     android:scheme="https"
-                    android:host="maypole-flutter-dev.web.app"
-                    android:pathPrefix="/chat" />
-                <data
-                    android:scheme="https"
-                    android:host="maypole-flutter-dev.web.app"
-                    android:pathPrefix="/dm" />
+                    android:host="maypole-flutter-dev.web.app" />
             </intent-filter>
             
             <!-- Custom URL scheme (fallback) -->

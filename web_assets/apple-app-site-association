@@ -3,10 +3,9 @@
     "apps": [],
     "details": [
       {
-        "appID": "REPLACE_WITH_YOUR_TEAM_ID.app.maypole.maypole",
+        "appID": "RS5HL4PGW5.app.maypole.maypole",
         "paths": [
-          "/chat/*",
-          "/dm/*"
+          "*"
         ]
       }
     ]

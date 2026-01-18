@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../features/maypolesearch/presentation/screens/maypole_search_screen.dart';
 import '../features/maypolechat/presentation/screens/maypole_chat_screen.dart';
+import '../features/maypolechat/presentation/screens/maypole_chat_loader.dart';
 import '../features/identity/presentation/login_screen.dart';
 import '../features/identity/presentation/registration_screen.dart';
 import '../features/identity/presentation/email_verified_screen.dart';
@@ -24,8 +25,9 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authService = ref.watch(authServiceProvider);
   
   return GoRouter(
-    initialLocation: '/home',
+    initialLocation: '/login',
     refreshListenable: GoRouterRefreshStream(authService.user),
+    errorBuilder: (context, state) => const HomeScreen(),
     redirect: (context, state) {
       final authState = ref.read(authStateProvider);
       final currentPath = state.matchedLocation;
@@ -59,30 +61,43 @@ final routerProvider = Provider<GoRouter>((ref) {
         return null;
       }
       
-      // If auth is still loading for other routes, don't redirect yet
+      // If auth is still loading for other routes, allow public routes
+      // For protected routes, redirect to login (which will show loading state)
       if (authState.isLoading) {
-        debugPrint('   ⏳ Auth loading, no redirect');
-        return null;
+        if (isPublicRoute) {
+          debugPrint('   ⏳ Auth loading, allowing public route');
+          return null;
+        }
+        debugPrint('   ⏳ Auth loading, redirecting protected route to login');
+        return '/login';
       }
       
       final isAuthenticated = authState.value != null;
       debugPrint('   Is authenticated: $isAuthenticated');
+      debugPrint('   Auth value: ${authState.value}');
+      debugPrint('   Has value: ${authState.hasValue}');
+      debugPrint('   Has error: ${authState.hasError}');
       
       // If user is not authenticated and trying to access a protected route
       if (!isAuthenticated && !isPublicRoute) {
-        debugPrint('   ➡️  Redirecting to /login');
+        debugPrint('   ➡️  Redirecting to /login (unauthenticated on protected route)');
         return '/login';
       }
       
-      // If user is authenticated and on login/register screen, redirect to home
-      if (isAuthenticated && (currentPath == '/login' || currentPath == '/register')) {
-        return '/home';
-      }
+      // Don't redirect authenticated users away from login/register
+      // This allows logout to work properly (user signs out, navigates to login,
+      // and by the time they arrive the auth state will have updated)
+      // The login screen itself will handle authenticated users appropriately
       
       // No redirect needed
+      debugPrint('   ✅ No redirect needed');
       return null;
     },
     routes: <RouteBase>[
+      GoRoute(
+        path: '/',
+        redirect: (context, state) => '/home',
+      ),
       GoRoute(
           path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
@@ -110,32 +125,36 @@ final routerProvider = Provider<GoRouter>((ref) {
           final threadId = state.pathParameters['threadId']!;
           // Handle both legacy String format and new Map format
           final extra = state.extra;
-          final String maypoleName;
+          final String? maypoleName;
           final String? address;
           final double? latitude;
           final double? longitude;
 
           if (extra is Map<String, dynamic>) {
-            maypoleName = extra['name'] as String? ?? 'Unknown';
+            maypoleName = extra['name'] as String?;
             address = extra['address'] as String?;
             latitude = extra['latitude'] as double?;
             longitude = extra['longitude'] as double?;
           } else {
-            maypoleName = extra as String? ?? 'Unknown';
+            maypoleName = extra as String?;
             address = null;
             latitude = null;
             longitude = null;
           }
 
-          // Use adaptive screen for both authenticated and anonymous users
-          // It automatically adapts based on auth state
-          return MaypoleChatScreen(
-            threadId: threadId,
-            maypoleName: maypoleName,
-            address: address,
-            latitude: latitude,
-            longitude: longitude,
-          );
+          // If we have complete place info, go directly to chat screen
+          if (maypoleName != null && maypoleName.isNotEmpty && maypoleName != 'Unknown') {
+            return MaypoleChatScreen(
+              threadId: threadId,
+              maypoleName: maypoleName,
+              address: address,
+              latitude: latitude,
+              longitude: longitude,
+            );
+          }
+
+          // Otherwise, use loader to fetch place details from Firestore or Google Places API
+          return MaypoleChatLoader(threadId: threadId);
         },
       ),
       GoRoute(
