@@ -1,0 +1,78 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#     https://docs.fastlane.tools/plugins/available-plugins
+
+# Reduce log verbosity
+opt_out_usage
+
+default_platform(:android)
+
+platform :android do
+  desc "Deploy dev build to Play Store Internal Testing track"
+  lane :deploy_dev_internal do
+    # This lane expects the AAB to already be built by Flutter
+    # Upload to Play Store internal testing track
+    # 
+    # Important: For DRAFT APPS (never published), you MUST use 'draft' status.
+    # Once published, you can change to 'completed' for automatic rollout.
+    upload_to_play_store(
+      track: 'internal',
+      aab: '../build/app/outputs/bundle/devRelease/app-dev-release.aab',
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_apk: true,
+      release_status: 'draft',  # Use 'draft' for apps that have never been published
+      json_key: ENV['GOOGLE_PLAY_SERVICE_ACCOUNT_JSON']
+    )
+    
+    puts "✅ Dev build uploaded to Play Store Internal Testing track as DRAFT!"
+    puts "   Go to Play Console to review and manually publish to internal testers"
+  end
+
+  desc "Deploy prod build to Play Store Open Testing (beta) track"
+  lane :deploy_beta_open do
+    # This lane expects the AAB to already be built by Flutter
+    # Upload to Play Store open testing track
+    # 
+    # Workaround for "draft app" error: Check if there's a draft in Production track
+    # If so, you need to either publish it or delete it first
+    upload_to_play_store(
+      track: 'beta',
+      aab: '../build/app/outputs/bundle/prodRelease/app-prod-release.aab',
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_apk: true,
+      skip_upload_changelogs: true,
+      # Don't specify release_status - let it use the default
+      json_key: ENV['GOOGLE_PLAY_SERVICE_ACCOUNT_JSON']
+    )
+    
+    puts "✅ Beta build uploaded to Play Store Open Testing track!"
+    puts "   Testers on the beta track can now access this release"
+  end
+
+  desc "Promote build from beta to production"
+  lane :promote_to_production do
+    # Promote the latest beta build to production
+    # This can be done via Play Console UI or via fastlane
+    upload_to_play_store(
+      track: 'beta',
+      track_promote_to: 'production',
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_apk: true,
+      skip_upload_aab: true,
+      json_key: ENV['GOOGLE_PLAY_SERVICE_ACCOUNT_JSON']
+    )
+    
+    puts "✅ Build promoted to Production!"
+  end
+end

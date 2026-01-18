@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -24,6 +25,8 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   final _confirmPasswordController = TextEditingController();
   final _usernameController = TextEditingController();
   bool _hasShownSuccessDialog = false;
+  bool _ageConfirmed = false;
+  bool _privacyPolicyAccepted = false;
 
   @override
   void dispose() {
@@ -137,13 +140,67 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                   )
               ),
               const SizedBox(height: 30),
+              
+              // Age confirmation checkbox
+              CheckboxListTile(
+                value: _ageConfirmed,
+                onChanged: (value) {
+                  setState(() {
+                    _ageConfirmed = value ?? false;
+                  });
+                },
+                title: const Text(
+                  'I confirm that I am 13 years of age or older',
+                  style: TextStyle(fontSize: 14),
+                ),
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+              ),
+              
+              // Privacy Policy acceptance checkbox with link
+              CheckboxListTile(
+                value: _privacyPolicyAccepted,
+                onChanged: (value) {
+                  setState(() {
+                    _privacyPolicyAccepted = value ?? false;
+                  });
+                },
+                title: RichText(
+                  text: TextSpan(
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 14),
+                    children: [
+                      const TextSpan(text: 'I agree to the '),
+                      TextSpan(
+                        text: 'Privacy Policy',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          decoration: TextDecoration.underline,
+                        ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () {
+                            context.push('/privacy-policy');
+                          },
+                      ),
+                    ],
+                  ),
+                ),
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+              ),
+              
+              const SizedBox(height: 20),
+              
               if (registrationState.isLoading)
                 const CircularProgressIndicator()
               else
                 Column(
                   children: [
                     ElevatedButton(
-                      onPressed: _handleRegistration,
+                      onPressed: (_ageConfirmed && _privacyPolicyAccepted) 
+                          ? _handleRegistration 
+                          : null,
                       child: Text(l10n.register),
                     ),
                     TextButton(

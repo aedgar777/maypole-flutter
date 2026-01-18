@@ -57,5 +57,23 @@ service firebase.storage {
       // Users can delete images (ownership is verified at application level via Firestore)
       allow delete: if request.auth != null;
     }
+    
+    // DM Images Rules
+    // Path structure: dm_images/{threadId}/{filename}
+    match /dm_images/{threadId}/{allPaths=**} {
+      // Only authenticated users who are participants in the thread can read DM images
+      // Note: Thread participant verification happens at application level
+      allow read: if request.auth != null;
+      
+      // Authenticated users can create/upload DM images (max 5 per message)
+      // Participant verification is enforced at application level
+      allow create: if request.auth != null
+                    && request.resource.size < 10 * 1024 * 1024  // 10MB max
+                    && request.resource.contentType.matches('image/.*')
+                    && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/gif'];
+      
+      // Users can delete images (ownership is verified at application level)
+      allow delete: if request.auth != null;
+    }
   }
 }

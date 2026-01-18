@@ -32,6 +32,8 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+/android/build/
+/ios/build/
 
 # Symbolication related
 app.*.symbols
@@ -80,7 +82,8 @@ ios/fastlane/Preview.html
 ios/fastlane/screenshots
 ios/fastlane/test_output
 ios/.env.local
-ios/vendor/bundle
+ios/vendor/
+android/vendor/
 
 # Local properties (contains SDK paths)
 android/local.properties
@@ -110,6 +113,9 @@ firebase-debug.*.log
 /functions-js/node_modules/
 /functions-js/.firebase/
 
+# Firebase hosting/deployment
+.firebase/
+
 # Any backup files of sensitive data
 *.backup
 firebase_options.dart.backup
@@ -122,3 +128,20 @@ firebase_options.dart.backup
 # For open source or when project IDs are not sensitive, you can commit it
 # See .firebaserc for template
 .firebaserc
+
+# iOS generated files
+/ios/Pods/
+/ios/.symlinks/
+/ios/Flutter/Flutter.podspec
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/ephemeral/
+/ios/Flutter/flutter_export_environment.sh
+/ios/Runner/GeneratedPluginRegistrant.h
+/ios/Runner/GeneratedPluginRegistrant.m
+/ios/Runner.xcodeproj/xcuserdata/
+/ios/Runner.xcworkspace/xcuserdata/
+
+# iOS build artifacts
+*.ipa
+*.app.dSYM.zip
+*.dSYM

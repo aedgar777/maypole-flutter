@@ -6,6 +6,9 @@ import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
+import 'package:maypole/core/widgets/report_content_dialog.dart';
+import 'package:maypole/core/widgets/app_toast.dart';
+import 'package:maypole/core/services/hive_moderation_provider.dart';
 import 'package:maypole/features/maypolechat/domain/maypole_image.dart';
 import 'package:maypole/features/maypolechat/presentation/maypole_chat_providers.dart';
 
@@ -282,7 +285,7 @@ class _ImageThumbnail extends StatelessWidget {
 }
 
 /// Full screen view for viewing images with swipe navigation
-class _ImageFullscreenView extends StatefulWidget {
+class _ImageFullscreenView extends ConsumerStatefulWidget {
   final MaypoleImage image;
   final List<MaypoleImage> allImages;
 
@@ -292,10 +295,10 @@ class _ImageFullscreenView extends StatefulWidget {
   });
 
   @override
-  State<_ImageFullscreenView> createState() => _ImageFullscreenViewState();
+  ConsumerState<_ImageFullscreenView> createState() => _ImageFullscreenViewState();
 }
 
-class _ImageFullscreenViewState extends State<_ImageFullscreenView> {
+class _ImageFullscreenViewState extends ConsumerState<_ImageFullscreenView> {
   late PageController _pageController;
   late int _currentIndex;
 
@@ -335,6 +338,13 @@ class _ImageFullscreenViewState extends State<_ImageFullscreenView> {
           ],
         ),
         actions: [
+          // Show report option for images uploaded by other users
+          if (!canDelete)
+            IconButton(
+              icon: const Icon(Icons.flag),
+              onPressed: () => _reportImage(currentImage),
+              tooltip: 'Report Image',
+            ),
           if (canDelete)
             IconButton(
               icon: const Icon(Icons.delete),
@@ -412,6 +422,57 @@ class _ImageFullscreenViewState extends State<_ImageFullscreenView> {
       // TODO: Implement delete functionality with provider
       // For now, just close the view
       Navigator.pop(context);
+    }
+  }
+
+  Future<void> _reportImage(MaypoleImage image) async {
+    final currentUser = AppSession().currentUser;
+    if (currentUser == null) return;
+
+    // Show confirmation dialog
+    final confirmed = await ReportContentDialog.show(
+      context,
+      contentType: 'image',
+    );
+
+    if (!confirmed || !mounted) return;
+
+    try {
+      final hiveModerationService = ref.read(hiveModerationServiceProvider);
+      
+      // Report the image
+      final success = await hiveModerationService.reportImageContent(
+        contentId: image.id,
+        reporterId: currentUser.firebaseID,
+        imageUrl: image.storageUrl,
+        additionalContext: {
+          'uploader_name': image.uploaderName,
+          'uploader_id': image.uploaderId,
+          'maypole_id': image.maypoleId,
+          'timestamp': image.uploadedAt.toIso8601String(),
+        },
+      );
+
+      if (mounted) {
+        if (success) {
+          AppToast.showSuccess(
+            context,
+            'Image reported successfully. Thank you for keeping our community safe.',
+          );
+        } else {
+          AppToast.showError(
+            context,
+            'Failed to report image. Please try again later.',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        AppToast.showError(
+          context,
+          'Error reporting image: ${e.toString()}',
+        );
+      }
     }
   }
 }

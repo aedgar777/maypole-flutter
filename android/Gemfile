@@ -1,0 +1,7 @@
+source "https://rubygems.org"
+
+# Fastlane for Android deployment automation
+gem "fastlane", "~> 2.230"
+
+# Bundler version constraint (Fastlane 2.x requires < 3.0)
+# GitHub Actions uses ruby/setup-ruby with bundler-cache which handles this automatically
