@@ -1,7 +1,7 @@
 /// Domain model for location-based feature preferences
 class LocationPreferences {
   final bool systemPermissionGranted;
-  final bool showWhenAtLocation; // Show pin icon AND restrict image uploads to when at location
+  final bool showWhenAtLocation; // Show pin icon badge AND restrict image uploads when at location
 
   const LocationPreferences({
     this.systemPermissionGranted = false,

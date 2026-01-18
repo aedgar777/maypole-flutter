@@ -108,21 +108,19 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     
     debugPrint('   Show when at location enabled: $showWhenAtLocationEnabled');
     
-    // If feature is not enabled, allow uploads anywhere
+    // If feature is not enabled, don't check proximity
     if (!showWhenAtLocationEnabled) {
-      debugPrint('   ✅ Show when at location disabled - allowing image upload');
-      return true;
+      debugPrint('   ⚠️ Show when at location disabled - not checking proximity');
+      return false;
     }
     
     if (widget.latitude == null || widget.longitude == null) {
-      debugPrint('   ⚠️ No place coordinates - allowing image upload by default');
-      // If no coordinates for the place, allow image upload
-      return true;
+      debugPrint('   ⚠️ No place coordinates - cannot check proximity');
+      return false;
     }
     
     if (_currentPosition == null) {
-      debugPrint('   ❌ No current position - denying image upload');
-      // If can't get position, deny image upload
+      debugPrint('   ❌ No current position - cannot check proximity');
       return false;
     }
     
@@ -135,6 +133,125 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     
     debugPrint('   Result: ${isNearby == true ? "✅ Within proximity" : "❌ Not within proximity"}');
     return isNearby ?? false;
+  }
+  
+  /// Check if image upload button should be enabled
+  /// Image uploads require BOTH:
+  /// 1. "Show When at Location" feature to be enabled
+  /// 2. User to be within 100m proximity (which requires location permission)
+  bool get _canUploadImage {
+    final locationState = ref.watch(locationSettingsViewModelProvider);
+    final showWhenAtLocationEnabled = locationState.preferences.showWhenAtLocation;
+    final hasLocationPermission = locationState.preferences.systemPermissionGranted;
+    
+    // Feature must be enabled to upload images
+    if (!showWhenAtLocationEnabled) {
+      debugPrint('   ❌ Cannot upload: Show when at location is disabled');
+      return false;
+    }
+    
+    // Must have location permission
+    if (!hasLocationPermission) {
+      debugPrint('   ❌ Cannot upload: No location permission');
+      return false;
+    }
+    
+    // If no coordinates for the place, cannot verify proximity - disallow
+    if (widget.latitude == null || widget.longitude == null) {
+      debugPrint('   ⚠️ Cannot upload: No place coordinates to verify proximity');
+      return false;
+    }
+    
+    // Must have current position
+    if (_currentPosition == null) {
+      debugPrint('   ❌ Cannot upload: No current position');
+      return false;
+    }
+    
+    // Must be within proximity
+    final locationService = ref.read(locationServiceProvider);
+    final isNearby = locationService.isPositionWithinProximity(
+      targetLat: widget.latitude!,
+      targetLon: widget.longitude!,
+      position: _currentPosition,
+    );
+    
+    final canUpload = isNearby ?? false;
+    debugPrint('   ${canUpload ? "✅" : "❌"} Can upload: $canUpload');
+    return canUpload;
+  }
+  
+  /// Show explanatory dialog when image upload is disabled
+  Future<void> _showImageUploadDisabledDialog() async {
+    final locationState = ref.read(locationSettingsViewModelProvider);
+    final showWhenAtLocationEnabled = locationState.preferences.showWhenAtLocation;
+    final hasLocationPermission = locationState.preferences.systemPermissionGranted;
+    
+    String title;
+    String message;
+    List<Widget> actions;
+    
+    if (!showWhenAtLocationEnabled) {
+      // Feature is disabled
+      title = 'Feature Not Enabled';
+      message = '"Show When at Location" must be enabled to upload images to maypoles.\n\n'
+          'This feature ensures photo authenticity by requiring you to be within 100 meters of the location.\n\n'
+          'Enable it in Preferences to start uploading images.';
+      actions = [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+            context.push('/settings/preferences');
+          },
+          child: const Text('Preferences'),
+        ),
+      ];
+    } else if (!hasLocationPermission) {
+      // No location permission
+      title = 'Location Permission Required';
+      message = '"Show When at Location" requires location permission to verify you\'re at ${widget.maypoleName}.\n\n'
+          'Please grant location permission in Settings.';
+      actions = [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () async {
+            Navigator.pop(context);
+            final locationService = ref.read(locationServiceProvider);
+            await locationService.openAppSettings();
+          },
+          child: const Text('Open Settings'),
+        ),
+      ];
+    } else {
+      // Has permission but not within proximity
+      title = 'Not at Location';
+      message = 'You must be within 100 meters of ${widget.maypoleName} to upload images.\n\n'
+          'This ensures photo authenticity. Move closer to the location to upload.';
+      actions = [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('OK'),
+        ),
+      ];
+    }
+    
+    if (!mounted) return;
+    
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: actions,
+      ),
+    );
   }
   
   bool _isMessageFromNearby(MaypoleMessage message) {
@@ -482,18 +599,13 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                 )
               : IconButton(
                   icon: const Icon(Icons.image),
-                  color: _isWithinProximity ? Colors.white70 : Colors.white24,
-                  onPressed: _isWithinProximity 
+                  color: _canUploadImage ? Colors.white70 : Colors.white24,
+                  onPressed: _canUploadImage 
                       ? () => _pickAndUploadImage(sender)
-                      : () {
-                          AppToast.showError(
-                            context,
-                            'You have "Show When at Location" enabled. You must be within 100m to post pictures. Disable in Preferences to post from anywhere.',
-                          );
-                        },
-                  tooltip: _isWithinProximity 
+                      : _showImageUploadDisabledDialog,
+                  tooltip: _canUploadImage 
                       ? 'Add photo' 
-                      : 'Must be at location to add photo',
+                      : 'Location required to add photo',
                 ),
           Expanded(
             child: MentionTextField(
