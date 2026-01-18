@@ -84,7 +84,7 @@ class LocationSettingsViewModel extends Notifier<LocationSettingsState> {
     await _locationService.openAppSettings();
   }
 
-  /// Toggle show when at location feature (pin badge + image upload restriction)
+  /// Toggle show when at location feature (pin badge AND image upload restriction)
   Future<void> toggleShowWhenAtLocation(bool value) async {
     await _preferencesService.setShowWhenAtLocation(value);
     state = state.copyWith(

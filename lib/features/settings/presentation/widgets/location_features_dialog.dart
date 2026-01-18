@@ -35,12 +35,12 @@ class LocationFeaturesDialog extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             
-            // Combined Location Feature
+            // Show When at Location Feature
             _buildFeatureItem(
               context,
               icon: Icons.pin_drop,
-              title: 'Show When You\'re at a Location',
-              description: 'When enabled, a pin icon appears next to your username on messages sent from within 100m of a place. You\'ll also only be able to post pictures when you\'re actually at the location. This helps ensure authenticity and prevents spam.',
+              title: 'Show When at Location',
+              description: 'Display a pin icon next to your name when you send messages from within 100m of a place. You\'ll also only be able to upload images when you\'re at the location, ensuring photo authenticity and preventing spam.',
             ),
             
             const SizedBox(height: 20),
