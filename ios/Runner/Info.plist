@@ -53,6 +53,21 @@
 	<string>We need your location to verify you're near a place before posting pictures and to show location badges on messages</string>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-9803674282352310~6862207571</string>
+	<key>FlutterDeepLinkingEnabled</key>
+	<true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>app.maypole.maypole</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>maypole</string>
+			</array>
+		</dict>
+	</array>
 	<key>SKAdNetworkItems</key>
 	<array>
 		<dict>

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
+import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/services/location_provider.dart';
 import 'package:maypole/core/services/location_service.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
@@ -37,6 +40,7 @@ class MaypoleChatContent extends ConsumerStatefulWidget {
   final double? longitude;
   final bool showAppBar;
   final bool autoFocus;
+  final bool readOnly; // If true, shows join prompt instead of input
 
   const MaypoleChatContent({
     super.key,
@@ -47,6 +51,7 @@ class MaypoleChatContent extends ConsumerStatefulWidget {
     this.longitude,
     this.showAppBar = true,
     this.autoFocus = false,
+    this.readOnly = false,
   });
 
   @override
@@ -289,13 +294,13 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                             timestamp: message.timestamp,
                             isNearby: _isMessageFromNearby(message),
                             isOwnMessage: isOwnMessage,
-                            onTagUser: !isOwnMessage 
+                            onTagUser: !widget.readOnly && !isOwnMessage 
                                 ? () => _tagUser(message.senderName, message.senderId)
                                 : null,
-                            onDelete: isOwnMessage
+                            onDelete: !widget.readOnly && isOwnMessage
                                 ? () => _deleteMessage(message)
                                 : null,
-                            onReport: !isOwnMessage
+                            onReport: !widget.readOnly && !isOwnMessage
                                 ? () => _reportMessage(message)
                                 : null,
                           ),
@@ -313,7 +318,10 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
             },
           ),
         ),
-        if (currentUser != null) _buildMessageInput(currentUser, l10n),
+        if (widget.readOnly)
+          _buildJoinPrompt(context, l10n)
+        else if (currentUser != null)
+          _buildMessageInput(currentUser, l10n),
       ],
     );
 
@@ -326,6 +334,11 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       appBar: AppBar(
         title: Text(widget.maypoleName),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: () => _shareConversation(context),
+            tooltip: 'Share conversation',
+          ),
           IconButton(
             icon: const Icon(Icons.photo_library),
             onPressed: () {
@@ -349,6 +362,76 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
               padding: EdgeInsets.all(4),
             )
           : null,
+    );
+  }
+
+  /// Build a join conversation prompt for anonymous/read-only users
+  Widget _buildJoinPrompt(BuildContext context, AppLocalizations l10n) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 38),
+      decoration: BoxDecoration(
+        color: lightPurple, // Match the message input background
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: brightTeal, // Bright teal border for visual pop
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: brightTeal.withOpacity(0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () {
+            // Navigate to login screen with return path
+            context.go('/login?returnTo=${Uri.encodeComponent('/preview/${widget.threadId}')}');
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.login,
+                  color: brightTeal,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Join the conversation',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Sign up or log in to post messages',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.85),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -567,6 +650,35 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
         AppToast.showError(
           context,
           'Error reporting message: ${e.toString()}',
+        );
+      }
+    }
+  }
+
+  /// Share the conversation link using the platform's native share dialog
+  Future<void> _shareConversation(BuildContext context) async {
+    try {
+      // Generate the shareable link
+      final shareUrl = '${AppConfig.appUrl}/chat/${widget.threadId}';
+      
+      // Create share text with maypole name and address if available
+      final locationInfo = widget.address != null 
+          ? ' at ${widget.address}'
+          : '';
+      
+      final shareText = 'Check out the conversation at ${widget.maypoleName}$locationInfo!\n\n$shareUrl';
+      
+      // Use the native share dialog
+      await Share.share(
+        shareText,
+        subject: 'Join the conversation on Maypole',
+      );
+    } catch (e) {
+      debugPrint('Error sharing conversation: $e');
+      if (mounted) {
+        AppToast.showError(
+          context,
+          'Failed to share conversation',
         );
       }
     }

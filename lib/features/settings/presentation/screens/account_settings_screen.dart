@@ -82,9 +82,10 @@ class AccountSettingsScreen extends ConsumerWidget {
       if (!context.mounted) return;
       AppToast.showSuccess(context, l10n.accountDeleted);
 
-      // Navigate to login screen
-      if (!context.mounted) return;
-      context.go('/login');
+      // Invalidate the auth state provider to force router to see the change
+      ref.invalidate(authStateProvider);
+      
+      // Router's refreshListenable will automatically redirect to /login
     } catch (e) {
       // Close loading indicator if open
       if (context.mounted) {

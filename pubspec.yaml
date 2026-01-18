@@ -18,7 +18,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # of the product and file versions while build-number is used as the build suffix.
 
 
-version: 1.0.0+28
+version: 1.0.0+43
 
 
 environment:
@@ -61,6 +61,7 @@ dependencies:
   url_launcher: ^6.3.0
   google_mobile_ads: ^5.2.0
   flutter_svg: ^2.0.10
+  share_plus: ^10.1.2
 
 
   http: any

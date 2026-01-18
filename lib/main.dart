@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'core/app_router.dart';
 import 'core/app_theme.dart';
@@ -26,6 +27,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Use path-based URL strategy for web (removes the # from URLs)
+  // This enables proper deep linking on web
+  usePathUrlStrategy();
 
   // Load environment variables - try .env first (CI/CD), then .env.local (local dev)
   try {
