@@ -10,6 +10,7 @@ class DirectMessage {
   final DateTime timestamp;
   final String body;
   final List<String> deletedFor; // List of user IDs who deleted this message
+  final List<String> imageUrls; // List of image URLs (max 5)
 
 
   const DirectMessage({
@@ -19,6 +20,7 @@ class DirectMessage {
     required this.body,
     required this.recipient,
     this.deletedFor = const [],
+    this.imageUrls = const [],
   });
 
   factory DirectMessage.fromMap(Map<String, dynamic> map, {String? documentId}) {
@@ -33,6 +35,11 @@ class DirectMessage {
               ?.map((e) => e.toString())
               .toList() ??
           [],
+      imageUrls:
+          (map['imageUrls'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
     );
   }
 
@@ -44,6 +51,7 @@ class DirectMessage {
       'body': body,
       'recipient': recipient,
       'deletedFor': deletedFor,
+      'imageUrls': imageUrls,
     };
   }
 

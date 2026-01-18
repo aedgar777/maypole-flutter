@@ -4,9 +4,9 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Users collection rules
     match /users/{userId} {
-      // Allow authenticated users to read any user's public profile data
-      // This is needed for displaying usernames, profile pictures, etc.
-      allow read: if request.auth != null;
+      // Allow ANYONE (including unauthenticated users) to read user profiles
+      // This is needed for displaying usernames, profile pictures, etc. in public maypole chats
+      allow read: if true;
       
       // Allow users to create their own document when registering
       // The document ID must match their Firebase UID
@@ -62,8 +62,9 @@ service cloud.firestore {
     
     // Maypoles (place-based chat threads) collection rules
     match /maypoles/{maypoleId} {
-      // Allow authenticated users to read any maypole thread
-      allow read: if request.auth != null;
+      // Allow ANYONE (including unauthenticated users) to read maypole threads
+      // This enables public sharing via deep links
+      allow read: if true;
       
       // Allow authenticated users to create or update maypole threads
       // This is needed when sending the first message to a new thread
@@ -71,16 +72,17 @@ service cloud.firestore {
       
       // Messages subcollection within a maypole thread
       match /messages/{messageId} {
-        // Allow authenticated users to read messages in any thread
-        allow read: if request.auth != null;
+        // Allow ANYONE (including unauthenticated users) to read messages
+        // This enables public sharing via deep links
+        allow read: if true;
         
         // Allow authenticated users to create messages
         // Validates senderId matches authenticated user and body length
         // Optional fields: messageType (for image uploads), imageId
+        // Body can be empty for image-only messages
         allow create: if request.auth != null
                       && request.resource.data.senderId == request.auth.uid
                       && request.resource.data.body is string
-                      && request.resource.data.body.size() > 0
                       && request.resource.data.body.size() <= 5000;
         
         // Allow users to delete only their own messages
@@ -90,8 +92,9 @@ service cloud.firestore {
       
       // Images subcollection within a maypole thread
       match /images/{imageId} {
-        // Allow authenticated users to read images in any thread
-        allow read: if request.auth != null;
+        // Allow ANYONE (including unauthenticated users) to read images
+        // This enables public sharing of galleries via deep links
+        allow read: if true;
         
         // Allow authenticated users to create images
         // Validate uploaderId matches authenticated user and required fields exist
@@ -152,6 +155,27 @@ service cloud.firestore {
                       && resource.data.sender == request.resource.data.sender
                       && resource.data.sender == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username;
       }
+    }
+    
+    // Reported Content collection for moderation review
+    match /reported_content/{reportId} {
+      // Only allow admins to read reports
+      // For now, allow any authenticated user to read (you can restrict this to admin role later)
+      allow read: if request.auth != null;
+      
+      // Allow the moderation service to create reports
+      allow create: if request.auth != null
+                    && request.resource.data.reporterId == request.auth.uid
+                    && request.resource.data.keys().hasAll(['contentId', 'reporterId', 'contentType', 'content', 'moderationScores', 'status'])
+                    && request.resource.data.status == 'pending_review';
+      
+      // Allow admins/moderators to update report status
+      // For now, allow any authenticated user (you can restrict this to admin role later)
+      allow update: if request.auth != null
+                    && request.resource.data.status in ['pending_review', 'reviewed', 'actioned', 'dismissed'];
+      
+      // Prevent deletion of reports (keep audit trail)
+      allow delete: if false;
     }
     
     // Default deny for all other documents

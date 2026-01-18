@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/features/directmessages/data/dm_thread_service.dart';
 import 'package:maypole/features/directmessages/data/dm_message_preloader.dart';
+import 'package:maypole/features/directmessages/data/dm_image_service.dart';
 import 'package:maypole/features/directmessages/presentation/viewmodels/dm_viewmodel.dart';
 
 import '../domain/direct_message.dart';
@@ -8,6 +9,10 @@ import '../domain/dm_thread.dart';
 
 final dmThreadServiceProvider = Provider<DMThreadService>((ref) {
   return DMThreadService();
+});
+
+final dmImageServiceProvider = Provider<DmImageService>((ref) {
+  return DmImageService();
 });
 
 /// Global DM message preloader that loads all DM messages in the background

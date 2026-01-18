@@ -175,4 +175,20 @@ class AppConfig {
       return dotenv.env['CLOUD_FUNCTIONS_DEV_URL'] ?? '';
     }
   }
+
+  /// Provides the app's base URL for sharing/deeplinks based on the environment.
+  static String get appUrl {
+    // First check dart-define (used in builds)
+    const dartDefineUrl = String.fromEnvironment('APP_URL');
+    if (dartDefineUrl.isNotEmpty) {
+      return dartDefineUrl;
+    }
+
+    // Fall back to environment-specific dotenv values
+    if (isProduction) {
+      return dotenv.env['APP_URL_PROD'] ?? 'https://maypole.app';
+    } else {
+      return dotenv.env['APP_URL_DEV'] ?? 'https://maypole-flutter-dev.web.app';
+    }
+  }
 }

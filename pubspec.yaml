@@ -61,6 +61,7 @@ dependencies:
   url_launcher: ^6.3.0
   google_mobile_ads: ^5.2.0
   flutter_svg: ^2.0.10
+  share_plus: ^10.1.2
 
 
   http: any

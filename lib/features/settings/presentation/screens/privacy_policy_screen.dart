@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_config.dart';
+import 'package:maypole/core/app_theme.dart' as app_theme;
 import 'package:maypole/l10n/generated/app_localizations.dart';
 
 class PrivacyPolicyScreen extends StatelessWidget {
@@ -44,9 +46,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Last Updated: ${DateTime
-                  .now()
-                  .year}',
+              'Last Updated: January 16, 2026',
               style: Theme
                   .of(context)
                   .textTheme
@@ -117,10 +117,27 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   '• Firebase Authentication: For user authentication and account management\n'
                   '• Firebase Cloud Firestore: For storing user data and messages\n'
                   '• Firebase Cloud Storage: For storing user-uploaded images\n'
+                  '• Hive.ai: For AI-powered content moderation\n'
                   '• Google AdMob (planned): For displaying advertisements\n\n'
                   'These services may collect information used to identify you. We recommend reviewing their privacy policies:\n\n'
                   '• Google Privacy Policy: https://policies.google.com/privacy\n'
-                  '• Firebase Privacy Policy: https://firebase.google.com/support/privacy',
+                  '• Firebase Privacy Policy: https://firebase.google.com/support/privacy\n'
+                  '• Hive.ai Privacy Policy: https://thehive.ai/privacy',
+            ),
+
+            _buildSection(
+              context,
+              'Content Moderation and Reporting',
+              'To maintain a safe community, we provide tools for users to report inappropriate content:\n\n'
+                  '• Report Feature: Users can report messages and images they believe violate our community guidelines\n'
+                  '• AI Moderation: When you report content, it is sent to Hive.ai, a third-party AI moderation service, for automated analysis\n'
+                  '• What Gets Sent: The reported content (message text or image URL), your user ID (as the reporter), and contextual information (sender, timestamp, location)\n'
+                  '• Moderation Analysis: Hive.ai analyzes the content for violations including sexual content, violence, hate speech, drugs, and other inappropriate material\n'
+                  '• Storage: Reports and moderation results are stored in our database for moderator review\n'
+                  '• Review Process: Our moderation team reviews reported content and may take action including content removal, user warnings, or account suspension\n'
+                  '• Reporter Privacy: The person who posted the content will NOT be notified of who reported it\n'
+                  '• False Reports: Repeated false or malicious reports may result in account restrictions\n\n'
+                  'Important: By using the report feature, you consent to the reported content being shared with Hive.ai for moderation purposes. Only use the report feature for content that genuinely violates our guidelines.',
             ),
 
             _buildSection(
@@ -166,10 +183,13 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   'To exercise these rights, please contact us using the information below.',
             ),
 
-            _buildSection(
+            _buildSectionWithLink(
               context,
               'Children\'s Privacy',
-              'Our service is not intended for children under the age of 13. We do not knowingly collect personal information from children under 13. If you are a parent or guardian and believe your child has provided us with personal information, please contact us so we can delete such information.',
+              'Our service is not intended for children under the age of 13. We do not knowingly collect personal information from children under 13. If you are a parent or guardian and believe your child has provided us with personal information, please contact us so we can delete such information.\n\n'
+                  'For more information about our commitment to child safety, please review our ',
+              'Child Safety Standards',
+              '/child-safety-standards',
             ),
 
             _buildSection(
@@ -222,6 +242,52 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 .bodyMedium
                 ?.copyWith(
               height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionWithLink(
+    BuildContext context,
+    String title,
+    String contentBefore,
+    String linkText,
+    String linkRoute,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 8),
+          RichText(
+            text: TextSpan(
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    height: 1.5,
+                  ),
+              children: [
+                TextSpan(text: contentBefore),
+                TextSpan(
+                  text: linkText,
+                  style: const TextStyle(
+                    color: app_theme.skyBlue,
+                    decoration: TextDecoration.underline,
+                  ),
+                  recognizer: TapGestureRecognizer()
+                    ..onTap = () {
+                      context.push(linkRoute);
+                    },
+                ),
+                const TextSpan(text: '.'),
+              ],
             ),
           ),
         ],
