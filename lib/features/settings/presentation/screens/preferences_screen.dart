@@ -331,7 +331,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
                     ),
                   ),
 
-                  // Show When at Location (combined feature)
+                  // Show When at Location (combined feature: pin badge + image upload restriction)
                   Consumer(
                     builder: (context, ref, child) {
                       final locationState = ref.watch(locationSettingsViewModelProvider);
@@ -346,7 +346,7 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
                         ),
                         title: const Text('Show When at Location'),
                         subtitle: const Text(
-                          'Display a pin icon next to your name when you send messages from within 100m of a place. Also restricts picture uploads to when you\'re at the location, ensuring authenticity.',
+                          'Display a pin icon next to your name when you send messages from within 100m of a place. Also enables image uploads only when you\'re at the location, ensuring authenticity.',
                         ),
                         value: locationPrefs.showWhenAtLocation,
                         onChanged: isLocationSwitchOn
