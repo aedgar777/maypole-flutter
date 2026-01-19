@@ -44,14 +44,64 @@ jobs:
       - name: Run unit tests
         run: flutter test
 
+  bump_version:
+    name: Bump Build Number
+    needs: run_tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      new_version: ${{ steps.bump.outputs.new_version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Bump build number
+        id: bump
+        run: |
+          chmod +x scripts/auto-bump-build.sh scripts/get-version.sh
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin develop || echo "⚠️ Pull failed, but continuing..."
+          echo "📱 Current version:"
+          ./scripts/get-version.sh
+          ./scripts/auto-bump-build.sh
+          echo "✅ New version:"
+          ./scripts/get-version.sh
+          if git diff --quiet pubspec.yaml; then
+            echo "ℹ️ No version changes detected, skipping commit"
+            exit 0
+          fi
+          NEW_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          git add pubspec.yaml
+          git commit -m "chore: bump build number to $NEW_VERSION [skip ci]"
+          for i in {1..3}; do
+            if git push origin develop; then
+              echo "✅ Successfully pushed version bump"
+              exit 0
+            else
+              echo "⚠️ Push failed (attempt $i/3), pulling and retrying..."
+              git pull --rebase origin develop
+            fi
+          done
+          echo "❌ Failed to push after 3 attempts"
+          exit 1
+
   deploy_firebase:
     name: Deploy Firebase Tools
-    needs: run_tests
+    needs: bump_version
     runs-on: ubuntu-latest
     environment: development
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          ref: develop
+          fetch-depth: 0
 
       - name: Deploy Firebase Tools
         run: |
@@ -69,239 +119,229 @@ jobs:
           echo ""
           echo "✅ Firebase tools deployed!"
 
-  # TEMPORARILY COMMENTED OUT - build_android
-  # build_android:
-  #  name: Build and Deploy Android (Dev Internal)
-  #  needs: run_tests
-  #  runs-on: ubuntu-latest
-  #  environment: development
-  #  permissions:
-  #    contents: write  # Required to push version bump commits
-  #  steps:
-  #    - name: Checkout repository
-  #      uses: actions/checkout@v3
-  #      with:
-  #        token: ${{ secrets.GITHUB_TOKEN }}
-  #        fetch-depth: 0
-
-  #    - name: Bump build number
-  #      run: |
-  #        chmod +x scripts/auto-bump-build.sh scripts/get-version.sh
-  #        git config user.name "github-actions[bot]"
-  #        git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-  #        echo "📱 Bumping build number..."
-  #        ./scripts/auto-bump-build.sh
-          
-  #        NEW_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
-  #        echo "✅ Version bumped to: $NEW_VERSION"
-          
-  #        if ! git diff --quiet pubspec.yaml; then
-  #          git add pubspec.yaml
-  #          git commit -m "chore: bump build number to $NEW_VERSION [skip ci]"
-  #          git push origin develop || echo "Push failed, continuing anyway"
-  #        fi
-
-  #    - name: Setup Java
-  #      uses: actions/setup-java@v3
-  #      with:
-  #        distribution: 'temurin'
-  #        java-version: '17'
-
-  #    - name: Setup Flutter
-  #      uses: subosito/flutter-action@v2
-  #      with:
-  #        flutter-version: '3.35.7'
-  #        channel: 'stable'
-
-  #    - name: Get dependencies
-  #      run: flutter pub get
-
-  #    - name: Create .env file from secrets
-  #      run: |
-  #        cat > .env << EOF
-  #        ENVIRONMENT=dev
-  #        FIREBASE_DEV_WEB_API_KEY=${{ secrets.FIREBASE_DEV_WEB_API_KEY }}
-  #        FIREBASE_DEV_WEB_APP_ID=${{ secrets.FIREBASE_DEV_WEB_APP_ID }}
-  #        FIREBASE_DEV_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_DEV_WEB_MEASUREMENT_ID }}
-  #        FIREBASE_DEV_ANDROID_API_KEY=${{ secrets.FIREBASE_DEV_ANDROID_API_KEY }}
-  #        FIREBASE_DEV_ANDROID_APP_ID=${{ secrets.FIREBASE_DEV_ANDROID_APP_ID }}
-  #        FIREBASE_DEV_IOS_API_KEY=${{ secrets.FIREBASE_DEV_IOS_API_KEY }}
-  #        FIREBASE_DEV_IOS_APP_ID=${{ secrets.FIREBASE_DEV_IOS_APP_ID }}
-  #        FIREBASE_DEV_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_DEV_MESSAGING_SENDER_ID }}
-  #        FIREBASE_DEV_PROJECT_ID=${{ secrets.FIREBASE_DEV_PROJECT_ID }}
-  #        FIREBASE_DEV_AUTH_DOMAIN=${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }}
-  #        FIREBASE_DEV_STORAGE_BUCKET=${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }}
-  #        IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
-  #        EOF
-
-  #    - name: Create google-services.json for dev flavor
-  #      env:
-  #        GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON_DEV }}
-  #      run: |
-  #        mkdir -p android/app/src/dev
-  #        echo "$GOOGLE_SERVICES_JSON" > android/app/src/dev/google-services.json
-  #        python3 -m json.tool android/app/src/dev/google-services.json > /dev/null 2>&1 || { echo "❌ Error: Invalid JSON"; exit 1; }
-  #        echo "✅ google-services.json created and validated"
-
-  #    - name: Setup Android Signing
-  #      run: |
-  #        echo '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' | tr -d '\n\r ' | base64 -d > android/app/upload-keystore.jks
-  #        cat > android/key.properties << 'KEYSTORE_EOF'
-  #        storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
-  #        keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-  #        keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-  #        storeFile=upload-keystore.jks
-  #        KEYSTORE_EOF
-
-  #    - name: Build Android App Bundle (devRelease)
-  #      run: |
-  #        echo "📦 Building Android App Bundle (dev release)..."
-  #        flutter build appbundle --release --flavor dev --dart-define=ENVIRONMENT=dev
-  #        echo "✅ Build complete!"
-
-  #    - name: Setup Ruby for Fastlane
-  #      uses: ruby/setup-ruby@v1
-  #      with:
-  #        ruby-version: '3.2.0'
-  #        bundler-cache: true
-  #        working-directory: android
-
-  #    - name: Deploy to Play Store Internal Testing with Fastlane
-  #      working-directory: android
-  #      env:
-  #        GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
-  #      run: |
-  #        echo "☁️  Uploading to Play Store Internal Testing track..."
-          
-  #        # Create temp file for service account JSON
-  #        echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > ../play-store-service-account.json
-  #        export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="../play-store-service-account.json"
-          
-  #        bundle exec fastlane deploy_dev_internal
-          
-  #        echo ""
-  #        echo "🎉 Dev build deployed to Play Store Internal Testing!"
-
-  # TEMPORARILY COMMENTED OUT - build_ios
-  # build_ios:
-  #  name: Build and Deploy iOS (Dev TestFlight)
-  #  needs: build_android  # Run after Android to avoid version conflicts
-  #  runs-on: macos-latest
-  #  timeout-minutes: 60
-  #  environment: development
-  #  steps:
-  #    - name: Checkout repository
-  #      uses: actions/checkout@v3
-  #      with:
-  #        fetch-depth: 0
-
-  #    - name: Select Xcode version
-  #      run: |
-  #        if [ -d "/Applications/Xcode_15.4.app" ]; then
-  #          sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
-  #        elif [ -d "/Applications/Xcode_15.3.app" ]; then
-  #          sudo xcode-select -s /Applications/Xcode_15.3.app/Contents/Developer
-  #        fi
-  #        echo "Selected Xcode:"
-  #        xcodebuild -version
-
-  #    - name: Setup Flutter
-  #      uses: subosito/flutter-action@v2
-  #      with:
-  #        flutter-version: '3.35.7'
-  #        channel: 'stable'
-
-  #    - name: Get dependencies
-  #      run: flutter pub get
-
-  #    - name: Setup Ruby for Fastlane
-  #      uses: ruby/setup-ruby@v1
-  #      with:
-  #        ruby-version: '3.2.0'
-  #        bundler-cache: true
-  #        working-directory: ios
-
-  #    - name: Create .env file from secrets
-  #      run: |
-  #        cat > .env << EOF
-  #        ENVIRONMENT=dev
-  #        FIREBASE_DEV_IOS_API_KEY=${{ secrets.FIREBASE_DEV_IOS_API_KEY }}
-  #        FIREBASE_DEV_IOS_APP_ID=${{ secrets.FIREBASE_DEV_IOS_APP_ID }}
-  #        FIREBASE_DEV_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_DEV_MESSAGING_SENDER_ID }}
-  #        FIREBASE_DEV_PROJECT_ID=${{ secrets.FIREBASE_DEV_PROJECT_ID }}
-  #        FIREBASE_DEV_AUTH_DOMAIN=${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }}
-  #        FIREBASE_DEV_STORAGE_BUCKET=${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }}
-  #        IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
-  #        EOF
-
-  #    - name: Create GoogleService-Info.plist for dev
-  #      run: |
-  #        mkdir -p ios/Firebase/dev
-  #        echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_DEV }}" > ios/Firebase/dev/GoogleService-Info.plist
-  #        plutil -lint ios/Firebase/dev/GoogleService-Info.plist
-  #        echo "✅ GoogleService-Info.plist created"
-
-  #    - name: Install CocoaPods dependencies
-  #      working-directory: ios
-  #      run: pod install
-
-  #    - name: Build IPA
-  #      run: |
-  #        echo "📦 Building IPA (dev release)..."
-  #        flutter build ipa --release \
-  #          --dart-define=ENVIRONMENT=dev \
-  #          --dart-define=FIREBASE_DEV_IOS_API_KEY=${{ secrets.FIREBASE_DEV_IOS_API_KEY }} \
-  #          --dart-define=FIREBASE_DEV_IOS_APP_ID=${{ secrets.FIREBASE_DEV_IOS_APP_ID }} \
-  #          --dart-define=FIREBASE_DEV_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_DEV_MESSAGING_SENDER_ID }} \
-  #          --dart-define=FIREBASE_DEV_PROJECT_ID=${{ secrets.FIREBASE_DEV_PROJECT_ID }} \
-  #          --dart-define=FIREBASE_DEV_AUTH_DOMAIN=${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }} \
-  #          --dart-define=FIREBASE_DEV_STORAGE_BUCKET=${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }} \
-  #          --export-options-plist=ios/ExportOptions.plist || true
-  #        echo "✅ Build complete!"
-
-  #    - name: Deploy to TestFlight with Fastlane
-  #      working-directory: ios
-  #      timeout-minutes: 50
-  #      env:
-  #        MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
-  #        MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
-  #        MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-  #        APPLE_ID: ${{ secrets.APPLE_ID }}
-  #        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-  #        IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
-  #        APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-  #        APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
-  #        GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-  #        APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
-  #      run: |
-  #        echo "☁️  Uploading to TestFlight Internal Testing..."
-          
-  #        # Setup GCP credentials for Match
-  #        mkdir -p ~/.config/gcloud
-  #        echo "$GCP_SERVICE_ACCOUNT_KEY" > ~/.config/gcloud/application_default_credentials.json
-  #        export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/gcloud/application_default_credentials.json"
-          
-  #        # Setup App Store Connect API key
-  #        mkdir -p ~/private_keys
-  #        echo "$APP_STORE_CONNECT_API_KEY_CONTENT" > ~/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_KEY_ID}.p8
-  #        export APP_STORE_CONNECT_API_KEY_KEY_FILEPATH="$HOME/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_KEY_ID}.p8"
-          
-  #        # Deploy with Fastlane (using upload_ipa_only since Flutter built the IPA)
-  #        bundle exec fastlane upload_ipa_only
-          
-  #        echo ""
-  #        echo "🎉 Dev build deployed to TestFlight Internal Testing!"
-
-  build_web:
-    name: Build and Deploy Web (Dev)
-    needs: build_android  # Run after Android to avoid version conflicts
+  build_android:
+    name: Build and Deploy Android (Dev Internal)
+    needs: deploy_firebase
     runs-on: ubuntu-latest
     environment: development
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Cache Gradle
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-dev-${{ hashFiles('**/*.gradle*', '**/*.gradle.kts', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-dev-
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.7'
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Clean build cache
+        run: |
+          flutter clean
+          rm -rf build
+          rm -rf android/.gradle
+          rm -rf android/app/build
+
+      - name: Create .env file from secrets
+        run: |
+          cat > .env << EOF
+          ENVIRONMENT=dev
+          FIREBASE_DEV_WEB_API_KEY=${{ secrets.FIREBASE_DEV_WEB_API_KEY }}
+          FIREBASE_DEV_WEB_APP_ID=${{ secrets.FIREBASE_DEV_WEB_APP_ID }}
+          FIREBASE_DEV_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_DEV_WEB_MEASUREMENT_ID }}
+          FIREBASE_DEV_ANDROID_API_KEY=${{ secrets.FIREBASE_DEV_ANDROID_API_KEY }}
+          FIREBASE_DEV_ANDROID_APP_ID=${{ secrets.FIREBASE_DEV_ANDROID_APP_ID }}
+          FIREBASE_DEV_IOS_API_KEY=${{ secrets.FIREBASE_DEV_IOS_API_KEY }}
+          FIREBASE_DEV_IOS_APP_ID=${{ secrets.FIREBASE_DEV_IOS_APP_ID }}
+          FIREBASE_DEV_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_DEV_MESSAGING_SENDER_ID }}
+          FIREBASE_DEV_PROJECT_ID=${{ secrets.FIREBASE_DEV_PROJECT_ID }}
+          FIREBASE_DEV_AUTH_DOMAIN=${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }}
+          FIREBASE_DEV_STORAGE_BUCKET=${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }}
+          IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
+          EOF
+
+      - name: Create google-services.json for dev flavor
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON_DEV }}
+        run: |
+          mkdir -p android/app/src/dev
+          echo "$GOOGLE_SERVICES_JSON" > android/app/src/dev/google-services.json
+          python3 -m json.tool android/app/src/dev/google-services.json > /dev/null 2>&1 || { echo "❌ Error: Invalid JSON"; exit 1; }
+          echo "✅ google-services.json created and validated"
+
+      - name: Setup Android Signing
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | tr -d '\n\r ' | base64 -d > android/app/upload-keystore.jks
+          cat > android/key.properties << 'KEYSTORE_EOF'
+          storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storeFile=upload-keystore.jks
+          KEYSTORE_EOF
+
+      - name: Build Android App Bundle (devRelease)
+        run: |
+          echo "📦 Building Android App Bundle (dev release)..."
+          flutter build appbundle --release --flavor dev --dart-define=ENVIRONMENT=dev
+          echo "✅ Build complete!"
+
+      - name: Setup Ruby for Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2.0'
+          bundler-cache: true
+          working-directory: android
+
+      - name: Deploy to Play Store Internal Testing with Fastlane
+        working-directory: android
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          echo "☁️  Uploading to Play Store Internal Testing track..."
+          
+          # Create temp file for service account JSON
+          echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > ../play-store-service-account.json
+          export GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="../play-store-service-account.json"
+          
+          bundle exec fastlane deploy_dev_internal
+          
+          echo ""
+          echo "🎉 Dev build deployed to Play Store Internal Testing!"
+
+  build_ios:
+    name: Build and Deploy iOS (Dev TestFlight)
+    needs: deploy_firebase
+    runs-on: macos-latest
+    timeout-minutes: 60
+    environment: development
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Select Xcode version
+        run: |
+          if [ -d "/Applications/Xcode_15.4.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_15.3.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_15.3.app/Contents/Developer
+          fi
+          echo "Selected Xcode:"
+          xcodebuild -version
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.7'
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Setup Ruby for Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2.0'
+          bundler-cache: true
+          working-directory: ios
+
+      - name: Create .env file from secrets
+        run: |
+          cat > .env << EOF
+          ENVIRONMENT=dev
+          FIREBASE_DEV_IOS_API_KEY=${{ secrets.FIREBASE_DEV_IOS_API_KEY }}
+          FIREBASE_DEV_IOS_APP_ID=${{ secrets.FIREBASE_DEV_IOS_APP_ID }}
+          FIREBASE_DEV_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_DEV_MESSAGING_SENDER_ID }}
+          FIREBASE_DEV_PROJECT_ID=${{ secrets.FIREBASE_DEV_PROJECT_ID }}
+          FIREBASE_DEV_AUTH_DOMAIN=${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }}
+          FIREBASE_DEV_STORAGE_BUCKET=${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }}
+          IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
+          GOOGLE_APPLICATION_CREDENTIALS=$HOME/.config/gcloud/application_default_credentials.json
+          EOF
+
+      - name: Create GoogleService-Info.plist for dev
+        run: |
+          mkdir -p ios/Firebase/dev
+          echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_DEV }}" > ios/Firebase/dev/GoogleService-Info.plist
+          plutil -lint ios/Firebase/dev/GoogleService-Info.plist
+          echo "✅ GoogleService-Info.plist created"
+
+      - name: Install CocoaPods dependencies
+        working-directory: ios
+        run: pod install
+
+      - name: Setup GCP credentials for Match
+        run: |
+          mkdir -p ~/.config/gcloud
+          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" > ~/.config/gcloud/application_default_credentials.json
+          export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/gcloud/application_default_credentials.json"
+
+      - name: Setup App Store Connect API key
+        run: |
+          mkdir -p ~/private_keys
+          echo "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}" > ~/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+
+      - name: Build iOS IPA with Flutter
+        run: |
+          flutter build ipa \
+            --release \
+            --dart-define=ENVIRONMENT=dev \
+            --export-options-plist=ios/ExportOptions.plist
+
+      - name: Deploy to TestFlight Internal Testing with Fastlane
+        working-directory: ios
+        timeout-minutes: 50
+        env:
+          MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
+          MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+          APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          GOOGLE_APPLICATION_CREDENTIALS: $HOME/.config/gcloud/application_default_credentials.json
+          APP_STORE_CONNECT_API_KEY_KEY_FILEPATH: $HOME/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+        run: |
+          # Deploy with Fastlane (upload_ipa_only since Flutter built the IPA)
+          bundle exec fastlane upload_ipa_only
+          
+          echo ""
+          echo "🎉 Dev build deployed to TestFlight Internal Testing!"
+
+  build_web:
+    name: Build and Deploy Web (Dev)
+    needs: deploy_firebase
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: develop
           fetch-depth: 0
 
       - name: Setup Flutter
@@ -329,6 +369,20 @@ jobs:
             --dart-define=GOOGLE_PLACES_API_KEY=${{ secrets.GOOGLE_PLACES_DEV_API_KEY }}
           echo "✅ Build complete!"
 
+      - name: Copy deeplink verification files
+        run: |
+          echo "🔗 Copying deeplink verification files..."
+          mkdir -p build/web/.well-known
+          
+          # Copy Apple App Site Association files
+          cp public/apple-app-site-association build/web/apple-app-site-association
+          cp public/.well-known/apple-app-site-association build/web/.well-known/apple-app-site-association
+          
+          # Copy Android Asset Links file
+          cp public/.well-known/assetlinks.json build/web/.well-known/assetlinks.json
+          
+          echo "✅ Verification files copied!"
+
       - name: Deploy to Firebase Hosting
         run: |
           echo "☁️  Deploying to Firebase Hosting (dev)..."
@@ -340,4 +394,4 @@ jobs:
           
           echo ""
           echo "🎉 Web app deployed to Firebase Hosting!"
-      
+          echo "   View at: https://maypole-flutter-dev.web.app"
