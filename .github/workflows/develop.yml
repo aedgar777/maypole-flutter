@@ -118,6 +118,18 @@ jobs:
           pip install -r requirements.txt
           echo "✅ Python dependencies installed"
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install Node.js Cloud Functions dependencies
+        run: |
+          echo "📦 Installing Node.js dependencies for auth-functions..."
+          cd functions-js
+          npm install
+          echo "✅ Node.js dependencies installed"
+
       - name: Deploy Firebase Tools
         run: |
           echo "☁️  Deploying Firebase tools to maypole-flutter-dev..."
