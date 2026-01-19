@@ -172,7 +172,6 @@ jobs:
     name: Build and Deploy iOS (Beta TestFlight)
     runs-on: macos-latest
     needs: bump_version
-    timeout-minutes: 60
     environment: production
     steps:
       - name: Checkout repository
@@ -271,7 +270,6 @@ jobs:
 
       - name: Deploy to TestFlight Beta with Fastlane
         working-directory: ios
-        timeout-minutes: 50
         env:
           MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
           MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
