@@ -103,6 +103,21 @@ jobs:
           ref: develop
           fetch-depth: 0
 
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Setup Cloud Functions Python dependencies
+        run: |
+          echo "🐍 Setting up Python virtual environment for Cloud Functions..."
+          cd functions
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          echo "✅ Python dependencies installed"
+
       - name: Deploy Firebase Tools
         run: |
           echo "☁️  Deploying Firebase tools to maypole-flutter-dev..."
