@@ -306,7 +306,6 @@ jobs:
           FIREBASE_DEV_AUTH_DOMAIN=${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }}
           FIREBASE_DEV_STORAGE_BUCKET=${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }}
           IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
-          GOOGLE_APPLICATION_CREDENTIALS=$HOME/.config/gcloud/application_default_credentials.json
           EOF
 
       - name: Create GoogleService-Info.plist for dev
@@ -338,9 +337,9 @@ jobs:
           MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
-          GOOGLE_APPLICATION_CREDENTIALS: $HOME/.config/gcloud/application_default_credentials.json
         run: |
           echo "🔐 Syncing code signing certificates and provisioning profiles..."
+          export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/gcloud/application_default_credentials.json"
           bundle exec fastlane sync_dev_signing
           echo "✅ Code signing setup complete!"
 
@@ -363,9 +362,10 @@ jobs:
           IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
           APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
-          GOOGLE_APPLICATION_CREDENTIALS: $HOME/.config/gcloud/application_default_credentials.json
-          APP_STORE_CONNECT_API_KEY_KEY_FILEPATH: $HOME/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
         run: |
+          export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/gcloud/application_default_credentials.json"
+          export APP_STORE_CONNECT_API_KEY_KEY_FILEPATH="$HOME/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8"
+          
           # Deploy with Fastlane (upload_ipa_only since Flutter built the IPA)
           bundle exec fastlane upload_ipa_only
           
@@ -392,6 +392,24 @@ jobs:
 
       - name: Flutter pub get
         run: flutter pub get
+
+      - name: Create .env file from secrets
+        run: |
+          cat > .env << EOF
+          ENVIRONMENT=dev
+          FIREBASE_DEV_WEB_API_KEY=${{ secrets.FIREBASE_DEV_WEB_API_KEY }}
+          FIREBASE_DEV_WEB_APP_ID=${{ secrets.FIREBASE_DEV_WEB_APP_ID }}
+          FIREBASE_DEV_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_DEV_WEB_MEASUREMENT_ID }}
+          FIREBASE_DEV_ANDROID_API_KEY=${{ secrets.FIREBASE_DEV_ANDROID_API_KEY }}
+          FIREBASE_DEV_ANDROID_APP_ID=${{ secrets.FIREBASE_DEV_ANDROID_APP_ID }}
+          FIREBASE_DEV_IOS_API_KEY=${{ secrets.FIREBASE_DEV_IOS_API_KEY }}
+          FIREBASE_DEV_IOS_APP_ID=${{ secrets.FIREBASE_DEV_IOS_APP_ID }}
+          FIREBASE_DEV_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_DEV_MESSAGING_SENDER_ID }}
+          FIREBASE_DEV_PROJECT_ID=${{ secrets.FIREBASE_DEV_PROJECT_ID }}
+          FIREBASE_DEV_AUTH_DOMAIN=${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }}
+          FIREBASE_DEV_STORAGE_BUCKET=${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }}
+          IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
+          EOF
 
       - name: Build Web
         run: |
