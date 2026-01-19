@@ -243,6 +243,7 @@ Built with ❤️ using:
 - [Firebase](https://firebase.google.com) by Google
 - [Riverpod](https://riverpod.dev) by Remi Rousselet
 - [GoRouter](https://pub.dev/packages/go_router) by the Flutter team
+- [Hive](https://thehive.ai) by Hive
 
 ---
 
