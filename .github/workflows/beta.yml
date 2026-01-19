@@ -237,6 +237,19 @@ jobs:
           mkdir -p ~/private_keys
           echo "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}" > ~/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
 
+      - name: Sync iOS code signing certificates with Match
+        working-directory: ios
+        env:
+          MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
+          MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+          GOOGLE_APPLICATION_CREDENTIALS: $HOME/.config/gcloud/application_default_credentials.json
+        run: |
+          echo "🔐 Syncing code signing certificates and provisioning profiles..."
+          bundle exec fastlane sync_prod_signing
+          echo "✅ Code signing setup complete!"
+
       - name: Build iOS IPA with Flutter
         run: |
           flutter build ipa \
@@ -305,7 +318,6 @@ jobs:
           echo "📦 Building web app (prod config for beta)..."
           flutter build web \
             --release \
-            --web-renderer html \
             --dart-define=ENVIRONMENT=production \
             --dart-define=FIREBASE_PROD_WEB_API_KEY=${{ secrets.FIREBASE_PROD_WEB_API_KEY }} \
             --dart-define=FIREBASE_PROD_WEB_APP_ID=${{ secrets.FIREBASE_PROD_WEB_APP_ID }} \
