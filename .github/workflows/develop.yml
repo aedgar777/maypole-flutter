@@ -157,6 +157,12 @@ jobs:
         with:
           ref: develop
           fetch-depth: 0
+      
+      - name: Pull latest changes (including version bump)
+        run: |
+          git pull origin develop
+          echo "📱 Current version after pull:"
+          grep '^version:' pubspec.yaml
 
       - name: Setup Java
         uses: actions/setup-java@v3
@@ -268,6 +274,12 @@ jobs:
         with:
           ref: develop
           fetch-depth: 0
+      
+      - name: Pull latest changes (including version bump)
+        run: |
+          git pull origin develop
+          echo "📱 Current version after pull:"
+          grep '^version:' pubspec.yaml
 
       - name: Select Xcode version
         run: |
@@ -384,6 +396,12 @@ jobs:
         with:
           ref: develop
           fetch-depth: 0
+      
+      - name: Pull latest changes (including version bump)
+        run: |
+          git pull origin develop
+          echo "📱 Current version after pull:"
+          grep '^version:' pubspec.yaml
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
