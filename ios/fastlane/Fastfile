@@ -152,6 +152,28 @@ platform :ios do
     )
   end
 
+  desc "Upload pre-built IPA to TestFlight Beta Testing"
+  lane :upload_beta_ipa do
+    # Create API key for App Store Connect
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
+      key_filepath: ENV["APP_STORE_CONNECT_API_KEY_KEY_FILEPATH"],
+      in_house: false
+    )
+
+    # Upload the IPA that was built by Flutter with production config
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: "../build/ios/ipa/maypole.ipa",
+      skip_waiting_for_build_processing: true,
+      distribute_external: true,
+      groups: ["Beta Testers"],
+      notify_external_testers: true,
+      changelog: "New beta release with bug fixes and improvements"
+    )
+  end
+
   desc "Debug build using xcodebuild directly (alternative to gym)"
   lane :deploy_dev_debug do
     # Sync certificates and get provisioning profile info

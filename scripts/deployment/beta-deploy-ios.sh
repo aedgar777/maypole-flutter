@@ -55,7 +55,7 @@ echo ""
 # Upload to TestFlight Beta Testing
 echo "☁️  Uploading to TestFlight Beta Testing..."
 cd ios
-bundle exec fastlane deploy_beta
+bundle exec fastlane upload_beta_ipa
 
 echo ""
 echo "🎉 Beta build deployed to TestFlight Beta Testing!"

@@ -13,7 +13,6 @@ jobs:
   debug_ios:
     name: Debug iOS Build (Manual)
     runs-on: macos-latest
-    timeout-minutes: 90
     environment: development
     
     steps:
@@ -113,7 +112,6 @@ jobs:
           echo "⏰ Completed: $(date)"
 
       - name: Test 1 - Flutter Build Only (No Signing)
-        timeout-minutes: 20
         run: |
           echo "==================== TEST 1: FLUTTER BUILD ===================="
           echo "⏰ Start: $(date)"
@@ -133,7 +131,6 @@ jobs:
           echo "✅ Flutter build completed"
 
       - name: Test 2 - Xcodebuild Archive Only (No Fastlane)
-        timeout-minutes: 30
         working-directory: ios
         env:
           MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}

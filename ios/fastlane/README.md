@@ -55,6 +55,14 @@ Build and upload beta to TestFlight
 
 Upload pre-built IPA to TestFlight
 
+### ios upload_beta_ipa
+
+```sh
+[bundle exec] fastlane ios upload_beta_ipa
+```
+
+Upload pre-built IPA to TestFlight Beta Testing
+
 ### ios deploy_dev_debug
 
 ```sh
