@@ -47,11 +47,12 @@ platform :android do
       skip_upload_screenshots: true,
       skip_upload_apk: true,
       skip_upload_changelogs: true,
+      release_status: 'draft',  # Use 'draft' to review and manually publish in Play Console
       json_key: ENV['GOOGLE_PLAY_SERVICE_ACCOUNT_JSON']
     )
     
-    puts "✅ Beta build uploaded to Play Store Open Testing track!"
-    puts "   Testers on the beta track can now access this release"
+    puts "✅ Beta build uploaded to Play Store Open Testing track as DRAFT!"
+    puts "   Go to Play Console to review and manually publish to beta testers"
   end
 
   desc "Promote build from beta to production"
