@@ -60,6 +60,62 @@ class MaypoleSearchService {
     }
   }
 
+  /// Reverse geocode coordinates to get place details
+  Future<Map<String, dynamic>?> reverseGeocode(double latitude, double longitude) async {
+    debugPrint('🗺️ Reverse geocoding: lat=$latitude, lon=$longitude');
+    
+    final url = 'https://places.googleapis.com/v1/places:searchNearby';
+    
+    final headers = {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': _apiKey,
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location',
+    };
+
+    final body = json.encode({
+      'locationRestriction': {
+        'circle': {
+          'center': {
+            'latitude': latitude,
+            'longitude': longitude,
+          },
+          'radius': 50.0, // Search within 50 meters
+        }
+      },
+      'maxResultCount': 1,
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: body,
+      );
+
+      debugPrint('📡 Reverse Geocode Response Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        debugPrint("✅ Reverse Geocode Response: ${response.body.substring(
+            0, response.body.length > 200 ? 200 : response.body.length)}...");
+        
+        final Map<String, dynamic> data = json.decode(response.body);
+        final places = data['places'] as List<dynamic>?;
+        
+        if (places != null && places.isNotEmpty) {
+          return places[0] as Map<String, dynamic>;
+        }
+        
+        return null;
+      } else {
+        debugPrint('❌ Error Response: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('💥 Exception during reverse geocode: $e');
+      return null;
+    }
+  }
+
   Future<AutocompleteResponse> autocomplete(AutocompleteRequest request) async {
     debugPrint('🔍 Places Autocomplete Request');
     debugPrint('  URL: $_baseUrl');
