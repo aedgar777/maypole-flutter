@@ -378,4 +378,11 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get hasAddedAnImage => 'ha añadido una imagen';
+
+  @override
+  String get chatHere => 'Chatear aquí';
+
+  @override
+  String get selectPlaceOnMap =>
+      'Toca cualquier lugar en el mapa para seleccionar un lugar';
 }
