@@ -139,9 +139,22 @@ jobs:
           storeFile=upload-keystore.jks
           KEYSTORE_EOF
 
+      - name: Verify google-services.json is for production
+        run: |
+          echo "🔍 Verifying google-services.json configuration..."
+          if grep -q "maypole-flutter-ce6c3" android/app/src/prod/google-services.json; then
+            echo "✅ Production google-services.json verified (maypole-flutter-ce6c3)"
+          else
+            echo "❌ ERROR: google-services.json is not for production!"
+            grep "project_id" android/app/src/prod/google-services.json
+            exit 1
+          fi
+
       - name: Build Android App Bundle (prodRelease)
         run: |
           echo "📦 Building Android App Bundle (prod release for beta)..."
+          echo "Using flavor: prod"
+          echo "Using ENVIRONMENT: production"
           flutter build appbundle --release --flavor prod --dart-define=ENVIRONMENT=production
           echo "✅ Build complete!"
 
