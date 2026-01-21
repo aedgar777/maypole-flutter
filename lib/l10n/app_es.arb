@@ -65,6 +65,8 @@
   "notificationPermissionDeniedMessage": "El permiso de notificación fue denegado. Para habilitar las notificaciones, ve a Configuración y permite las notificaciones para Maypole.",
   "enableNotifications": "Habilitar notificaciones",
   "openSettings": "Abrir configuración",
+  "locationPermissionRequired": "Permiso de ubicación requerido",
+  "locationPermissionMessage": "Para centrar el mapa en tu ubicación, por favor otorga el permiso de ubicación en la configuración de tu dispositivo.",
   "notificationTypes": "Tipos de notificaciones",
   "taggingNotifications": "Notificaciones de etiquetas",
   "taggingNotificationsDescription": "Recibe notificaciones cuando alguien te etiquete en un mensaje",

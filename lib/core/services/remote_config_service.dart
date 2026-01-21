@@ -36,6 +36,7 @@ class RemoteConfigService {
         'ads_banner_enabled': true,
         'ads_interstitial_enabled': true,
         'ads_interstitial_frequency': 5,  // Show every 5 location switches
+        'ads_web_enabled': true,  // Default: web ads are enabled (requires ads_enabled)
       });
 
       // Fetch and activate
@@ -76,6 +77,12 @@ class RemoteConfigService {
   int get interstitialFrequency {
     if (!_initialized || _remoteConfig == null) return 5;
     return _remoteConfig!.getInt('ads_interstitial_frequency');
+  }
+
+  /// Get whether web ads are enabled (locked behind master ads_enabled flag)
+  bool get webAdsEnabled {
+    if (!_initialized || _remoteConfig == null) return true;
+    return _remoteConfig!.getBool('ads_web_enabled');
   }
 
   /// Manually fetch latest config (useful for testing)

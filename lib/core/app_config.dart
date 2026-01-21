@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'utils/platform_info.dart';
 
@@ -150,6 +150,7 @@ class AppConfig {
     // First check dart-define (used in web builds)
     const dartDefineKey = String.fromEnvironment('GOOGLE_PLACES_API_KEY');
     if (dartDefineKey.isNotEmpty) {
+      debugPrint('🔑 Using Google Places API key from dart-define');
       return dartDefineKey;
     }
 
@@ -157,10 +158,12 @@ class AppConfig {
     // Use web-specific key for web platform if available
     if (kIsWeb) {
       if (isProduction) {
+        debugPrint('🔑 Using Google Places API key: WEB PROD (isProduction=$isProduction, _environment=$_environment)');
         final webKey = dotenv.env['GOOGLE_PLACES_WEB_PROD_API_KEY'];
         if (webKey != null && webKey.isNotEmpty) return webKey;
         return dotenv.env['GOOGLE_PLACES_PROD_API_KEY'] ?? '';
       } else {
+        debugPrint('🔑 Using Google Places API key: WEB DEV (isProduction=$isProduction, _environment=$_environment)');
         final webKey = dotenv.env['GOOGLE_PLACES_WEB_DEV_API_KEY'];
         if (webKey != null && webKey.isNotEmpty) return webKey;
         return dotenv.env['GOOGLE_PLACES_DEV_API_KEY'] ?? '';
@@ -169,8 +172,10 @@ class AppConfig {
     
     // Mobile platforms
     if (isProduction) {
+      debugPrint('🔑 Using Google Places API key: MOBILE PROD (isProduction=$isProduction, _environment=$_environment)');
       return dotenv.env['GOOGLE_PLACES_PROD_API_KEY'] ?? '';
     } else {
+      debugPrint('🔑 Using Google Places API key: MOBILE DEV (isProduction=$isProduction, _environment=$_environment)');
       return dotenv.env['GOOGLE_PLACES_DEV_API_KEY'] ?? '';
     }
   }

@@ -216,6 +216,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get openSettings => 'Abrir configuración';
 
   @override
+  String get locationPermissionRequired => 'Permiso de ubicación requerido';
+
+  @override
+  String get locationPermissionMessage =>
+      'Para centrar el mapa en tu ubicación, por favor otorga el permiso de ubicación en la configuración de tu dispositivo.';
+
+  @override
   String get notificationTypes => 'Tipos de notificaciones';
 
   @override
