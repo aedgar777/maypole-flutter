@@ -348,6 +348,37 @@ class MaypoleChatService {
     }
   }
 
+  /// Adds a maypole thread to a user's maypoleChatThreads list
+  /// This is called when a user opens a maypole on wide screen to make it immediately visible
+  Future<void> addMaypoleToUserList({
+    required String userId,
+    required String placeId,
+    required String placeName,
+    required String address,
+    double? latitude,
+    double? longitude,
+  }) async {
+    try {
+      final userRef = _firestore.collection('users').doc(userId);
+      final maypoleMetaData = MaypoleMetaData(
+        id: placeId,
+        name: placeName,
+        address: address,
+        latitude: latitude,
+        longitude: longitude,
+      );
+      
+      await userRef.update({
+        'maypoleChatThreads': FieldValue.arrayUnion([maypoleMetaData.toMap()])
+      });
+      
+      debugPrint('✓ Added maypole $placeId to user $userId\'s list');
+    } catch (e) {
+      debugPrint('❌ Error adding maypole to user list: $e');
+      rethrow;
+    }
+  }
+
   /// Removes a maypole thread from a user's maypoleChatThreads list
   /// This hides the thread from the user's list without deleting the maypole itself
   Future<void> deleteMaypoleThreadForUser(String threadId, String userId) async {
