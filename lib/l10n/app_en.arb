@@ -511,5 +511,13 @@
   "hasAddedAnImage": "has added an image",
   "@hasAddedAnImage": {
     "description": "Text shown when a user uploads an image to a maypole"
+  },
+  "chatHere": "Chat Here",
+  "@chatHere": {
+    "description": "Button text to start chatting at a selected location"
+  },
+  "selectPlaceOnMap": "Tap anywhere on the map to select a place",
+  "@selectPlaceOnMap": {
+    "description": "Hint text for selecting places on the map"
   }
 }

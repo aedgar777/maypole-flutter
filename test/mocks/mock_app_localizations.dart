@@ -347,4 +347,10 @@ class MockAppLocalizations extends AppLocalizations {
 
   @override
   String get hasAddedAnImage => 'has added an image';
+
+  @override
+  String get chatHere => 'Chat Here';
+
+  @override
+  String get selectPlaceOnMap => 'Tap anywhere on the map to select a place';
 }

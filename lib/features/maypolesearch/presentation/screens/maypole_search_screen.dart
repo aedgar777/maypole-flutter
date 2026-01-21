@@ -3,13 +3,114 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_theme.dart';
+import 'package:maypole/core/services/location_provider.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/autocomplete_response.dart';
 import '../../data/services/maypole_search_service_provider.dart';
 import '../../maypole_search_providers.dart';
+
+// Dark map style using app theme colors
+const String _darkMapStyle = '''
+[
+  {
+    "elementType": "geometry",
+    "stylers": [{"color": "#1A1A2E"}]
+  },
+  {
+    "elementType": "labels.text.fill",
+    "stylers": [{"color": "#8a8a8a"}]
+  },
+  {
+    "elementType": "labels.text.stroke",
+    "stylers": [{"color": "#1A1A2E"}]
+  },
+  {
+    "featureType": "administrative",
+    "elementType": "geometry",
+    "stylers": [{"color": "#2D2D44"}]
+  },
+  {
+    "featureType": "poi",
+    "elementType": "geometry",
+    "stylers": [{"color": "#2D2D44"}]
+  },
+  {
+    "featureType": "poi",
+    "elementType": "labels.text.fill",
+    "stylers": [{"color": "#6CB4E8"}]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "geometry",
+    "stylers": [{"color": "#263c3f"}]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "labels.text.fill",
+    "stylers": [{"color": "#6b9a76"}]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry",
+    "stylers": [{"color": "#2D2D44"}]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry.stroke",
+    "stylers": [{"color": "#212a37"}]
+  },
+  {
+    "featureType": "road",
+    "elementType": "labels.text.fill",
+    "stylers": [{"color": "#9ca5b3"}]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "geometry",
+    "stylers": [{"color": "#746855"}]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "geometry.stroke",
+    "stylers": [{"color": "#1f2835"}]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "labels.text.fill",
+    "stylers": [{"color": "#6CB4E8"}]
+  },
+  {
+    "featureType": "transit",
+    "elementType": "geometry",
+    "stylers": [{"color": "#2f3948"}]
+  },
+  {
+    "featureType": "transit.station",
+    "elementType": "labels.text.fill",
+    "stylers": [{"color": "#6CB4E8"}]
+  },
+  {
+    "featureType": "water",
+    "elementType": "geometry",
+    "stylers": [{"color": "#17263c"}]
+  },
+  {
+    "featureType": "water",
+    "elementType": "labels.text.fill",
+    "stylers": [{"color": "#515c6d"}]
+  },
+  {
+    "featureType": "water",
+    "elementType": "labels.text.stroke",
+    "stylers": [{"color": "#17263c"}]
+  }
+]
+''';
 
 class MaypoleSearchScreen extends ConsumerStatefulWidget {
   const MaypoleSearchScreen({super.key});
@@ -21,82 +122,211 @@ class MaypoleSearchScreen extends ConsumerStatefulWidget {
 class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
+  GoogleMapController? _mapController;
+  final FocusNode _searchFocusNode = FocusNode();
+  Map<String, dynamic>? _selectedPlace;
+  LatLng? _selectedLocation;
+  bool _isMapLoaded = false;
+  
+  // Context menu state
+  Map<String, dynamic>? _contextMenuPlace;
+  LatLng? _contextMenuLocation;
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
+    _searchFocusNode.addListener(_onFocusChanged);
   }
 
   @override
   void dispose() {
     _searchController.removeListener(_onSearchChanged);
+    _searchFocusNode.removeListener(_onFocusChanged);
     _searchController.dispose();
+    _searchFocusNode.dispose();
     _debounce?.cancel();
+    _mapController?.dispose();
     super.dispose();
+  }
+
+  void _onFocusChanged() {
+    // When search bar gains focus, close any open bottom sheet
+    if (_searchFocusNode.hasFocus && _contextMenuPlace != null) {
+      setState(() {
+        _contextMenuPlace = null;
+        _contextMenuLocation = null;
+      });
+    }
+    // Trigger rebuild when focus changes to update background
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     final searchState = ref.watch(maypoleSearchViewModelProvider);
     final l10n = AppLocalizations.of(context)!;
+    final currentPosition = ref.watch(currentPositionProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.searchMaypoles),
-        automaticallyImplyLeading: !AppConfig.isWideScreen,
-      ),
-      body: Column(
+      backgroundColor: darkPurple, // Dark purple background while map loads
+      // No app bar - search bar makes it redundant
+      appBar: null,
+      body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: l10n.searchForMaypole,
-                hintStyle: TextStyle(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.3),
+          // Google Map in the background - full screen
+          GoogleMap(
+            onMapCreated: (controller) async {
+              _mapController = controller;
+              debugPrint('🗺️ Map created');
+              // Apply dark map style
+              try {
+                await controller.setMapStyle(_darkMapStyle);
+                debugPrint('✅ Map style applied successfully');
+              } catch (e) {
+                debugPrint('⚠️ Error applying map style: $e');
+              }
+              // Mark map as loaded after a short delay to ensure tiles are rendered
+              await Future.delayed(const Duration(milliseconds: 500));
+              if (mounted) {
+                setState(() {
+                  _isMapLoaded = true;
+                });
+              }
+            },
+            initialCameraPosition: CameraPosition(
+              target: currentPosition.value != null
+                  ? LatLng(currentPosition.value!.latitude, currentPosition.value!.longitude)
+                  : const LatLng(37.7749, -122.4194),
+              zoom: 14.0,
+            ),
+            myLocationEnabled: true,
+            myLocationButtonEnabled: true,
+            mapType: MapType.normal,
+            onTap: _onMapTapped,
+            zoomControlsEnabled: false,
+            // Note: Google Maps POI info windows will still appear
+            // This is a limitation of the google_maps_flutter package
+          ),
+
+          // Overlay with search bar and results
+          Column(
+            children: [
+              // Add safe area padding on mobile to push search bar below status bar (half distance)
+              // This container gets tinted when search is active
+              if (!AppConfig.isWideScreen)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  height: MediaQuery.of(context).padding.top + (kToolbarHeight / 2),
+                  color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
+                      ? darkPurple.withOpacity(0.9) // 90% opacity when focused/has text
+                      : Colors.transparent, // Transparent when unfocused and empty
                 ),
-                filled: true,
-                fillColor: lightPurple,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 2.0,
+              // Search bar with conditional background and tighter padding
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
+                    ? darkPurple.withOpacity(0.9) // 90% opacity when focused/has text
+                    : Colors.transparent, // Transparent when unfocused and empty
+                padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 4.0), // Reduced bottom padding
+                child: TextField(
+                  controller: _searchController,
+                  focusNode: _searchFocusNode,
+                  decoration: InputDecoration(
+                    hintText: l10n.searchForMaypole,
+                    hintStyle: TextStyle(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.3),
+                    ),
+                    filled: true,
+                    fillColor: lightPurple,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide(
+                        color: skyBlue,
+                        width: 2.0,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    suffixIcon: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              _searchFocusNode.unfocus();
+                              ref.read(maypoleSearchViewModelProvider.notifier).searchMaypoles('');
+                            },
+                          )
+                        : null,
                   ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+              ),
+
+              // Animated search results list with semi-transparent background
+              Expanded(
+                child: AnimatedOpacity(
+                  opacity: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty) ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 300),
+                  child: IgnorePointer(
+                    // When search is NOT active, ignore pointer events (allow map clicks through)
+                    // When search IS active, don't ignore (block map clicks)
+                    ignoring: !_searchFocusNode.hasFocus && _searchController.text.isEmpty,
+                    child: GestureDetector(
+                      // Absorb taps on the background to close search and prevent map clicks
+                      onTap: () {
+                        if (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty) {
+                          _searchController.clear();
+                          _searchFocusNode.unfocus();
+                          ref.read(maypoleSearchViewModelProvider.notifier).searchMaypoles('');
+                        }
+                      },
+                      child: Container(
+                        color: darkPurple.withOpacity(0.9), // 90% opacity background
+                        child: searchState.when(
+                          data: (predictions) => _buildPredictionsList(predictions),
+                          loading: () => const Center(child: CircularProgressIndicator()),
+                          error: (error, stackTrace) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              ErrorDialog.show(context, error);
+                            });
+                            return const Center(child: CircularProgressIndicator());
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-              autofocus: true,
-            ),
+            ],
           ),
-          Expanded(
-            child: searchState.when(
-              data: (predictions) => _buildPredictionsList(predictions),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stackTrace) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  ErrorDialog.show(context, error);
-                });
-                return const Center(child: CircularProgressIndicator());
-              },
+
+          // Loading overlay to cover white flash while map loads
+          if (!_isMapLoaded)
+            Container(
+              color: darkPurple,
+              child: const Center(
+                child: CircularProgressIndicator(
+                  color: skyBlue,
+                ),
+              ),
             ),
-          ),
+          
+          // Non-modal bottom sheet overlay
+          if (_contextMenuPlace != null && _contextMenuLocation != null)
+            _buildBottomSheet(_contextMenuPlace!, _contextMenuLocation!),
         ],
       ),
     );
@@ -190,5 +420,213 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
           .read(maypoleSearchViewModelProvider.notifier)
           .searchMaypoles(_searchController.text);
     });
+  }
+
+  Future<void> _onMapTapped(LatLng position) async {
+    // Don't handle map taps if search is focused or has text
+    if (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty) {
+      return;
+    }
+
+    debugPrint('🗺️ Map tapped at: ${position.latitude}, ${position.longitude}');
+
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Reverse geocode to get place details
+      final searchService = ref.read(maypoleSearchServiceProvider);
+      final placeDetails = await searchService.reverseGeocode(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (!mounted) return;
+
+      // Close loading dialog
+      Navigator.pop(context);
+
+      if (placeDetails != null) {
+        setState(() {
+          _selectedPlace = placeDetails;
+          _selectedLocation = position;
+          _contextMenuPlace = placeDetails;
+          _contextMenuLocation = position;
+        });
+      } else {
+        // No place found, show a generic location option
+        setState(() {
+          _contextMenuPlace = {'isGeneric': true};
+          _contextMenuLocation = position;
+        });
+      }
+    } catch (e) {
+      debugPrint('💥 Error reverse geocoding: $e');
+      if (!mounted) return;
+
+      // Close loading dialog
+      Navigator.pop(context);
+
+      // Show error but still allow generic location
+      ErrorDialog.show(context, e);
+      setState(() {
+        _contextMenuPlace = {'isGeneric': true};
+        _contextMenuLocation = position;
+      });
+    }
+  }
+
+  Widget _buildBottomSheet(Map<String, dynamic> placeDetails, LatLng position) {
+    final l10n = AppLocalizations.of(context)!;
+    final isGeneric = placeDetails['isGeneric'] == true;
+    
+    final displayName = isGeneric
+        ? 'Location (${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)})'
+        : (placeDetails['displayName']?['text'] as String? ?? 'Unknown Place');
+    
+    final formattedAddress = isGeneric
+        ? 'Selected location on map'
+        : (placeDetails['formattedAddress'] as String? ?? '');
+    
+    final placeId = isGeneric
+        ? 'loc_${position.latitude}_${position.longitude}'
+        : (placeDetails['id'] as String? ?? '');
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: GestureDetector(
+        // Absorb taps to prevent map interaction
+        onTap: () {},
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                displayName,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              if (formattedAddress.isNotEmpty)
+                Text(
+                  formattedAddress,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
+                      ),
+                ),
+              const SizedBox(height: 12),
+              // View on Google Maps link
+              InkWell(
+                onTap: () async {
+                  final url = Uri.parse(
+                    'https://www.google.com/maps/search/?api=1&query=${position.latitude},${position.longitude}'
+                  );
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.open_in_new,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'View on Google Maps',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            decoration: TextDecoration.underline,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _contextMenuPlace = null;
+                      _contextMenuLocation = null;
+                    });
+                    _navigateToChat(
+                      placeId: placeId,
+                      placeName: displayName,
+                      address: formattedAddress,
+                      latitude: position.latitude,
+                      longitude: position.longitude,
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    l10n.chatHere,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _navigateToChat({
+    required String placeId,
+    required String placeName,
+    required String address,
+    required double latitude,
+    required double longitude,
+  }) {
+    // Create a PlacePrediction and return it to the caller (home screen)
+    // This allows the home screen to handle navigation consistently
+    final prediction = PlacePrediction(
+      place: placeName, // Use placeName as the display text (full text)
+      placeId: placeId,
+      placeName: placeName,
+      address: address,
+      latitude: latitude,
+      longitude: longitude,
+    );
+    
+    context.pop(prediction);
   }
 }

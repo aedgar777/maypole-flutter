@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'utils/platform_info.dart';
 
@@ -153,6 +154,20 @@ class AppConfig {
     }
 
     // Fall back to dotenv
+    // Use web-specific key for web platform if available
+    if (kIsWeb) {
+      if (isProduction) {
+        final webKey = dotenv.env['GOOGLE_PLACES_WEB_PROD_API_KEY'];
+        if (webKey != null && webKey.isNotEmpty) return webKey;
+        return dotenv.env['GOOGLE_PLACES_PROD_API_KEY'] ?? '';
+      } else {
+        final webKey = dotenv.env['GOOGLE_PLACES_WEB_DEV_API_KEY'];
+        if (webKey != null && webKey.isNotEmpty) return webKey;
+        return dotenv.env['GOOGLE_PLACES_DEV_API_KEY'] ?? '';
+      }
+    }
+    
+    // Mobile platforms
     if (isProduction) {
       return dotenv.env['GOOGLE_PLACES_PROD_API_KEY'] ?? '';
     } else {
@@ -169,11 +184,22 @@ class AppConfig {
     }
 
     // Fall back to dotenv
-    if (isProduction) {
-      return dotenv.env['CLOUD_FUNCTIONS_PROD_URL'] ?? '';
-    } else {
-      return dotenv.env['CLOUD_FUNCTIONS_DEV_URL'] ?? '';
+    final url = isProduction
+        ? dotenv.env['CLOUD_FUNCTIONS_PROD_URL']
+        : dotenv.env['CLOUD_FUNCTIONS_DEV_URL'];
+    
+    if (url != null && url.isNotEmpty) {
+      return url;
     }
+    
+    // Hardcoded fallback for web builds (where .env is not available)
+    if (kIsWeb) {
+      return isProduction
+          ? 'https://places-autocomplete-1069925301177.us-central1.run.app'
+          : 'https://places-autocomplete-n7tnn27vga-uc.a.run.app';
+    }
+    
+    return '';
   }
 
   /// Provides the app's base URL for sharing/deeplinks based on the environment.
