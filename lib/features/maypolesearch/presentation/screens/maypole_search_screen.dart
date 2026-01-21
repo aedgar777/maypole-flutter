@@ -202,7 +202,7 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
               zoom: 14.0,
             ),
             myLocationEnabled: true,
-            myLocationButtonEnabled: true,
+            myLocationButtonEnabled: false, // Disable default button - we'll add custom one
             mapType: MapType.normal,
             onTap: _onMapTapped,
             zoomControlsEnabled: false,
@@ -357,6 +357,29 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                 ),
               ),
             ),
+          
+          // Custom "My Location" button (bottom right)
+          Positioned(
+            bottom: _contextMenuPlace != null ? 220 : 16, // Move up if bottom sheet is showing
+            right: 16,
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(4),
+              elevation: 4,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(4),
+                onTap: _centerOnUserLocation,
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  child: Icon(
+                    Icons.my_location,
+                    color: skyBlue,
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -450,6 +473,24 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
           .read(maypoleSearchViewModelProvider.notifier)
           .searchMaypoles(_searchController.text);
     });
+  }
+
+  Future<void> _centerOnUserLocation() async {
+    final currentPosition = ref.read(currentPositionProvider);
+    
+    if (currentPosition.value != null && _mapController != null) {
+      await _mapController!.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(
+              currentPosition.value!.latitude,
+              currentPosition.value!.longitude,
+            ),
+            zoom: 16.0,
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _onMapTapped(LatLng position) async {
