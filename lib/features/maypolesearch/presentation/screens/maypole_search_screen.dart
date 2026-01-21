@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart' show LocationPermission;
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maypole/core/app_config.dart';
@@ -10,6 +13,8 @@ import 'package:maypole/core/services/location_provider.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:maypole/core/ads/widgets/web_ad_widget.dart';
+import 'package:maypole/core/ads/ad_config.dart';
 import '../../data/models/autocomplete_response.dart';
 import '../../data/services/maypole_search_service_provider.dart';
 import '../../maypole_search_providers.dart';
@@ -167,6 +172,7 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
     final searchState = ref.watch(maypoleSearchViewModelProvider);
     final l10n = AppLocalizations.of(context)!;
     final currentPosition = ref.watch(currentPositionProvider);
+    final hasLocationPermission = ref.watch(hasLocationPermissionProvider);
 
     return Scaffold(
       backgroundColor: darkPurple, // Dark purple background while map loads
@@ -186,6 +192,28 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
               } catch (e) {
                 debugPrint('⚠️ Error applying map style: $e');
               }
+              
+              // Move to user's location if permission is granted
+              if (hasLocationPermission.value == true) {
+                debugPrint('📍 Permission granted, fetching user location...');
+                final locationService = ref.read(locationServiceProvider);
+                final position = await locationService.getCurrentPosition();
+                
+                if (position != null && mounted) {
+                  debugPrint('✅ Moving map to user location: ${position.latitude}, ${position.longitude}');
+                  await controller.animateCamera(
+                    CameraUpdate.newCameraPosition(
+                      CameraPosition(
+                        target: LatLng(position.latitude, position.longitude),
+                        zoom: 14.0,
+                      ),
+                    ),
+                  );
+                }
+              } else {
+                debugPrint('⚠️ No location permission, using default position');
+              }
+              
               // Mark map as loaded after a short delay to ensure tiles are rendered
               await Future.delayed(const Duration(milliseconds: 500));
               if (mounted) {
@@ -195,13 +223,14 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
               }
             },
             initialCameraPosition: CameraPosition(
+              // Start with a default position (will be updated in onMapCreated if permission granted)
               target: currentPosition.value != null
                   ? LatLng(currentPosition.value!.latitude, currentPosition.value!.longitude)
-                  : const LatLng(37.7749, -122.4194),
+                  : const LatLng(37.7749, -122.4194), // San Francisco as fallback
               zoom: 14.0,
             ),
             myLocationEnabled: true,
-            myLocationButtonEnabled: true,
+            myLocationButtonEnabled: false, // Disable default button - we'll add custom one
             mapType: MapType.normal,
             onTap: _onMapTapped,
             zoomControlsEnabled: false,
@@ -222,13 +251,19 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                       ? darkPurple.withOpacity(0.9) // 90% opacity when focused/has text
                       : Colors.transparent, // Transparent when unfocused and empty
                 ),
-              // Search bar with conditional background and tighter padding
+              // Search bar with conditional background and padding
+              // Extra left padding on iOS to make room for back button
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
                     ? darkPurple.withOpacity(0.9) // 90% opacity when focused/has text
                     : Colors.transparent, // Transparent when unfocused and empty
-                padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 4.0), // Reduced bottom padding
+                padding: EdgeInsets.fromLTRB(
+                  (!kIsWeb && Platform.isIOS) ? 56.0 : 8.0, // Extra left padding on iOS for back button
+                  8.0,
+                  8.0,
+                  4.0,
+                ),
                 child: TextField(
                   controller: _searchController,
                   focusNode: _searchFocusNode,
@@ -327,6 +362,54 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
           // Non-modal bottom sheet overlay
           if (_contextMenuPlace != null && _contextMenuLocation != null)
             _buildBottomSheet(_contextMenuPlace!, _contextMenuLocation!),
+          
+          // Back button for iOS (upper left - iOS standard)
+          if (!kIsWeb && Platform.isIOS)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + (kToolbarHeight / 2) + 8,
+              left: 8,
+              child: Material(
+                color: darkPurple.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(20),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => context.pop(),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          
+          // Custom "My Location" button (bottom right) - placed LAST to appear on top
+          Positioned(
+            bottom: _contextMenuPlace != null ? 280 : 16, // Move up well above bottom sheet when showing
+            right: 16,
+            child: Material(
+              color: (hasLocationPermission.value == true) 
+                  ? skyBlue // Blue background when permission granted
+                  : Colors.grey[600], // Gray when no permission
+              borderRadius: BorderRadius.circular(4),
+              elevation: 4,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(4),
+                onTap: () => _handleLocationButtonTap(hasLocationPermission.value == true),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  child: const Icon(
+                    Icons.my_location,
+                    color: Colors.white, // White icon
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -420,6 +503,87 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
           .read(maypoleSearchViewModelProvider.notifier)
           .searchMaypoles(_searchController.text);
     });
+  }
+
+  Future<void> _handleLocationButtonTap(bool hasPermission) async {
+    if (!hasPermission) {
+      // Show permission dialog
+      _showLocationPermissionDialog();
+      return;
+    }
+    
+    // Center on location
+    await _centerOnUserLocation();
+  }
+
+  void _showLocationPermissionDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.locationPermissionRequired),
+        content: Text(l10n.locationPermissionMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              final locationService = ref.read(locationServiceProvider);
+              final permission = await locationService.requestPermission();
+              
+              if (permission == LocationPermission.denied || 
+                  permission == LocationPermission.deniedForever) {
+                if (mounted) {
+                  // Open settings if permission is permanently denied
+                  if (permission == LocationPermission.deniedForever) {
+                    await locationService.openAppSettings();
+                  }
+                }
+              } else {
+                // Permission granted, refresh and center
+                if (mounted) {
+                  ref.invalidate(hasLocationPermissionProvider);
+                  ref.invalidate(currentPositionProvider);
+                  await _centerOnUserLocation();
+                }
+              }
+            },
+            child: Text(l10n.openSettings),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _centerOnUserLocation() async {
+    try {
+      // Force refresh the position
+      final locationService = ref.read(locationServiceProvider);
+      final position = await locationService.getCurrentPosition();
+      
+      if (position != null && _mapController != null) {
+        await _mapController!.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: LatLng(
+                position.latitude,
+                position.longitude,
+              ),
+              zoom: 16.0,
+            ),
+          ),
+        );
+        debugPrint('✅ Centered on user location: ${position.latitude}, ${position.longitude}');
+      } else {
+        debugPrint('⚠️ Could not get user location');
+      }
+    } catch (e) {
+      debugPrint('💥 Error centering on location: $e');
+    }
   }
 
   Future<void> _onMapTapped(LatLng position) async {
@@ -569,6 +733,12 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+              // Web ad banner
+              if (kIsWeb && AdConfig.webAdsEnabled)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: WebHorizontalBannerAd(adSlot: '3398941414'), // Maypole Web Banner
+                ),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(

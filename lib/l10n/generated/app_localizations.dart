@@ -470,6 +470,18 @@ abstract class AppLocalizations {
   /// **'Open Settings'**
   String get openSettings;
 
+  /// Title for location permission dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Location Permission Required'**
+  String get locationPermissionRequired;
+
+  /// Message explaining why location permission is needed
+  ///
+  /// In en, this message translates to:
+  /// **'To center the map on your location, please grant location permission in your device settings.'**
+  String get locationPermissionMessage;
+
   /// Section header for notification types
   ///
   /// In en, this message translates to:

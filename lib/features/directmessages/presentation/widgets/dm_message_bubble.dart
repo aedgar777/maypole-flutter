@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -203,27 +204,36 @@ class DmMessageBubble extends StatelessWidget {
         ? BorderRadius.zero 
         : (message.body.isEmpty ? borderRadius : BorderRadius.circular(8));
     
-    return GestureDetector(
-      onTap: () => _showFullscreenImage(context, 0),
-      child: ClipRRect(
-        borderRadius: effectiveRadius,
-        child: CachedNetworkImage(
-          imageUrl: imageUrl,
+    final imageWidget = ClipRRect(
+      borderRadius: effectiveRadius,
+      child: CachedNetworkImage(
+        imageUrl: imageUrl,
+        height: 250,
+        width: kIsWeb ? 250 : double.infinity, // Keep square on web
+        fit: BoxFit.cover,
+        placeholder: (context, url) => Container(
           height: 250,
-          width: double.infinity,
-          fit: BoxFit.cover,
-          placeholder: (context, url) => Container(
-            height: 250,
-            color: Colors.grey[300],
-            child: const Center(child: CircularProgressIndicator()),
-          ),
-          errorWidget: (context, url, error) => Container(
-            height: 250,
-            color: Colors.grey[300],
-            child: const Icon(Icons.error),
-          ),
+          width: kIsWeb ? 250 : null,
+          color: Colors.grey[300],
+          child: const Center(child: CircularProgressIndicator()),
+        ),
+        errorWidget: (context, url, error) => Container(
+          height: 250,
+          width: kIsWeb ? 250 : null,
+          color: Colors.grey[300],
+          child: const Icon(Icons.error),
         ),
       ),
+    );
+
+    return GestureDetector(
+      onTap: () => _showFullscreenImage(context, 0),
+      child: kIsWeb 
+          ? Align(
+              alignment: isOwnMessage ? Alignment.centerRight : Alignment.centerLeft,
+              child: imageWidget,
+            )
+          : imageWidget,
     );
   }
 

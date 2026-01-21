@@ -51,6 +51,10 @@
 	<string>We need your location to verify you're near a place before posting pictures and to show location badges on messages</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>We need your location to verify you're near a place before posting pictures and to show location badges on messages</string>
+	<key>NSCameraUsageDescription</key>
+	<string>We need access to your camera to take profile pictures and photos for your posts</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need access to your photo library to select profile pictures and photos for your posts</string>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-9803674282352310~6862207571</string>
 	<key>FlutterDeepLinkingEnabled</key>

@@ -15,6 +15,7 @@ import 'package:maypole/features/maypolechat/presentation/maypole_chat_providers
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import 'package:maypole/core/ads/widgets/banner_ad_widget.dart';
 
+
 /// A panel showing the list of maypole chats and DM threads.
 /// This widget is used in both mobile and desktop layouts.
 class MaypoleListPanel extends ConsumerStatefulWidget {
@@ -107,21 +108,10 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
                 ],
               ),
             ),
-            body: Column(
+            body: TabBarView(
               children: [
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      _buildMaypoleList(context, l10n),
-                      _buildDmList(context, l10n, userId),
-                    ],
-                  ),
-                ),
-                // Show banner at bottom on web (fixed in sidebar)
-                if (kIsWeb)
-                  const BannerAdWidget(
-                    padding: EdgeInsets.all(8),
-                  ),
+                _buildMaypoleList(context, l10n),
+                _buildDmList(context, l10n, userId),
               ],
             ),
             floatingActionButton: AnimatedScale(
@@ -160,16 +150,16 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
       );
     }
 
-    // Calculate total items including ads (1 ad per 6 threads)
+    // Calculate total items including ads (1 ad per 6 threads) for mobile
     final adCount = filteredMaypoleThreads.length ~/ 6;
     final totalItems = filteredMaypoleThreads.length + adCount;
 
     return ListView.builder(
       itemCount: totalItems,
       itemBuilder: (context, index) {
-        // Show ad every 6 items (at positions 6, 13, 20, etc.)
+        // Show ad every 6 items (at positions 6, 13, 20, etc.) - mobile only
         if (index > 0 && (index + 1) % 7 == 0) {
-          return const ListBannerAdWidget(
+          return const BannerAdWidget(
             padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
           );
         }
@@ -259,16 +249,16 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
         final partnerIds = filteredDmThreads.map((thread) => thread.partnerId).toList();
         ref.read(profilePictureCacheServiceProvider).prefetchProfilePictures(partnerIds);
 
-        // Calculate total items including ads (1 ad per 6 threads)
+        // Calculate total items including ads (1 ad per 6 threads) for mobile
         final adCount = filteredDmThreads.length ~/ 6;
         final totalItems = filteredDmThreads.length + adCount;
 
         return ListView.builder(
           itemCount: totalItems,
           itemBuilder: (context, index) {
-            // Show ad every 6 items (at positions 6, 13, 20, etc.)
+            // Show ad every 6 items (at positions 6, 13, 20, etc.) - mobile only
             if (index > 0 && (index + 1) % 7 == 0) {
-              return const ListBannerAdWidget(
+              return const BannerAdWidget(
                 padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               );
             }
@@ -278,8 +268,8 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
             if (threadIndex >= filteredDmThreads.length) {
               return const SizedBox.shrink();
             }
-            
-            final threadMetadata = filteredDmThreads[threadIndex];
+
+            final threadMetadata = filteredDmThreads[index];
             final isSelected =
                 widget.selectedThreadId == threadMetadata.id && !widget.isMaypoleThread;
             final formattedTimestamp = DateTimeUtils.formatThreadTimestamp(
