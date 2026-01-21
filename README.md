@@ -20,6 +20,8 @@ Imagine walking into your favorite coffee shop and instantly being able to chat 
 - **🔔 Push Notifications**: Stay updated with community activity via Firebase Cloud Messaging
 - **🎨 Modern UI/UX**: Beautiful, responsive design with dark theme
 - **🔒 Privacy-First**: Control who can message you, block users, and manage your data
+- **🛡️ Content Moderation**: AI-powered moderation via Hive to keep communities safe
+- **📱 Cross-Platform Ads**: AdMob for mobile and AdSense for web with feature flag control
 
 ### User Experience Highlights
 
@@ -67,7 +69,9 @@ Imagine walking into your favorite coffee shop and instantly being able to chat 
 
 **External Services**
 - **Google Places API** - Location search and place data
-- **Google Mobile Ads 5.2** - AdMob integration for monetization
+- **Google Mobile Ads 5.2** - AdMob integration for mobile monetization
+- **Google AdSense** - Web platform ad monetization with display ads
+- **Hive Moderation API** - AI-powered content moderation for text and images
 
 **Development Tools**
 - **Flutter Lints 6.0** - Comprehensive code quality rules
@@ -93,6 +97,8 @@ Imagine walking into your favorite coffee shop and instantly being able to chat 
   - `users`: User profiles and authentication data
   - `DMThreads`: Private direct message conversations
   - `notifications`: Push notification management
+  - `contentReports`: User-reported content for moderation review
+  - `moderationLogs`: Hive moderation decisions and actions
 - **Composite Indexes**: Optimized queries for message pagination
 - **Security Rules**: Row-level security for data access control
 
@@ -150,6 +156,34 @@ Imagine walking into your favorite coffee shop and instantly being able to chat 
 - **Singleton Services**: Shared service instances
 - **Factory Pattern**: Object creation abstraction
 
+### Content Safety & Moderation
+
+**Hive AI Moderation**
+- **Real-Time Content Scanning**: All user-generated text and images are analyzed by Hive AI before display
+- **Multi-Class Detection**: Identifies inappropriate content including hate speech, explicit material, and harassment
+- **Automated Actions**: Content flagged as high-risk is automatically hidden or deleted
+- **User Reporting**: Community members can report problematic content for review
+- **Moderation Dashboard**: Logs all moderation decisions for compliance and review
+
+**Privacy & Safety Features**
+- User blocking and reporting
+- Content deletion by authors
+- Proximity-based messaging (location verification)
+- Firebase security rules for data access control
+
+### Monetization Strategy
+
+**Multi-Platform Ad Integration**
+- **Mobile (iOS/Android)**: Google AdMob with native banner and interstitial ads
+- **Web**: Google AdSense with responsive display ads
+- **Feature Flags**: Firebase Remote Config for ad control
+  - `ads_enabled`: Master kill switch for all ads
+  - `ads_web_enabled`: Web-specific ad toggle
+  - `ads_banner_enabled`: Mobile banner ad control
+  - `ads_interstitial_enabled`: Mobile full-screen ad control
+- **Environment-Based**: Automatic test ads in development, production ads in release
+- **Platform-Adaptive**: Seamless cross-platform ad display with unified widget API
+
 ---
 
 ## 📁 Project Structure
@@ -161,7 +195,11 @@ maypole-flutter/
 │   │   ├── app_router.dart      # Navigation configuration
 │   │   ├── app_theme.dart       # UI theming
 │   │   ├── firebase_options.dart # Firebase configuration
+│   │   ├── ads/                 # Monetization (AdMob & AdSense)
+│   │   │   ├── ad_config.dart   # Ad unit IDs and feature flags
+│   │   │   └── widgets/         # Ad display widgets
 │   │   └── services/            # Shared services
+│   │       ├── hive_moderation_provider.dart # Content moderation
 │   ├── features/                # Feature modules
 │   │   ├── identity/            # Authentication & user profiles
 │   │   ├── maypolechat/         # Location-based chat rooms
@@ -177,6 +215,8 @@ maypole-flutter/
 ├── ios/                         # iOS native code & Fastlane
 ├── macos/                       # macOS native code
 ├── web/                         # Web platform code
+│   ├── index.html               # Main HTML with AdSense integration
+│   └── ads.txt                  # AdSense site verification
 ├── scripts/                     # Build automation scripts
 ├── test/                        # Unit and widget tests
 ├── assets/                      # Images, fonts, and resources
