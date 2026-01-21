@@ -18,6 +18,7 @@ class ErrorDialog {
 
     return showDialog<void>(
       context: context,
+      barrierDismissible: true, // Allow dismissing by tapping outside
       builder: (context) =>
           AlertDialog(
             title: Row(

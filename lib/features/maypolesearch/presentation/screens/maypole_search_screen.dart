@@ -9,6 +9,7 @@ import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/services/location_provider.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/autocomplete_response.dart';
 import '../../data/services/maypole_search_service_provider.dart';
 import '../../maypole_search_providers.dart';
@@ -126,6 +127,10 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
   Map<String, dynamic>? _selectedPlace;
   LatLng? _selectedLocation;
   bool _isMapLoaded = false;
+  
+  // Context menu state
+  Map<String, dynamic>? _contextMenuPlace;
+  LatLng? _contextMenuLocation;
 
   @override
   void initState() {
@@ -146,6 +151,13 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
   }
 
   void _onFocusChanged() {
+    // When search bar gains focus, close any open bottom sheet
+    if (_searchFocusNode.hasFocus && _contextMenuPlace != null) {
+      setState(() {
+        _contextMenuPlace = null;
+        _contextMenuLocation = null;
+      });
+    }
     // Trigger rebuild when focus changes to update background
     setState(() {});
   }
@@ -158,13 +170,11 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
 
     return Scaffold(
       backgroundColor: darkPurple, // Dark purple background while map loads
-      appBar: AppBar(
-        title: Text(l10n.searchMaypoles),
-        automaticallyImplyLeading: !AppConfig.isWideScreen,
-      ),
+      // No app bar - search bar makes it redundant
+      appBar: null,
       body: Stack(
         children: [
-          // Google Map in the background - takes full screen
+          // Google Map in the background - full screen
           GoogleMap(
             onMapCreated: (controller) async {
               _mapController = controller;
@@ -195,18 +205,30 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
             mapType: MapType.normal,
             onTap: _onMapTapped,
             zoomControlsEnabled: false,
+            // Note: Google Maps POI info windows will still appear
+            // This is a limitation of the google_maps_flutter package
           ),
 
           // Overlay with search bar and results
           Column(
             children: [
-              // Search bar with conditional background
+              // Add safe area padding on mobile to push search bar below status bar (half distance)
+              // This container gets tinted when search is active
+              if (!AppConfig.isWideScreen)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  height: MediaQuery.of(context).padding.top + (kToolbarHeight / 2),
+                  color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
+                      ? darkPurple.withOpacity(0.9) // 90% opacity when focused/has text
+                      : Colors.transparent, // Transparent when unfocused and empty
+                ),
+              // Search bar with conditional background and tighter padding
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
                     ? darkPurple.withOpacity(0.9) // 90% opacity when focused/has text
                     : Colors.transparent, // Transparent when unfocused and empty
-                padding: const EdgeInsets.all(8.0),
+                padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 4.0), // Reduced bottom padding
                 child: TextField(
                   controller: _searchController,
                   focusNode: _searchFocusNode,
@@ -259,18 +281,30 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                   opacity: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty) ? 1.0 : 0.0,
                   duration: const Duration(milliseconds: 300),
                   child: IgnorePointer(
+                    // When search is NOT active, ignore pointer events (allow map clicks through)
+                    // When search IS active, don't ignore (block map clicks)
                     ignoring: !_searchFocusNode.hasFocus && _searchController.text.isEmpty,
-                    child: Container(
-                      color: darkPurple.withOpacity(0.9), // 90% opacity background
-                      child: searchState.when(
-                        data: (predictions) => _buildPredictionsList(predictions),
-                        loading: () => const Center(child: CircularProgressIndicator()),
-                        error: (error, stackTrace) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            ErrorDialog.show(context, error);
-                          });
-                          return const Center(child: CircularProgressIndicator());
-                        },
+                    child: GestureDetector(
+                      // Absorb taps on the background to close search and prevent map clicks
+                      onTap: () {
+                        if (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty) {
+                          _searchController.clear();
+                          _searchFocusNode.unfocus();
+                          ref.read(maypoleSearchViewModelProvider.notifier).searchMaypoles('');
+                        }
+                      },
+                      child: Container(
+                        color: darkPurple.withOpacity(0.9), // 90% opacity background
+                        child: searchState.when(
+                          data: (predictions) => _buildPredictionsList(predictions),
+                          loading: () => const Center(child: CircularProgressIndicator()),
+                          error: (error, stackTrace) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              ErrorDialog.show(context, error);
+                            });
+                            return const Center(child: CircularProgressIndicator());
+                          },
+                        ),
                       ),
                     ),
                   ),
@@ -289,6 +323,10 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                 ),
               ),
             ),
+          
+          // Non-modal bottom sheet overlay
+          if (_contextMenuPlace != null && _contextMenuLocation != null)
+            _buildBottomSheet(_contextMenuPlace!, _contextMenuLocation!),
         ],
       ),
     );
@@ -385,8 +423,8 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
   }
 
   Future<void> _onMapTapped(LatLng position) async {
-    // Don't handle map taps if search is focused
-    if (_searchFocusNode.hasFocus) {
+    // Don't handle map taps if search is focused or has text
+    if (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty) {
       return;
     }
 
@@ -418,13 +456,15 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
         setState(() {
           _selectedPlace = placeDetails;
           _selectedLocation = position;
+          _contextMenuPlace = placeDetails;
+          _contextMenuLocation = position;
         });
-
-        // Show bottom sheet with place info
-        _showPlaceBottomSheet(placeDetails, position);
       } else {
         // No place found, show a generic location option
-        _showGenericLocationBottomSheet(position);
+        setState(() {
+          _contextMenuPlace = {'isGeneric': true};
+          _contextMenuLocation = position;
+        });
       }
     } catch (e) {
       debugPrint('💥 Error reverse geocoding: $e');
@@ -435,140 +475,135 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
 
       // Show error but still allow generic location
       ErrorDialog.show(context, e);
-      _showGenericLocationBottomSheet(position);
+      setState(() {
+        _contextMenuPlace = {'isGeneric': true};
+        _contextMenuLocation = position;
+      });
     }
   }
 
-  void _showPlaceBottomSheet(Map<String, dynamic> placeDetails, LatLng position) {
+  Widget _buildBottomSheet(Map<String, dynamic> placeDetails, LatLng position) {
     final l10n = AppLocalizations.of(context)!;
+    final isGeneric = placeDetails['isGeneric'] == true;
     
-    final displayName = placeDetails['displayName']?['text'] as String? ?? 'Unknown Place';
-    final formattedAddress = placeDetails['formattedAddress'] as String? ?? '';
-    final placeId = placeDetails['id'] as String? ?? '';
+    final displayName = isGeneric
+        ? 'Location (${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)})'
+        : (placeDetails['displayName']?['text'] as String? ?? 'Unknown Place');
+    
+    final formattedAddress = isGeneric
+        ? 'Selected location on map'
+        : (placeDetails['formattedAddress'] as String? ?? '');
+    
+    final placeId = isGeneric
+        ? 'loc_${position.latitude}_${position.longitude}'
+        : (placeDetails['id'] as String? ?? '');
 
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              displayName,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            if (formattedAddress.isNotEmpty)
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: GestureDetector(
+        // Absorb taps to prevent map interaction
+        onTap: () {},
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(
-                formattedAddress,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.7),
+                displayName,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
               ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context); // Close bottom sheet
-                  _navigateToChat(
-                    placeId: placeId,
-                    placeName: displayName,
-                    address: formattedAddress,
-                    latitude: position.latitude,
-                    longitude: position.longitude,
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+              const SizedBox(height: 8),
+              if (formattedAddress.isNotEmpty)
+                Text(
+                  formattedAddress,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
+                      ),
                 ),
-                child: Text(
-                  l10n.chatHere,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+              const SizedBox(height: 12),
+              // View on Google Maps link
+              InkWell(
+                onTap: () async {
+                  final url = Uri.parse(
+                    'https://www.google.com/maps/search/?api=1&query=${position.latitude},${position.longitude}'
+                  );
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.open_in_new,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'View on Google Maps',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            decoration: TextDecoration.underline,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _contextMenuPlace = null;
+                      _contextMenuLocation = null;
+                    });
+                    _navigateToChat(
+                      placeId: placeId,
+                      placeName: displayName,
+                      address: formattedAddress,
+                      latitude: position.latitude,
+                      longitude: position.longitude,
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    l10n.chatHere,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showGenericLocationBottomSheet(LatLng position) {
-    final l10n = AppLocalizations.of(context)!;
-    
-    final locationName = 'Location (${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)})';
-
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              locationName,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Selected location on map',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
-                  ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context); // Close bottom sheet
-                  _navigateToChat(
-                    placeId: 'loc_${position.latitude}_${position.longitude}',
-                    placeName: locationName,
-                    address: '',
-                    latitude: position.latitude,
-                    longitude: position.longitude,
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  l10n.chatHere,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -581,11 +616,17 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
     required double latitude,
     required double longitude,
   }) {
-    context.push('/chat/$placeId', extra: {
-      'name': placeName,
-      'address': address,
-      'latitude': latitude,
-      'longitude': longitude,
-    });
+    // Create a PlacePrediction and return it to the caller (home screen)
+    // This allows the home screen to handle navigation consistently
+    final prediction = PlacePrediction(
+      place: placeName, // Use placeName as the display text (full text)
+      placeId: placeId,
+      placeName: placeName,
+      address: address,
+      latitude: latitude,
+      longitude: longitude,
+    );
+    
+    context.pop(prediction);
   }
 }
