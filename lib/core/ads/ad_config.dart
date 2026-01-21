@@ -44,6 +44,16 @@ class AdConfig {
       return 5; // Default: show every 5 location switches
     }
   }
+  
+  /// Whether web ads are enabled (locked behind master ads_enabled flag)
+  static bool get webAdsEnabled {
+    if (!adsEnabled) return false; // Must have master flag enabled
+    try {
+      return RemoteConfigService().webAdsEnabled;
+    } catch (e) {
+      return true; // Default to enabled if Remote Config fails
+    }
+  }
 
   /// Whether to use test ads
   /// Automatically determined based on environment (dev = test ads, prod = real ads)

@@ -284,6 +284,14 @@
   "@openSettings": {
     "description": "Button text to open system settings"
   },
+  "locationPermissionRequired": "Location Permission Required",
+  "@locationPermissionRequired": {
+    "description": "Title for location permission dialog"
+  },
+  "locationPermissionMessage": "To center the map on your location, please grant location permission in your device settings.",
+  "@locationPermissionMessage": {
+    "description": "Message explaining why location permission is needed"
+  },
   "notificationTypes": "Notification Types",
   "@notificationTypes": {
     "description": "Section header for notification types"
