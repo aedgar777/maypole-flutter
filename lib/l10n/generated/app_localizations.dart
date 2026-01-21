@@ -751,6 +751,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'has added an image'**
   String get hasAddedAnImage;
+
+  /// Button text to start chatting at a selected location
+  ///
+  /// In en, this message translates to:
+  /// **'Chat Here'**
+  String get chatHere;
+
+  /// Hint text for selecting places on the map
+  ///
+  /// In en, this message translates to:
+  /// **'Tap anywhere on the map to select a place'**
+  String get selectPlaceOnMap;
 }
 
 class _AppLocalizationsDelegate

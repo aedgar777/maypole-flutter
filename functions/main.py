@@ -26,14 +26,6 @@ def _get_pil_image():
 initialize_app()
 print("Firebase Admin initialized", flush=True)
 
-# CORS configuration
-CORS_HEADERS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Goog-Api-Key, X-Goog-Field-Mask',
-    'Access-Control-Max-Age': '3600',
-}
-
 @https_fn.on_request(
     cors=options.CorsOptions(
         cors_origins="*",
@@ -45,21 +37,15 @@ def places_autocomplete(req: https_fn.Request) -> https_fn.Response:
     """
     Proxy function for Google Places API autocomplete requests.
     This avoids CORS issues when calling from web clients.
+    CORS is handled by the decorator, so no manual headers needed.
     """
-    
-    # Handle preflight OPTIONS request
-    if req.method == 'OPTIONS':
-        return https_fn.Response(
-            status=204,
-            headers=CORS_HEADERS
-        )
     
     # Only allow POST requests
     if req.method != 'POST':
         return https_fn.Response(
             json.dumps({'error': 'Method not allowed'}),
             status=405,
-            headers={'Content-Type': 'application/json', **CORS_HEADERS}
+            headers={'Content-Type': 'application/json'}
         )
     
     try:
@@ -72,7 +58,7 @@ def places_autocomplete(req: https_fn.Request) -> https_fn.Response:
             return https_fn.Response(
                 json.dumps({'error': 'API key is required'}),
                 status=400,
-                headers={'Content-Type': 'application/json', **CORS_HEADERS}
+                headers={'Content-Type': 'application/json'}
             )
         
         # Get field mask from request headers or use default
@@ -93,7 +79,7 @@ def places_autocomplete(req: https_fn.Request) -> https_fn.Response:
             return https_fn.Response(
                 json.dumps({'error': 'Request body is required'}),
                 status=400,
-                headers={'Content-Type': 'application/json', **CORS_HEADERS}
+                headers={'Content-Type': 'application/json'}
             )
         
         # Make request to Google Places API
@@ -104,18 +90,18 @@ def places_autocomplete(req: https_fn.Request) -> https_fn.Response:
             timeout=10
         )
         
-        # Return the response with CORS headers
+        # Return the response (CORS headers added by decorator)
         return https_fn.Response(
             response.text,
             status=response.status_code,
-            headers={'Content-Type': 'application/json', **CORS_HEADERS}
+            headers={'Content-Type': 'application/json'}
         )
         
     except Exception as e:
         return https_fn.Response(
             json.dumps({'error': str(e)}),
             status=500,
-            headers={'Content-Type': 'application/json', **CORS_HEADERS}
+            headers={'Content-Type': 'application/json'}
         )
 
 

@@ -30,6 +30,8 @@
   "passwordsDoNotMatch": "Las contraseñas no coinciden",
   "searchMaypoles": "Buscar Maypoles",
   "searchForMaypole": "Buscar un maypole",
+  "chatHere": "Chatear aquí",
+  "selectPlaceOnMap": "Toca cualquier lugar en el mapa para seleccionar un lugar",
   "enterMessage": "Ingrese un mensaje",
   "devEnvironment": "DEV",
   "settings": "Configuración",

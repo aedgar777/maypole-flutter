@@ -16,6 +16,7 @@ import 'package:maypole/core/ads/ad_config.dart';
 import 'package:maypole/core/services/permissions_provider.dart';
 import '../../../identity/auth_providers.dart';
 import '../../../directmessages/presentation/dm_providers.dart';
+import '../../../maypolechat/presentation/maypole_chat_providers.dart';
 import '../widgets/maypole_list_panel.dart';
 
 /// State for tracking the selected thread in the home screen
@@ -310,7 +311,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final isWideScreen = MediaQuery.of(context).size.width >= 600;
 
       if (isWideScreen) {
-        // On wide screen, update the selected thread to show in the content panel
+        // On wide screen, automatically add to user's maypole list permanently
+        final authState = ref.read(authStateProvider);
+        final user = authState.value;
+        
+        if (user != null) {
+          final isAlreadyInList = user.maypoleChatThreads
+              .any((thread) => thread.id == result.placeId);
+          
+          if (!isAlreadyInList) {
+            // Add maypole to user's list immediately
+            try {
+              await ref.read(maypoleChatThreadServiceProvider).addMaypoleToUserList(
+                userId: user.firebaseID,
+                placeId: result.placeId,
+                placeName: result.placeName,
+                address: result.address,
+                latitude: result.latitude,
+                longitude: result.longitude,
+              );
+            } catch (e) {
+              debugPrint('⚠️ Error adding maypole to user list: $e');
+              // Continue anyway - will be added when they send a message
+            }
+          }
+        }
+        
+        // Update the selected thread to show in the content panel
         setState(() {
           _selectedThread = _SelectedThreadState(
             threadId: result.placeId,
