@@ -25,14 +25,14 @@ source "$(dirname "$0")/../../.env"
 set +a
 
 # Set environment to prod (beta uses prod configuration)
-export ENVIRONMENT=production
+export ENVIRONMENT=prod
 
 # Build the Android App Bundle with prod flavor
 echo "📦 Building Android App Bundle (prod release for beta)..."
 flutter build appbundle \
     --release \
     --flavor prod \
-    --dart-define=ENVIRONMENT=production
+    --dart-define=ENVIRONMENT=prod
 
 echo "✅ Build complete!"
 echo "📍 AAB location: build/app/outputs/bundle/prodRelease/app-prod-release.aab"

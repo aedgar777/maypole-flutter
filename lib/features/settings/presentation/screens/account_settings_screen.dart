@@ -7,8 +7,16 @@ import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/features/identity/auth_providers.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 
-class AccountSettingsScreen extends ConsumerWidget {
+class AccountSettingsScreen extends ConsumerStatefulWidget {
   const AccountSettingsScreen({super.key});
+
+  @override
+  ConsumerState<AccountSettingsScreen> createState() => _AccountSettingsScreenState();
+}
+
+class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
+  bool _isResendingEmail = false;
+  DateTime? _lastEmailSentTime;
 
   Future<void> _confirmDeleteAccount(BuildContext context,
       WidgetRef ref,) async {
@@ -100,14 +108,56 @@ class AccountSettingsScreen extends ConsumerWidget {
   Future<void> _handleResendVerification(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context)!;
 
+    // Prevent multiple simultaneous requests
+    if (_isResendingEmail) return;
+
+    // Check if we sent an email recently (within last 60 seconds)
+    if (_lastEmailSentTime != null) {
+      final timeSinceLastEmail = DateTime.now().difference(_lastEmailSentTime!);
+      if (timeSinceLastEmail.inSeconds < 60) {
+        if (!context.mounted) return;
+        final remainingSeconds = 60 - timeSinceLastEmail.inSeconds;
+        AppToast.showError(
+          context,
+          'Please wait $remainingSeconds seconds before requesting another email',
+        );
+        return;
+      }
+    }
+
+    setState(() {
+      _isResendingEmail = true;
+    });
+
     try {
       await ref.read(authServiceProvider).sendEmailVerification();
+      
+      setState(() {
+        _lastEmailSentTime = DateTime.now();
+      });
 
       if (!context.mounted) return;
       AppToast.showSuccess(context, l10n.verificationEmailSent);
     } catch (e) {
       if (!context.mounted) return;
-      ErrorDialog.show(context, e);
+      
+      // Check if it's a rate limiting error
+      final errorMessage = e.toString().toLowerCase();
+      if (errorMessage.contains('too-many-requests') || 
+          errorMessage.contains('too many requests')) {
+        AppToast.showError(
+          context,
+          'Too many verification emails sent. Please check your spam folder or wait a few minutes before trying again.',
+        );
+      } else {
+        ErrorDialog.show(context, e);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isResendingEmail = false;
+        });
+      }
     }
   }
 
@@ -157,7 +207,7 @@ class AccountSettingsScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final authState = ref.watch(authStateProvider);
 
@@ -181,9 +231,15 @@ class AccountSettingsScreen extends ConsumerWidget {
                 leading: const Icon(Icons.email),
                 title: Text(l10n.emailAddress),
                 subtitle: Text(user.email),
-                trailing: _buildEmailVerificationStatus(
-                    context, user.emailVerified),
-                onTap: user.emailVerified
+                trailing: _isResendingEmail
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : _buildEmailVerificationStatus(
+                        context, user.emailVerified),
+                onTap: (user.emailVerified || _isResendingEmail)
                     ? null
                     : () => _handleResendVerification(context, ref),
               ),

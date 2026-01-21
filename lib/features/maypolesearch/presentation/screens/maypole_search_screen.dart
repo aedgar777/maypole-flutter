@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -222,13 +223,19 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                       ? darkPurple.withOpacity(0.9) // 90% opacity when focused/has text
                       : Colors.transparent, // Transparent when unfocused and empty
                 ),
-              // Search bar with conditional background and tighter padding
+              // Search bar with conditional background and padding
+              // Extra left padding on iOS to make room for back button
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
                     ? darkPurple.withOpacity(0.9) // 90% opacity when focused/has text
                     : Colors.transparent, // Transparent when unfocused and empty
-                padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 4.0), // Reduced bottom padding
+                padding: EdgeInsets.fromLTRB(
+                  Platform.isIOS ? 56.0 : 8.0, // Extra left padding on iOS for back button
+                  8.0,
+                  8.0,
+                  4.0,
+                ),
                 child: TextField(
                   controller: _searchController,
                   focusNode: _searchFocusNode,
@@ -327,6 +334,29 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
           // Non-modal bottom sheet overlay
           if (_contextMenuPlace != null && _contextMenuLocation != null)
             _buildBottomSheet(_contextMenuPlace!, _contextMenuLocation!),
+          
+          // Back button for iOS (upper left - iOS standard)
+          if (Platform.isIOS)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + (kToolbarHeight / 2) + 8,
+              left: 8,
+              child: Material(
+                color: darkPurple.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(20),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => context.pop(),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
