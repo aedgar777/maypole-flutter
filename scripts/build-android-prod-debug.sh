@@ -11,7 +11,7 @@ echo "📦 Building APK..."
 flutter build apk \
     --debug \
     --flavor prod \
-    --dart-define=ENVIRONMENT=production
+    --dart-define=ENVIRONMENT=prod
 
 echo "✅ Build complete!"
 echo "📍 APK location: build/app/outputs/flutter-apk/app-prod-debug.apk"

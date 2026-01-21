@@ -15,7 +15,7 @@ set +a
 # Build the web app with prod configuration
 echo "📦 Building web app (production)..."
 flutter build web \
-  --dart-define=ENVIRONMENT=production \
+  --dart-define=ENVIRONMENT=prod \
   --dart-define=FIREBASE_PROD_WEB_API_KEY="${FIREBASE_PROD_WEB_API_KEY}" \
   --dart-define=FIREBASE_PROD_WEB_APP_ID="${FIREBASE_PROD_WEB_APP_ID}" \
   --dart-define=FIREBASE_PROD_MESSAGING_SENDER_ID="${FIREBASE_PROD_MESSAGING_SENDER_ID}" \

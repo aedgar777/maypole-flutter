@@ -4,14 +4,14 @@
 echo "🔨 Building Android Prod Release..."
 
 # Set environment
-export ENVIRONMENT=production
+export ENVIRONMENT=prod
 
 # Build the app
 echo "📦 Building APK..."
 flutter build apk \
     --release \
     --flavor prod \
-    --dart-define=ENVIRONMENT=production
+    --dart-define=ENVIRONMENT=prod
 
 echo "✅ Build complete!"
 echo "📍 APK location: build/app/outputs/flutter-apk/app-prod-release.apk"

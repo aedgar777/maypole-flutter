@@ -45,7 +45,7 @@ export ENVIRONMENT=production
 echo "📦 Building IPA (prod release for beta)..."
 flutter build ipa \
     --release \
-    --dart-define=ENVIRONMENT=production \
+    --dart-define=ENVIRONMENT=prod \
     --export-options-plist=ios/ExportOptions.plist
 
 echo "✅ Build complete!"

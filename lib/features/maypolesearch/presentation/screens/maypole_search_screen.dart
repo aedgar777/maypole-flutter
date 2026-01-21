@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -201,7 +202,7 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
               zoom: 14.0,
             ),
             myLocationEnabled: true,
-            myLocationButtonEnabled: true,
+            myLocationButtonEnabled: false, // Disable default button - we'll add custom one
             mapType: MapType.normal,
             onTap: _onMapTapped,
             zoomControlsEnabled: false,
@@ -222,13 +223,19 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                       ? darkPurple.withOpacity(0.9) // 90% opacity when focused/has text
                       : Colors.transparent, // Transparent when unfocused and empty
                 ),
-              // Search bar with conditional background and tighter padding
+              // Search bar with conditional background and padding
+              // Extra left padding on iOS to make room for back button
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
                     ? darkPurple.withOpacity(0.9) // 90% opacity when focused/has text
                     : Colors.transparent, // Transparent when unfocused and empty
-                padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 4.0), // Reduced bottom padding
+                padding: EdgeInsets.fromLTRB(
+                  Platform.isIOS ? 56.0 : 8.0, // Extra left padding on iOS for back button
+                  8.0,
+                  8.0,
+                  4.0,
+                ),
                 child: TextField(
                   controller: _searchController,
                   focusNode: _searchFocusNode,
@@ -327,6 +334,52 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
           // Non-modal bottom sheet overlay
           if (_contextMenuPlace != null && _contextMenuLocation != null)
             _buildBottomSheet(_contextMenuPlace!, _contextMenuLocation!),
+          
+          // Back button for iOS (upper left - iOS standard)
+          if (Platform.isIOS)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + (kToolbarHeight / 2) + 8,
+              left: 8,
+              child: Material(
+                color: darkPurple.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(20),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => context.pop(),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    child: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          
+          // Custom "My Location" button (bottom right)
+          Positioned(
+            bottom: _contextMenuPlace != null ? 220 : 16, // Move up if bottom sheet is showing
+            right: 16,
+            child: Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(4),
+              elevation: 4,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(4),
+                onTap: _centerOnUserLocation,
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  child: Icon(
+                    Icons.my_location,
+                    color: skyBlue,
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -420,6 +473,24 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
           .read(maypoleSearchViewModelProvider.notifier)
           .searchMaypoles(_searchController.text);
     });
+  }
+
+  Future<void> _centerOnUserLocation() async {
+    final currentPosition = ref.read(currentPositionProvider);
+    
+    if (currentPosition.value != null && _mapController != null) {
+      await _mapController!.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(
+              currentPosition.value!.latitude,
+              currentPosition.value!.longitude,
+            ),
+            zoom: 16.0,
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _onMapTapped(LatLng position) async {
