@@ -10,9 +10,17 @@
         <!-- <item name="windowSplashScreenIconBackgroundColor">@color/dark_purple</item> -->
         <!-- Post splash screen theme -->
         <item name="postSplashScreenTheme">@style/NormalTheme</item>
+        <!-- Enable edge-to-edge with transparent system bars -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 
     <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">?android:colorBackground</item>
+        <!-- Enable edge-to-edge with transparent system bars -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 </resources>

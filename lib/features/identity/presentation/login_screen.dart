@@ -79,8 +79,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       children: [
         // Apple App Store Badge
         InkWell(
-          onTap: () {
-            // TODO: Add Apple App Store link
+          onTap: () async {
+            final Uri appStoreUrl = Uri.parse('https://apps.apple.com/us/app/maypole/id6757092758');
+            if (await canLaunchUrl(appStoreUrl)) {
+              await launchUrl(appStoreUrl, mode: LaunchMode.externalApplication);
+            }
           },
           child: SvgPicture.asset(
             'assets/images/badges/app_store_badge.svg',
@@ -92,8 +95,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         // Google Play Store Badge - wrapped in Container with white background
         // because the SVG has a black background rectangle
         InkWell(
-          onTap: () {
-            // TODO: Add Google Play Store link
+          onTap: () async {
+            final Uri playStoreUrl = Uri.parse('https://play.google.com/store/apps/details?id=app.maypole.maypole');
+            if (await canLaunchUrl(playStoreUrl)) {
+              await launchUrl(playStoreUrl, mode: LaunchMode.externalApplication);
+            }
           },
           child: Container(
             height: 40,
