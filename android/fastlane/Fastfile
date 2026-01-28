@@ -18,8 +18,7 @@ platform :android do
     # This lane expects the AAB to already be built by Flutter
     # Upload to Play Store internal testing track
     # 
-    # Important: For DRAFT APPS (never published), you MUST use 'draft' status.
-    # Once published, you can change to 'completed' for automatic rollout.
+    # Note: Using 'completed' status for automatic publishing since app is in production
     upload_to_play_store(
       track: 'internal',
       aab: '../build/app/outputs/bundle/devRelease/app-dev-release.aab',
@@ -27,18 +26,19 @@ platform :android do
       skip_upload_images: true,
       skip_upload_screenshots: true,
       skip_upload_apk: true,
-      release_status: 'draft',  # Use 'draft' for apps that have never been published
+      release_status: 'completed',  # Automatically publish to internal testers
       json_key: ENV['GOOGLE_PLAY_SERVICE_ACCOUNT_JSON']
     )
     
-    puts "✅ Dev build uploaded to Play Store Internal Testing track as DRAFT!"
-    puts "   Go to Play Console to review and manually publish to internal testers"
+    puts "✅ Dev build uploaded and published to Play Store Internal Testing track!"
   end
 
   desc "Deploy prod build to Play Store Open Testing (beta) track"
   lane :deploy_beta_open do
     # This lane expects the AAB to already be built by Flutter
     # Upload to Play Store open testing track
+    # 
+    # Note: Using 'completed' status for automatic publishing since app is in production
     upload_to_play_store(
       track: 'beta',
       aab: '../build/app/outputs/bundle/prodRelease/app-prod-release.aab',
@@ -47,12 +47,11 @@ platform :android do
       skip_upload_screenshots: true,
       skip_upload_apk: true,
       skip_upload_changelogs: true,
-      release_status: 'draft',  # Use 'draft' to review and manually publish in Play Console
+      release_status: 'completed',  # Automatically publish to beta testers
       json_key: ENV['GOOGLE_PLAY_SERVICE_ACCOUNT_JSON']
     )
     
-    puts "✅ Beta build uploaded to Play Store Open Testing track as DRAFT!"
-    puts "   Go to Play Console to review and manually publish to beta testers"
+    puts "✅ Beta build uploaded and published to Play Store Open Testing track!"
   end
 
   desc "Promote build from beta to production"
