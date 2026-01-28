@@ -170,7 +170,7 @@ jobs:
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
         run: |
-          echo "☁️  Uploading to Play Store Open Testing (Beta) track..."
+          echo "☁️  Uploading and publishing to Play Store Open Testing (Beta) track..."
           
           # Create temp file for service account JSON
           echo "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > ../play-store-service-account.json
@@ -179,7 +179,7 @@ jobs:
           bundle exec fastlane deploy_beta_open
           
           echo ""
-          echo "🎉 Beta build uploaded to Play Store Open Testing as DRAFT!"
+          echo "🎉 Beta build published to Play Store Open Testing!"
 
   build_ios:
     name: Build and Deploy iOS (Beta TestFlight)
