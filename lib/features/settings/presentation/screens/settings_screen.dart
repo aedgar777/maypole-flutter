@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,8 +9,6 @@ import 'package:maypole/features/identity/auth_providers.dart';
 import 'package:maypole/features/settings/settings_providers.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:maypole/core/ads/widgets/web_ad_widget.dart';
-import 'package:maypole/core/ads/ad_config.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -127,8 +124,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           return LayoutBuilder(
             builder: (context, constraints) {
-              final isWideScreen = constraints.maxWidth >= 800;
-              
               final settingsContent = SingleChildScrollView(
                 child: Column(
                   children: [
@@ -320,20 +315,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ],
                 ),
               );
-              
-              // On wide screens with web, show sidebar ad
-              if (kIsWeb && isWideScreen && AdConfig.webAdsEnabled) {
-                return Row(
-                  children: [
-                    Expanded(child: settingsContent),
-                    Container(
-                      width: 180,
-                      padding: const EdgeInsets.all(8.0),
-                      child: WebVerticalBannerAd(adSlot: '8619478503'), // Maypole Web Sidebar
-                    ),
-                  ],
-                );
-              }
               
               return settingsContent;
             },

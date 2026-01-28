@@ -193,22 +193,29 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                 debugPrint('⚠️ Error applying map style: $e');
               }
               
-              // Move to user's location if permission is granted
+              // Move to user's location if permission is granted and we don't already have the position
               if (hasLocationPermission.value == true) {
-                debugPrint('📍 Permission granted, fetching user location...');
-                final locationService = ref.read(locationServiceProvider);
-                final position = await locationService.getCurrentPosition();
+                final currentPos = currentPosition.value;
                 
-                if (position != null && mounted) {
-                  debugPrint('✅ Moving map to user location: ${position.latitude}, ${position.longitude}');
-                  await controller.animateCamera(
-                    CameraUpdate.newCameraPosition(
-                      CameraPosition(
-                        target: LatLng(position.latitude, position.longitude),
-                        zoom: 14.0,
+                // Only fetch and move if we didn't already start at the user's location
+                if (currentPos == null) {
+                  debugPrint('📍 Permission granted, fetching user location...');
+                  final locationService = ref.read(locationServiceProvider);
+                  final position = await locationService.getCurrentPosition();
+                  
+                  if (position != null && mounted) {
+                    debugPrint('✅ Moving map to user location: ${position.latitude}, ${position.longitude}');
+                    await controller.animateCamera(
+                      CameraUpdate.newCameraPosition(
+                        CameraPosition(
+                          target: LatLng(position.latitude, position.longitude),
+                          zoom: 14.0,
+                        ),
                       ),
-                    ),
-                  );
+                    );
+                  }
+                } else {
+                  debugPrint('✅ Map already initialized at user location: ${currentPos.latitude}, ${currentPos.longitude}');
                 }
               } else {
                 debugPrint('⚠️ No location permission, using default position');
@@ -223,10 +230,13 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
               }
             },
             initialCameraPosition: CameraPosition(
-              // Start with a default position (will be updated in onMapCreated if permission granted)
-              target: currentPosition.value != null
-                  ? LatLng(currentPosition.value!.latitude, currentPosition.value!.longitude)
-                  : const LatLng(37.7749, -122.4194), // San Francisco as fallback
+              // Start with user's position if available, otherwise default position
+              target: currentPosition.whenData((pos) {
+                if (pos != null) {
+                  return LatLng(pos.latitude, pos.longitude);
+                }
+                return const LatLng(37.7749, -122.4194); // San Francisco as fallback
+              }).value ?? const LatLng(37.7749, -122.4194),
               zoom: 14.0,
             ),
             myLocationEnabled: true,

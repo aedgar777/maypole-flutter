@@ -5,12 +5,20 @@ import android.app.NotificationManager
 import android.os.Build
 import android.os.Bundle
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.WindowCompat
 import io.flutter.embedding.android.FlutterActivity
 
 class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // Install the splash screen before calling super.onCreate()
         installSplashScreen()
+        
+        // Enable edge-to-edge display for Android 15+ compatibility
+        // This ensures proper inset handling and backward compatibility
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+        }
+        
         super.onCreate(savedInstanceState)
         
         // Create notification channels for Android 8.0+
