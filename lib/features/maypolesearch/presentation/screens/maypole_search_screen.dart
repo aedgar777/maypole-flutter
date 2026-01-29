@@ -10,6 +10,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/services/location_provider.dart';
+import 'package:maypole/core/utils/place_geofence_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -464,21 +465,70 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
       if (placeDetails != null) {
         debugPrint('🗺️ Place Details: $placeDetails');
         
-        // Extract coordinates from place details
-        // Google Places API v1 structure: { "location": { "latitude": X, "longitude": Y } }
+        // Extract coordinates and place type from place details
+        // Google Places API v1 structure: { "location": { "latitude": X, "longitude": Y }, "primaryType": "...", "types": [...] }
         final location = placeDetails['location'] as Map<String, dynamic>?;
         final latitude = location?['latitude'] as double?;
         final longitude = location?['longitude'] as double?;
+        
+        // Get place type - use primaryType if available, otherwise find best match from types array
+        debugPrint('🔍 EXTRACTING PLACE TYPE:');
+        debugPrint('   Raw primaryType field: ${placeDetails['primaryType']}');
+        debugPrint('   primaryType exists: ${placeDetails.containsKey('primaryType')}');
+        
+        String? placeType = placeDetails['primaryType'] as String?;
+        debugPrint('   Extracted primaryType: $placeType');
+        
+        if (placeType == null || placeType.isEmpty) {
+          debugPrint('   ⚠️ primaryType is null/empty, checking types array...');
+          final types = placeDetails['types'] as List<dynamic>?;
+          debugPrint('   Raw types: $types');
+          
+          if (types != null && types.isNotEmpty) {
+            debugPrint('   Found ${types.length} types, checking priority order...');
+            // Priority order for determining range (most specific to least specific)
+            const priorityOrder = [
+              'sublocality_level_1',
+              'sublocality',
+              'locality',
+              'neighborhood',
+              'administrative_area_level_2',
+              'administrative_area_level_1',
+              'political',
+              'country',
+            ];
+            
+            for (final priority in priorityOrder) {
+              if (types.contains(priority)) {
+                placeType = priority;
+                debugPrint('   ✅ FOUND MATCH: $placeType (from types array)');
+                break;
+              }
+            }
+            
+            if (placeType == null) {
+              debugPrint('   ❌ No priority type found in types array');
+            }
+          } else {
+            debugPrint('   ❌ types array is null or empty');
+          }
+        } else {
+          debugPrint('   ✅ Using primaryType: $placeType');
+        }
 
-        debugPrint('📍 Extracted coordinates: lat=$latitude, lon=$longitude');
+        debugPrint('📍 FINAL RESULTS:');
+        debugPrint('   Coordinates: lat=$latitude, lon=$longitude');
+        debugPrint('   Place type: $placeType');
+        debugPrint('   Will get range: ${placeType != null ? PlaceGeofenceUtils.getRadiusDescription(placeType) : "1 km (default)"}');
 
-        // Return prediction with coordinates
+        // Return prediction with coordinates and place type
         final updatedPrediction = prediction.copyWith(
           latitude: latitude,
           longitude: longitude,
+          placeType: placeType,
         );
         
-        debugPrint('✅ Returning prediction with coordinates: ${updatedPrediction.latitude}, ${updatedPrediction.longitude}');
+        debugPrint('✅ Returning prediction with coordinates and type: ${updatedPrediction.latitude}, ${updatedPrediction.longitude}, ${updatedPrediction.placeType}');
         
         if (mounted) {
           context.pop(updatedPrediction);
@@ -671,6 +721,55 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
     final placeId = isGeneric
         ? 'loc_${position.latitude}_${position.longitude}'
         : (placeDetails['id'] as String? ?? '');
+    
+    // Get place type - use primaryType if available, otherwise find best match from types array
+    String? placeType;
+    if (!isGeneric) {
+      debugPrint('🔍 EXTRACTING PLACE TYPE (reverse geocode):');
+      debugPrint('   Raw primaryType field: ${placeDetails['primaryType']}');
+      
+      placeType = placeDetails['primaryType'] as String?;
+      debugPrint('   Extracted primaryType: $placeType');
+      
+      if (placeType == null || placeType.isEmpty) {
+        debugPrint('   ⚠️ primaryType is null/empty, checking types array...');
+        final types = placeDetails['types'] as List<dynamic>?;
+        debugPrint('   Raw types: $types');
+        
+        if (types != null && types.isNotEmpty) {
+          debugPrint('   Found ${types.length} types, checking priority order...');
+          // Priority order for determining range
+          const priorityOrder = [
+            'sublocality_level_1',
+            'sublocality',
+            'locality',
+            'neighborhood',
+            'administrative_area_level_2',
+            'administrative_area_level_1',
+            'political',
+            'country',
+          ];
+          
+          for (final priority in priorityOrder) {
+            if (types.contains(priority)) {
+              placeType = priority;
+              debugPrint('   ✅ FOUND MATCH: $placeType (from types array)');
+              break;
+            }
+          }
+          
+          if (placeType == null) {
+            debugPrint('   ❌ No priority type found in types array');
+          }
+        } else {
+          debugPrint('   ❌ types array is null or empty');
+        }
+      } else {
+        debugPrint('   ✅ Using primaryType: $placeType');
+      }
+      
+      debugPrint('📍 FINAL place type: $placeType (range: ${placeType != null ? PlaceGeofenceUtils.getRadiusDescription(placeType) : "1 km (default)"})');
+    }
 
     return Positioned(
       left: 0,
@@ -763,6 +862,7 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                       address: formattedAddress,
                       latitude: position.latitude,
                       longitude: position.longitude,
+                      placeType: placeType,
                     );
                   },
                   style: ElevatedButton.styleFrom(
@@ -795,6 +895,7 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
     required String address,
     required double latitude,
     required double longitude,
+    String? placeType,
   }) {
     // Create a PlacePrediction and return it to the caller (home screen)
     // This allows the home screen to handle navigation consistently
@@ -805,6 +906,7 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
       address: address,
       latitude: latitude,
       longitude: longitude,
+      placeType: placeType,
     );
     
     context.pop(prediction);

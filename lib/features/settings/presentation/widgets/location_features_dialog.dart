@@ -40,7 +40,7 @@ class LocationFeaturesDialog extends StatelessWidget {
               context,
               icon: Icons.pin_drop,
               title: 'Show When at Location',
-              description: 'Display a pin icon next to your name when you send messages from within 100m of a place. You\'ll also only be able to upload images when you\'re at the location, ensuring photo authenticity and preventing spam.',
+              description: 'Display a pin icon next to your name when you send messages from within range of a place (range varies by place type: cities 5-15km, venues 500m). You\'ll also only be able to upload images when you\'re in range, ensuring photo authenticity and preventing spam.',
             ),
             
             const SizedBox(height: 20),

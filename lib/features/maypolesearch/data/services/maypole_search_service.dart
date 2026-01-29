@@ -20,7 +20,7 @@ class MaypoleSearchService {
     return 'https://places.googleapis.com/v1/places:autocomplete';
   }
 
-  /// Fetch place details including coordinates
+  /// Fetch place details including coordinates and place type
   Future<Map<String, dynamic>?> getPlaceDetails(String placeId) async {
     debugPrint('📍 Fetching Place Details for: $placeId');
     
@@ -30,7 +30,7 @@ class MaypoleSearchService {
     final headers = {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': _apiKey,
-      'X-Goog-FieldMask': 'id,displayName,formattedAddress,location',
+      'X-Goog-FieldMask': 'id,displayName,formattedAddress,location,primaryType,types',
     };
 
     try {
@@ -45,7 +45,7 @@ class MaypoleSearchService {
         debugPrint("✅ Place Details Response: ${response.body.substring(
             0, response.body.length > 200 ? 200 : response.body.length)}...");
         
-        // Parse the response to extract coordinates
+        // Parse the response to extract coordinates and place type
         final Map<String, dynamic> data = json.decode(response.body);
         
         return data;
@@ -69,7 +69,7 @@ class MaypoleSearchService {
     final headers = {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': _apiKey,
-      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location',
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types',
     };
 
     final body = json.encode({

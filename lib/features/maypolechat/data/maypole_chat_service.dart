@@ -198,6 +198,7 @@ class MaypoleChatService {
         double? longitude,
         double? senderLatitude,
         double? senderLongitude,
+        String? placeType,
       }) async {
     final now = DateTime.now();
     final message = MaypoleMessage(
@@ -231,24 +232,54 @@ class MaypoleChatService {
     if (longitude != null) {
       maypoleData['longitude'] = longitude;
     }
+    if (placeType != null) {
+      maypoleData['placeType'] = placeType;
+    }
     
     batch.set(maypoleRef, maypoleData, SetOptions(merge: true));
 
     // Add the new message to the subcollection
     batch.set(messageRef, message.toMap());
 
+    // Update or add the maypole thread in user's list with lastTypedAt timestamp
+    final userRef = _firestore.collection('users').doc(sender.firebaseID);
+    
     // Check if user already has this maypole in their list (using local data)
-    if (!sender.maypoleChatThreads.any((element) => element.id == threadId)) {
+    final existingThreadIndex = sender.maypoleChatThreads.indexWhere((element) => element.id == threadId);
+    
+    if (existingThreadIndex == -1) {
+      // Thread doesn't exist - add it with lastTypedAt
       final maypoleMetaData = MaypoleMetaData(
         id: threadId,
         name: maypoleName,
         address: address,
         latitude: latitude,
         longitude: longitude,
+        lastTypedAt: now,
+        placeType: placeType,
       );
-      final userRef = _firestore.collection('users').doc(sender.firebaseID);
       batch.update(userRef, {
         'maypoleChatThreads': FieldValue.arrayUnion([maypoleMetaData.toMap()])
+      });
+    } else {
+      // Thread exists - update lastTypedAt efficiently
+      // We need to remove the old entry and add the updated one atomically
+      final oldThread = sender.maypoleChatThreads[existingThreadIndex];
+      final updatedThread = MaypoleMetaData(
+        id: threadId,
+        name: maypoleName,
+        address: address,
+        latitude: latitude,
+        longitude: longitude,
+        lastTypedAt: now,
+        placeType: placeType,
+      );
+      
+      batch.update(userRef, {
+        'maypoleChatThreads': FieldValue.arrayRemove([oldThread.toMap()])
+      });
+      batch.update(userRef, {
+        'maypoleChatThreads': FieldValue.arrayUnion([updatedThread.toMap()])
       });
     }
 
@@ -272,6 +303,7 @@ class MaypoleChatService {
       DomainUser sender, {
         List<String> taggedUserIds = const [],
         String address = '',
+        String? placeType,
       }) async {
     final now = DateTime.now();
     final message = MaypoleMessage(
@@ -288,23 +320,53 @@ class MaypoleChatService {
     final messageRef = maypoleRef.collection('messages').doc();
 
     final batch = _firestore.batch();
-    batch.set(
-        maypoleRef,
-        {
-          'id': threadId,
-          'name': maypoleName,
-          'address': address,
-        },
-        SetOptions(merge: true));
+    
+    final Map<String, dynamic> maypoleData = {
+      'id': threadId,
+      'name': maypoleName,
+      'address': address,
+    };
+    if (placeType != null) {
+      maypoleData['placeType'] = placeType;
+    }
+    
+    batch.set(maypoleRef, maypoleData, SetOptions(merge: true));
     batch.set(messageRef, message.toMap());
 
+    // Update or add the maypole thread in user's list with lastTypedAt timestamp
+    final userRef = _firestore.collection('users').doc(sender.firebaseID);
+    
     // Check if user already has this maypole in their list (using local data)
-    if (!sender.maypoleChatThreads.any((element) => element.id == threadId)) {
-      final maypoleMetaData =
-      MaypoleMetaData(id: threadId, name: maypoleName, address: address);
-      final userRef = _firestore.collection('users').doc(sender.firebaseID);
+    final existingThreadIndex = sender.maypoleChatThreads.indexWhere((element) => element.id == threadId);
+    
+    if (existingThreadIndex == -1) {
+      // Thread doesn't exist - add it with lastTypedAt
+      final maypoleMetaData = MaypoleMetaData(
+        id: threadId, 
+        name: maypoleName, 
+        address: address,
+        lastTypedAt: now,
+        placeType: placeType,
+      );
       batch.update(userRef, {
         'maypoleChatThreads': FieldValue.arrayUnion([maypoleMetaData.toMap()])
+      });
+    } else {
+      // Thread exists - update lastTypedAt efficiently
+      final oldThread = sender.maypoleChatThreads[existingThreadIndex];
+      final updatedThread = MaypoleMetaData(
+        id: threadId, 
+        name: maypoleName, 
+        address: address,
+        lastTypedAt: now,
+        placeType: placeType,
+      );
+      
+      batch.update(userRef, {
+        'maypoleChatThreads': FieldValue.arrayRemove([oldThread.toMap()])
+      });
+      batch.update(userRef, {
+        'maypoleChatThreads': FieldValue.arrayUnion([updatedThread.toMap()])
       });
     }
 
@@ -350,6 +412,7 @@ class MaypoleChatService {
 
   /// Adds a maypole thread to a user's maypoleChatThreads list
   /// This is called when a user opens a maypole on wide screen to make it immediately visible
+  /// Note: lastTypedAt is null until the user sends their first message
   Future<void> addMaypoleToUserList({
     required String userId,
     required String placeId,
@@ -357,6 +420,7 @@ class MaypoleChatService {
     required String address,
     double? latitude,
     double? longitude,
+    String? placeType,
   }) async {
     try {
       final userRef = _firestore.collection('users').doc(userId);
@@ -366,6 +430,8 @@ class MaypoleChatService {
         address: address,
         latitude: latitude,
         longitude: longitude,
+        lastTypedAt: null, // Will be set when user sends first message
+        placeType: placeType,
       );
       
       await userRef.update({
