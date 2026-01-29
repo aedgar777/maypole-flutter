@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+import '../utils/place_geofence_utils.dart';
 
 /// Service for handling location permissions and calculations
 class LocationService {
@@ -112,56 +112,63 @@ class LocationService {
 
   /// Calculate distance between two points using Haversine formula
   /// Returns distance in meters
+  /// 
+  /// Delegates to PlaceGeofenceUtils for consistent distance calculations
   double calculateDistance(
     double lat1,
     double lon1,
     double lat2,
     double lon2,
   ) {
-    const double earthRadius = 6371000; // meters
-
-    final double dLat = _toRadians(lat2 - lat1);
-    final double dLon = _toRadians(lon2 - lon1);
-
-    final double a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(_toRadians(lat1)) *
-            cos(_toRadians(lat2)) *
-            sin(dLon / 2) *
-            sin(dLon / 2);
-
-    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-
-    return earthRadius * c;
-  }
-
-  double _toRadians(double degree) {
-    return degree * pi / 180;
+    return PlaceGeofenceUtils.calculateDistance(lat1, lon1, lat2, lon2);
   }
 
   /// Check if user is within proximity threshold of a given location
   /// Returns null if current position cannot be determined
+  /// 
+  /// Delegates to PlaceGeofenceUtils for consistent proximity checks
   Future<bool?> isWithinProximity({
     required double targetLat,
     required double targetLon,
     double? customThreshold,
   }) async {
     final position = await getCurrentPosition();
-    if (position == null) {
-      return null;
-    }
-
-    final distance = calculateDistance(
-      position.latitude,
-      position.longitude,
-      targetLat,
-      targetLon,
+    return PlaceGeofenceUtils.isPositionWithinProximity(
+      position: position,
+      targetLat: targetLat,
+      targetLon: targetLon,
+      threshold: customThreshold ?? proximityThreshold,
     );
+  }
 
-    return distance <= (customThreshold ?? proximityThreshold);
+  /// Check if user is within range of a place based on its type
+  /// Returns null if current position cannot be determined
+  /// 
+  /// This method uses dynamic geofencing based on place type:
+  /// - Countries: 500 km
+  /// - States: 200 km
+  /// - Cities: 15 km
+  /// - Neighborhoods: 5 km
+  /// - Establishments: 500 m
+  /// - Buildings: 200 m
+  Future<bool?> isInRangeOfPlace({
+    required double placeLatitude,
+    required double placeLongitude,
+    String? placeType,
+  }) async {
+    final position = await getCurrentPosition();
+    return PlaceGeofenceUtils.isPositionInRange(
+      position: position,
+      placeLatitude: placeLatitude,
+      placeLongitude: placeLongitude,
+      placeType: placeType,
+    );
   }
 
   /// Check if a position is within proximity of a target location
   /// Uses cached position if available, returns null if no position
+  /// 
+  /// Delegates to PlaceGeofenceUtils for consistent proximity checks
   bool? isPositionWithinProximity({
     required double targetLat,
     required double targetLon,
@@ -169,36 +176,52 @@ class LocationService {
     double? customThreshold,
   }) {
     final pos = position ?? _lastKnownPosition;
-    if (pos == null) {
-      return null;
-    }
-
-    final distance = calculateDistance(
-      pos.latitude,
-      pos.longitude,
-      targetLat,
-      targetLon,
+    return PlaceGeofenceUtils.isPositionWithinProximity(
+      position: pos,
+      targetLat: targetLat,
+      targetLon: targetLon,
+      threshold: customThreshold ?? proximityThreshold,
     );
+  }
 
-    return distance <= (customThreshold ?? proximityThreshold);
+  /// Check if a position is within range of a place based on its type
+  /// Uses cached position if available, returns null if no position
+  /// 
+  /// This method uses dynamic geofencing based on place type:
+  /// - Countries: 500 km
+  /// - States: 200 km
+  /// - Cities: 15 km
+  /// - Neighborhoods: 5 km
+  /// - Establishments: 500 m
+  /// - Buildings: 200 m
+  bool? isPositionInRangeOfPlace({
+    required double placeLatitude,
+    required double placeLongitude,
+    Position? position,
+    String? placeType,
+  }) {
+    final pos = position ?? _lastKnownPosition;
+    return PlaceGeofenceUtils.isPositionInRange(
+      position: pos,
+      placeLatitude: placeLatitude,
+      placeLongitude: placeLongitude,
+      placeType: placeType,
+    );
   }
 
   /// Get distance to a location in meters
   /// Returns null if current position cannot be determined
+  /// 
+  /// Delegates to PlaceGeofenceUtils for consistent distance calculations
   Future<double?> getDistanceToLocation({
     required double targetLat,
     required double targetLon,
   }) async {
     final position = await getCurrentPosition();
-    if (position == null) {
-      return null;
-    }
-
-    return calculateDistance(
-      position.latitude,
-      position.longitude,
-      targetLat,
-      targetLon,
+    return PlaceGeofenceUtils.getDistanceToPlace(
+      position: position,
+      placeLatitude: targetLat,
+      placeLongitude: targetLon,
     );
   }
 

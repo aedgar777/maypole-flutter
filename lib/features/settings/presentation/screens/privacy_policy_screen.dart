@@ -84,7 +84,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
               context,
               'Location Information',
               'With your explicit permission, we may collect and use your device\'s location data for the following optional feature:\n\n'
-                  '• "Show When at Location": When enabled, this feature allows you to show others that you were physically present at a location when sending messages. Your approximate location coordinates are stored with your messages only when you have this feature enabled and are within 100 meters of a place.\n\n'
+                  '• "Show When at Location": When enabled, this feature allows you to show others that you were physically present at a location when sending messages. Your approximate location coordinates are stored with your messages only when you have this feature enabled and are within the place\'s geofence range (which varies by place type: countries 500km, states 200km, cities 5-15km, establishments 500m, buildings 200m).\n\n'
                   'Important details about location data:\n\n'
                   '• Location permission is entirely optional - you can use Maypole without it\n'
                   '• We only collect location data when you have explicitly enabled "Show When at Location" in Preferences\n'
