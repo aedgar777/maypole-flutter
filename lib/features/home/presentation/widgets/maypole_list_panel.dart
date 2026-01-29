@@ -136,10 +136,18 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
   }
 
   Widget _buildMaypoleList(BuildContext context, AppLocalizations l10n) {
-    // Filter out maypole threads that are pending deletion
+    // Filter out maypole threads that are pending deletion and sort by lastTypedAt
     final filteredMaypoleThreads = widget.user.maypoleChatThreads
         .where((thread) => !_pendingMaypoleDeletions.contains(thread.id))
-        .toList();
+        .toList()
+      ..sort((a, b) {
+        // Sort by lastTypedAt (most recent first)
+        // Threads without lastTypedAt go to the end
+        if (a.lastTypedAt == null && b.lastTypedAt == null) return 0;
+        if (a.lastTypedAt == null) return 1;
+        if (b.lastTypedAt == null) return -1;
+        return b.lastTypedAt!.compareTo(a.lastTypedAt!);
+      });
 
     if (filteredMaypoleThreads.isEmpty) {
       return Center(

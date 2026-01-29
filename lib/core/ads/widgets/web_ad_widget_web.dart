@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:html' as html;
@@ -39,13 +40,25 @@ class WebAdWidget extends StatefulWidget {
 class _WebAdWidgetState extends State<WebAdWidget> {
   final String _viewType = 'google-adsense-${DateTime.now().millisecondsSinceEpoch}';
   bool _isRegistered = false;
+  bool _isAdLoaded = false;
+  bool _isAdFailed = false;
+  Timer? _periodicCheckTimer;
 
   @override
   void initState() {
     super.initState();
     if (kIsWeb && AdConfig.webAdsEnabled) {
       _registerAdWidget();
+      _checkAdLoadStatus();
+      // Start periodic checking to detect when ads become approved
+      _startPeriodicAdCheck();
     }
+  }
+
+  @override
+  void dispose() {
+    _periodicCheckTimer?.cancel();
+    super.dispose();
   }
 
   void _registerAdWidget() {
@@ -122,6 +135,137 @@ class _WebAdWidgetState extends State<WebAdWidget> {
     });
   }
 
+  /// Check the ad load status periodically to detect if ads are being served
+  void _checkAdLoadStatus() {
+    // Check after a delay to allow ad to attempt loading
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      
+      try {
+        // Query all adsbygoogle elements
+        final adElements = html.document.querySelectorAll('ins.adsbygoogle');
+        
+        for (var element in adElements) {
+          // Check the data-adsbygoogle-status attribute
+          final status = element.getAttribute('data-adsbygoogle-status');
+          
+          if (status == 'done') {
+            // Ad loaded successfully - check if it's filled
+            final parent = element.parent;
+            if (parent != null) {
+              // Check if the ad has content (height > 0 means ad is filled)
+              final clientHeight = (element as html.Element).clientHeight;
+              if (clientHeight > 0) {
+                setState(() {
+                  _isAdLoaded = true;
+                  _isAdFailed = false;
+                });
+                debugPrint('✅ Ad loaded successfully (height: $clientHeight)');
+                return;
+              }
+            }
+            
+            // Status is 'done' but no content - ad is unfilled
+            setState(() {
+              _isAdLoaded = false;
+              _isAdFailed = true;
+            });
+            debugPrint('⚠️ Ad slot is unfilled (likely not approved yet)');
+            return;
+          }
+        }
+        
+        // If we get here, check again after a bit more time
+        Future.delayed(const Duration(seconds: 2), () {
+          if (!mounted) return;
+          _recheckAdStatus();
+        });
+      } catch (e) {
+        debugPrint('❌ Error checking ad status: $e');
+        setState(() {
+          _isAdFailed = true;
+        });
+      }
+    });
+  }
+
+  /// Recheck ad status after initial check
+  void _recheckAdStatus() {
+    try {
+      final adElements = html.document.querySelectorAll('ins.adsbygoogle');
+      
+      for (var element in adElements) {
+        final status = element.getAttribute('data-adsbygoogle-status');
+        final clientHeight = (element as html.Element).clientHeight;
+        
+        if (status == 'done' && clientHeight > 0) {
+          setState(() {
+            _isAdLoaded = true;
+            _isAdFailed = false;
+          });
+          debugPrint('✅ Ad loaded on recheck');
+          return;
+        }
+      }
+      
+      // Still no ad loaded - hide the placeholder
+      setState(() {
+        _isAdLoaded = false;
+        _isAdFailed = true;
+      });
+      debugPrint('📵 No ads loaded - hiding placeholder');
+    } catch (e) {
+      debugPrint('❌ Error rechecking ad status: $e');
+      setState(() {
+        _isAdFailed = true;
+      });
+    }
+  }
+
+  /// Start periodic checking to detect when ads become approved
+  /// This allows ads to automatically appear when the site is approved,
+  /// even if the user has the app open
+  void _startPeriodicAdCheck() {
+    // Only start periodic checking if ads haven't loaded yet
+    if (_isAdLoaded) return;
+    
+    // Check every 30 seconds for new ad status
+    _periodicCheckTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      
+      // If ad is already loaded, stop checking
+      if (_isAdLoaded) {
+        timer.cancel();
+        return;
+      }
+      
+      try {
+        final adElements = html.document.querySelectorAll('ins.adsbygoogle');
+        
+        for (var element in adElements) {
+          final status = element.getAttribute('data-adsbygoogle-status');
+          final clientHeight = (element as html.Element).clientHeight;
+          
+          // Check if ad is now filled
+          if (status == 'done' && clientHeight > 0) {
+            setState(() {
+              _isAdLoaded = true;
+              _isAdFailed = false;
+            });
+            debugPrint('🎉 Ads are now approved and serving! Showing ad units.');
+            timer.cancel();
+            return;
+          }
+        }
+      } catch (e) {
+        debugPrint('⚠️ Error in periodic ad check: $e');
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // Check if we're on web platform
@@ -132,6 +276,12 @@ class _WebAdWidgetState extends State<WebAdWidget> {
     // Check if web ads are enabled
     if (!AdConfig.webAdsEnabled) {
       debugPrint('📵 Web ads are disabled');
+      return const SizedBox.shrink();
+    }
+
+    // Hide the ad container if the ad failed to load or is unfilled
+    // This will automatically hide placeholders when ads aren't approved
+    if (_isAdFailed) {
       return const SizedBox.shrink();
     }
 
@@ -156,10 +306,12 @@ class _WebAdWidgetState extends State<WebAdWidget> {
       }
     }
 
+    // Show a subtle loading placeholder initially, or the ad if loaded
     return Container(
       height: containerHeight,
       width: double.infinity,
-      color: Colors.grey[200],
+      // Remove the grey background when ad is loaded to avoid showing placeholder
+      color: _isAdLoaded ? Colors.transparent : Colors.grey[200]?.withAlpha(51),
       child: HtmlElementView(
         viewType: _viewType,
       ),

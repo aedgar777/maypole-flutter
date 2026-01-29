@@ -18,6 +18,7 @@ class MaypoleChatScreen extends ConsumerWidget {
   final String? address;
   final double? latitude;
   final double? longitude;
+  final String? placeType;
 
   const MaypoleChatScreen({
     super.key,
@@ -26,6 +27,7 @@ class MaypoleChatScreen extends ConsumerWidget {
     this.address,
     this.latitude,
     this.longitude,
+    this.placeType,
   });
 
   @override
@@ -68,6 +70,7 @@ class MaypoleChatScreen extends ConsumerWidget {
                     address: address,
                     latitude: latitude,
                     longitude: longitude,
+                    placeType: placeType,
                     showAppBar: false,
                     autoFocus: true,
                     readOnly: false, // Authenticated users can interact
@@ -84,6 +87,7 @@ class MaypoleChatScreen extends ConsumerWidget {
               address: address,
               latitude: latitude,
               longitude: longitude,
+              placeType: placeType,
               showAppBar: true,
               readOnly: !isAuthenticated, // Read-only for anonymous users
             );
@@ -110,6 +114,7 @@ class MaypoleChatScreen extends ConsumerWidget {
         'address': prediction.address,
         'latitude': prediction.latitude,
         'longitude': prediction.longitude,
+        'placeType': prediction.placeType,
       });
     }
   }

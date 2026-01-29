@@ -329,6 +329,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 address: result.address,
                 latitude: result.latitude,
                 longitude: result.longitude,
+                placeType: result.placeType,
               );
             } catch (e) {
               debugPrint('⚠️ Error adding maypole to user list: $e');
@@ -351,11 +352,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       } else {
         // On mobile, navigate to the chat screen
         if (context.mounted) {
+          debugPrint('📱 Navigating to chat with placeType: ${result.placeType}');
           context.push('/chat/${result.placeId}', extra: {
             'name': result.placeName,
             'address': result.address,
             'latitude': result.latitude,
             'longitude': result.longitude,
+            'placeType': result.placeType,
           });
         }
       }

@@ -130,16 +130,20 @@ final routerProvider = Provider<GoRouter>((ref) {
           final double? latitude;
           final double? longitude;
 
+          String? placeType;
+          
           if (extra is Map<String, dynamic>) {
             maypoleName = extra['name'] as String?;
             address = extra['address'] as String?;
             latitude = extra['latitude'] as double?;
             longitude = extra['longitude'] as double?;
+            placeType = extra['placeType'] as String?;
           } else {
             maypoleName = extra as String?;
             address = null;
             latitude = null;
             longitude = null;
+            placeType = null;
           }
 
           // If we have complete place info, go directly to chat screen
@@ -150,6 +154,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               address: address,
               latitude: latitude,
               longitude: longitude,
+              placeType: placeType,
             );
           }
 

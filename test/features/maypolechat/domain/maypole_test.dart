@@ -138,18 +138,21 @@ void main() {
 
   group('MaypoleMetaData', () {
     test('creates instance with all fields', () {
+      final lastTyped = DateTime(2024, 1, 15, 10, 30);
       final metadata = MaypoleMetaData(
         id: 'meta123',
         name: 'Test Place',
         address: '123 Main St',
+        lastTypedAt: lastTyped,
       );
 
       expect(metadata.id, 'meta123');
       expect(metadata.name, 'Test Place');
       expect(metadata.address, '123 Main St');
+      expect(metadata.lastTypedAt, lastTyped);
     });
 
-    test('toMap serializes correctly', () {
+    test('toMap serializes correctly without lastTypedAt', () {
       final metadata = MaypoleMetaData(
         id: 'meta123',
         name: 'Test Place',
@@ -160,10 +163,29 @@ void main() {
       expect(map['id'], 'meta123');
       expect(map['name'], 'Test Place');
       expect(map['address'], ''); // Default empty string
-      expect(map.length, 3); // Now includes address field
+      expect(map.containsKey('lastTypedAt'), false); // Not included when null
+      expect(map.length, 3); // id, name, address
     });
 
-    test('fromMap deserializes correctly', () {
+    test('toMap serializes correctly with lastTypedAt', () {
+      final lastTyped = DateTime(2024, 1, 15, 10, 30);
+      final metadata = MaypoleMetaData(
+        id: 'meta123',
+        name: 'Test Place',
+        lastTypedAt: lastTyped,
+      );
+
+      final map = metadata.toMap();
+
+      expect(map['id'], 'meta123');
+      expect(map['name'], 'Test Place');
+      expect(map['address'], ''); // Default empty string
+      expect(map.containsKey('lastTypedAt'), true);
+      expect((map['lastTypedAt'] as Timestamp).toDate(), lastTyped);
+      expect(map.length, 4); // id, name, address, lastTypedAt
+    });
+
+    test('fromMap deserializes correctly without lastTypedAt', () {
       final map = {
         'id': 'meta123',
         'name': 'Test Place',
@@ -175,6 +197,24 @@ void main() {
       expect(metadata.id, 'meta123');
       expect(metadata.name, 'Test Place');
       expect(metadata.address, '456 Oak Ave');
+      expect(metadata.lastTypedAt, isNull);
+    });
+
+    test('fromMap deserializes correctly with lastTypedAt', () {
+      final lastTyped = DateTime(2024, 1, 15, 10, 30);
+      final map = {
+        'id': 'meta123',
+        'name': 'Test Place',
+        'address': '456 Oak Ave',
+        'lastTypedAt': Timestamp.fromDate(lastTyped),
+      };
+
+      final metadata = MaypoleMetaData.fromMap(map);
+
+      expect(metadata.id, 'meta123');
+      expect(metadata.name, 'Test Place');
+      expect(metadata.address, '456 Oak Ave');
+      expect(metadata.lastTypedAt, lastTyped);
     });
 
     test('fromMap handles null values with defaults', () {
@@ -191,7 +231,7 @@ void main() {
       expect(metadata.address, '');
     });
 
-    test('serialization round-trip preserves data', () {
+    test('serialization round-trip preserves data without lastTypedAt', () {
       final original = MaypoleMetaData(
         id: 'test_id_123',
         name: 'Test Location Name',
@@ -204,6 +244,25 @@ void main() {
       expect(restored.id, original.id);
       expect(restored.name, original.name);
       expect(restored.address, original.address);
+      expect(restored.lastTypedAt, isNull);
+    });
+
+    test('serialization round-trip preserves data with lastTypedAt', () {
+      final lastTyped = DateTime(2024, 1, 15, 10, 30);
+      final original = MaypoleMetaData(
+        id: 'test_id_123',
+        name: 'Test Location Name',
+        address: '789 Elm Street',
+        lastTypedAt: lastTyped,
+      );
+
+      final map = original.toMap();
+      final restored = MaypoleMetaData.fromMap(map);
+
+      expect(restored.id, original.id);
+      expect(restored.name, original.name);
+      expect(restored.address, original.address);
+      expect(restored.lastTypedAt, lastTyped);
     });
   });
 }
