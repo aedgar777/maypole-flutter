@@ -145,6 +145,7 @@ class _DmScreenState extends ConsumerState<DmScreen> {
           'address': result.address,
           'latitude': result.latitude,
           'longitude': result.longitude,
+          'placeType': result.placeType,
         });
       }
     }

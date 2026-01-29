@@ -25,6 +25,7 @@ class PlacePrediction {
   final String address; // Secondary text (address) from structured format
   final double? latitude; // Place latitude
   final double? longitude; // Place longitude
+  final String? placeType; // Primary type from Google Places API
 
   PlacePrediction({
     required this.place,
@@ -33,6 +34,7 @@ class PlacePrediction {
     this.address = '',
     this.latitude,
     this.longitude,
+    this.placeType,
   });
 
   factory PlacePrediction.fromMap(Map<String, dynamic> map) {
@@ -49,10 +51,11 @@ class PlacePrediction {
       address: structuredFormat?['secondaryText']?['text'] as String? ?? '',
       latitude: map['latitude'] as double?,
       longitude: map['longitude'] as double?,
+      placeType: map['placeType'] as String?,
     );
   }
   
-  /// Create a copy with updated coordinates
+  /// Create a copy with updated coordinates and/or place type
   PlacePrediction copyWith({
     String? place,
     String? placeName,
@@ -60,6 +63,7 @@ class PlacePrediction {
     String? address,
     double? latitude,
     double? longitude,
+    String? placeType,
   }) {
     return PlacePrediction(
       place: place ?? this.place,
@@ -68,6 +72,7 @@ class PlacePrediction {
       address: address ?? this.address,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      placeType: placeType ?? this.placeType,
     );
   }
 

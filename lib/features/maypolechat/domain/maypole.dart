@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'maypole_message.dart';
 
 // Subclass for place-based home threads
@@ -42,6 +43,8 @@ class MaypoleMetaData {
   final String address;
   final double? latitude;
   final double? longitude;
+  final DateTime? lastTypedAt;
+  final String? placeType; // Primary type from Google Places API
 
   const MaypoleMetaData({
     required this.id,
@@ -49,6 +52,8 @@ class MaypoleMetaData {
     this.address = '',
     this.latitude,
     this.longitude,
+    this.lastTypedAt,
+    this.placeType,
   });
 
   factory MaypoleMetaData.fromMap(Map<String, dynamic> map) {
@@ -58,6 +63,10 @@ class MaypoleMetaData {
       address: map['address'] ?? '',
       latitude: map['latitude'] as double?,
       longitude: map['longitude'] as double?,
+      lastTypedAt: map['lastTypedAt'] != null 
+          ? (map['lastTypedAt'] as Timestamp).toDate()
+          : null,
+      placeType: map['placeType'] as String?,
     );
   }
 
@@ -73,6 +82,12 @@ class MaypoleMetaData {
     }
     if (longitude != null) {
       mapData['longitude'] = longitude!;
+    }
+    if (lastTypedAt != null) {
+      mapData['lastTypedAt'] = Timestamp.fromDate(lastTypedAt!);
+    }
+    if (placeType != null) {
+      mapData['placeType'] = placeType!;
     }
     
     return mapData;

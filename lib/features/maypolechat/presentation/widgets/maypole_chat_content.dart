@@ -11,6 +11,7 @@ import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/services/location_provider.dart';
 import 'package:maypole/core/services/location_service.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
+import 'package:maypole/core/utils/place_geofence_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/core/widgets/report_content_dialog.dart';
@@ -40,6 +41,7 @@ class MaypoleChatContent extends ConsumerStatefulWidget {
   final String? address;
   final double? latitude;
   final double? longitude;
+  final String? placeType;
   final bool showAppBar;
   final bool autoFocus;
   final bool readOnly; // If true, shows join prompt instead of input
@@ -51,6 +53,7 @@ class MaypoleChatContent extends ConsumerStatefulWidget {
     this.address,
     this.latitude,
     this.longitude,
+    this.placeType,
     this.showAppBar = true,
     this.autoFocus = false,
     this.readOnly = false,
@@ -79,6 +82,13 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     debugPrint('🏠 MaypoleChatContent initialized:');
     debugPrint('   Place: ${widget.maypoleName}');
     debugPrint('   Coordinates: lat=${widget.latitude}, lon=${widget.longitude}');
+    debugPrint('   Place Type: ${widget.placeType}');
+    if (widget.placeType != null) {
+      final radius = PlaceGeofenceUtils.getRadiusForPlaceType(widget.placeType);
+      debugPrint('   Expected range: ${radius}m (${PlaceGeofenceUtils.getRadiusDescription(widget.placeType)})');
+    } else {
+      debugPrint('   ⚠️ Place Type is NULL - will use default 1km range');
+    }
 
     // Auto-focus if requested
     if (widget.autoFocus) {
@@ -99,8 +109,10 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     }
   }
   
+  /// Check if user is within proximity (100m) of the place
+  /// This uses a fixed threshold for the "Show When at Location" feature
   bool get _isWithinProximity {
-    debugPrint('🔍 Checking proximity:');
+    debugPrint('🔍 Checking proximity (100m threshold):');
     debugPrint('   Place coords: lat=${widget.latitude}, lon=${widget.longitude}');
     debugPrint('   Current position: lat=${_currentPosition?.latitude}, lon=${_currentPosition?.longitude}');
     
@@ -136,12 +148,59 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     debugPrint('   Result: ${isNearby == true ? "✅ Within proximity" : "❌ Not within proximity"}');
     return isNearby ?? false;
   }
+
+  /// Check if user is within range of the place based on its type
+  /// Uses dynamic geofencing: countries (500km), states (200km), cities (15km), 
+  /// neighborhoods (5km), establishments (500m), buildings (200m)
+  bool get _isWithinPlaceRange {
+    debugPrint('🔍 Checking place range (type-based geofencing):');
+    debugPrint('   Place: ${widget.maypoleName}');
+    debugPrint('   Place type: ${widget.placeType}');
+    debugPrint('   Place coords: lat=${widget.latitude}, lon=${widget.longitude}');
+    debugPrint('   Current position: lat=${_currentPosition?.latitude}, lon=${_currentPosition?.longitude}');
+    
+    if (widget.latitude == null || widget.longitude == null) {
+      debugPrint('   ⚠️ No place coordinates - cannot check range');
+      return false;
+    }
+    
+    if (_currentPosition == null) {
+      debugPrint('   ❌ No current position - cannot check range');
+      return false;
+    }
+    
+    final locationService = ref.read(locationServiceProvider);
+    final isInRange = locationService.isPositionInRangeOfPlace(
+      placeLatitude: widget.latitude!,
+      placeLongitude: widget.longitude!,
+      position: _currentPosition,
+      placeType: widget.placeType,
+    );
+    
+    if (isInRange != null) {
+      final radius = PlaceGeofenceUtils.getRadiusForPlaceType(widget.placeType);
+      final distance = PlaceGeofenceUtils.getDistanceToPlace(
+        position: _currentPosition,
+        placeLatitude: widget.latitude!,
+        placeLongitude: widget.longitude!,
+      );
+      debugPrint('   Distance: ${distance?.toStringAsFixed(0)}m / ${radius.toStringAsFixed(0)}m');
+    }
+    
+    debugPrint('   Result: ${isInRange == true ? "✅ Within range" : "❌ Not within range"}');
+    return isInRange ?? false;
+  }
   
   /// Check if image upload button should be enabled
   /// Image uploads require BOTH:
   /// 1. "Show When at Location" feature to be enabled
-  /// 2. User to be within 100m proximity (which requires location permission)
+  /// 2. User to be within the place's geofence range (which requires location permission)
   bool get _canUploadImage {
+    debugPrint('🖼️ IMAGE UPLOAD CHECK for ${widget.maypoleName}:');
+    debugPrint('   Widget placeType: ${widget.placeType}');
+    debugPrint('   Widget latitude: ${widget.latitude}');
+    debugPrint('   Widget longitude: ${widget.longitude}');
+    
     final locationState = ref.watch(locationSettingsViewModelProvider);
     final showWhenAtLocationEnabled = locationState.preferences.showWhenAtLocation;
     final hasLocationPermission = locationState.preferences.systemPermissionGranted;
@@ -170,21 +229,29 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       return false;
     }
     
-    // Must be within proximity
+    // Must be within the place's geofence range (dynamic based on place type)
+    final radius = PlaceGeofenceUtils.getRadiusForPlaceType(widget.placeType);
+    debugPrint('   Place type: ${widget.placeType}');
+    debugPrint('   Calculated radius: ${radius}m (${PlaceGeofenceUtils.getRadiusDescription(widget.placeType)})');
+    
     final locationService = ref.read(locationServiceProvider);
-    final isNearby = locationService.isPositionWithinProximity(
-      targetLat: widget.latitude!,
-      targetLon: widget.longitude!,
+    final isInRange = locationService.isPositionInRangeOfPlace(
+      placeLatitude: widget.latitude!,
+      placeLongitude: widget.longitude!,
       position: _currentPosition,
+      placeType: widget.placeType,
     );
     
-    final canUpload = isNearby ?? false;
+    final canUpload = isInRange ?? false;
     debugPrint('   ${canUpload ? "✅" : "❌"} Can upload: $canUpload');
     return canUpload;
   }
   
   /// Show explanatory dialog when image upload is disabled
   Future<void> _showImageUploadDisabledDialog() async {
+    debugPrint('🚫 SHOWING UPLOAD DISABLED DIALOG:');
+    debugPrint('   Widget placeType: ${widget.placeType}');
+    
     final locationState = ref.read(locationSettingsViewModelProvider);
     final showWhenAtLocationEnabled = locationState.preferences.showWhenAtLocation;
     final hasLocationPermission = locationState.preferences.systemPermissionGranted;
@@ -192,12 +259,14 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     String title;
     String message;
     List<Widget> actions;
-    
+
     if (!showWhenAtLocationEnabled) {
       // Feature is disabled
+      final requiredRange = PlaceGeofenceUtils.getRadiusDescription(widget.placeType);
+      debugPrint('   Required range: $requiredRange');
       title = 'Feature Not Enabled';
       message = '"Show When at Location" must be enabled to upload images to maypoles.\n\n'
-          'This feature ensures photo authenticity by requiring you to be within 100 meters of the location.\n\n'
+          'This feature ensures photo authenticity by requiring you to be within $requiredRange of the location.\n\n'
           'Enable it in Preferences to start uploading images.';
       actions = [
         TextButton(
@@ -232,9 +301,38 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
         ),
       ];
     } else {
-      // Has permission but not within proximity
+      // Has permission but not within range
+      debugPrint('   ERROR: Not within range');
+      debugPrint('   widget.placeType being used: ${widget.placeType}');
+      
+      final radius = PlaceGeofenceUtils.getRadiusForPlaceType(widget.placeType);
+      debugPrint('   Calculated radius for error: ${radius}m');
+      
+      final requiredRange = PlaceGeofenceUtils.getRadiusDescription(widget.placeType);
+      debugPrint('   Required range string: $requiredRange');
+      
+      final placeCategory = PlaceGeofenceUtils.getPlaceCategory(widget.placeType);
+      debugPrint('   Place category: $placeCategory');
+      
+      // Get current distance if available
+      String distanceInfo = '';
+      if (_currentPosition != null && widget.latitude != null && widget.longitude != null) {
+        final distance = PlaceGeofenceUtils.getDistanceToPlace(
+          position: _currentPosition,
+          placeLatitude: widget.latitude!,
+          placeLongitude: widget.longitude!,
+        );
+        debugPrint('   Actual distance: ${distance}m');
+        if (distance != null) {
+          final distanceStr = distance >= 1000 
+              ? '${(distance / 1000).toStringAsFixed(1)} km'
+              : '${distance.toStringAsFixed(0)} m';
+          distanceInfo = '\n\nYou are currently $distanceStr away.';
+        }
+      }
+      
       title = 'Not at Location';
-      message = 'You must be within 100 meters of ${widget.maypoleName} to upload images.\n\n'
+      message = 'You must be within $requiredRange of ${widget.maypoleName} to upload images.$distanceInfo\n\n'
           'This ensures photo authenticity. Move closer to the location to upload.';
       actions = [
         TextButton(
@@ -256,6 +354,8 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     );
   }
   
+  /// Check if a message was sent from within the place's geofence range
+  /// Uses dynamic range based on place type (e.g., 5km for cities, 500m for restaurants)
   bool _isMessageFromNearby(MaypoleMessage message) {
     // Check if user has enabled "Show When at Location" feature
     final locationState = ref.watch(locationSettingsViewModelProvider);
@@ -275,15 +375,16 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       return false;
     }
     
-    final locationService = ref.read(locationServiceProvider);
-    final distance = locationService.calculateDistance(
-      message.senderLatitude!,
-      message.senderLongitude!,
-      widget.latitude!,
-      widget.longitude!,
+    // Use dynamic geofence range based on place type
+    final isInRange = PlaceGeofenceUtils.isUserInRange(
+      userLatitude: message.senderLatitude!,
+      userLongitude: message.senderLongitude!,
+      placeLatitude: widget.latitude!,
+      placeLongitude: widget.longitude!,
+      placeType: widget.placeType,
     );
     
-    return distance <= LocationService.proximityThreshold;
+    return isInRange;
   }
 
   @override
@@ -592,6 +693,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
               longitude: widget.longitude,
               senderLatitude: _currentPosition?.latitude,
               senderLongitude: _currentPosition?.longitude,
+              placeType: widget.placeType,
             );
 
         _messageController.clear();
