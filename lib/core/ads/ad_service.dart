@@ -1,15 +1,23 @@
-import 'package:flutter/foundation.dart';
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'ad_config.dart';
 
 /// Service for managing AdMob SDK initialization and ad loading
 class AdService {
   bool _isInitialized = false;
-  
-  /// Initialize the Mobile Ads SDK
+
+  /// Initialize the Mobile Ads SDK (mobile only)
   Future<void> initialize() async {
     if (!AdConfig.adsEnabled) {
       debugPrint('📵 Ads are disabled');
+      return;
+    }
+
+    // Only initialize AdMob on mobile platforms (Android/iOS)
+    if (kIsWeb) {
+      debugPrint('🌐 Skipping AdMob initialization on web (not supported)');
       return;
     }
 
@@ -19,11 +27,11 @@ class AdService {
     }
 
     try {
-      debugPrint('🚀 Initializing AdMob SDK...');
+      debugPrint('🚀 Initializing AdMob SDK on ${Platform.isIOS ? 'iOS' : 'Android'}...');
       await MobileAds.instance.initialize();
       _isInitialized = true;
       debugPrint('✅ AdMob SDK initialized successfully');
-      
+
       // Optional: Set request configuration for testing
       if (AdConfig.useTestAds) {
         debugPrint('🧪 Using test ads');
