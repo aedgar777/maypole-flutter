@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:maypole/core/app_theme.dart';
 import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 import 'dart:js' as js;
@@ -310,8 +311,8 @@ class _WebAdWidgetState extends State<WebAdWidget> {
     return Container(
       height: containerHeight,
       width: double.infinity,
-      // Remove the grey background when ad is loaded to avoid showing placeholder
-      color: _isAdLoaded ? Colors.transparent : Colors.grey[200]?.withAlpha(51),
+      // Use dark purple background when loading, transparent when ad is loaded
+      color: _isAdLoaded ? Colors.transparent : darkPurple,
       child: HtmlElementView(
         viewType: _viewType,
       ),
