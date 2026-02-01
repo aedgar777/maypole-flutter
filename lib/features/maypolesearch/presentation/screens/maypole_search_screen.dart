@@ -4,7 +4,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart' show LocationPermission;
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maypole/core/app_config.dart';
@@ -185,49 +185,103 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
           GoogleMap(
             onMapCreated: (controller) async {
               _mapController = controller;
-              debugPrint('🗺️ Map created');
+              debugPrint('🗺️ [DEBUG] Map created');
+              debugPrint('🗺️ [DEBUG] Platform: ${kIsWeb ? "Web" : !kIsWeb && Platform.isIOS ? "iOS" : !kIsWeb && Platform.isAndroid ? "Android" : "Unknown"}');
+
               // Apply dark map style
               try {
                 await controller.setMapStyle(_darkMapStyle);
-                debugPrint('✅ Map style applied successfully');
+                debugPrint('✅ [DEBUG] Map style applied successfully');
               } catch (e) {
-                debugPrint('⚠️ Error applying map style: $e');
+                debugPrint('⚠️ [DEBUG] Error applying map style: $e');
               }
-              
-              // Move to user's location if permission is granted and we don't already have the position
-              if (hasLocationPermission.value == true) {
-                final currentPos = currentPosition.value;
-                
-                // Only fetch and move if we didn't already start at the user's location
-                if (currentPos == null) {
-                  debugPrint('📍 Permission granted, fetching user location...');
-                  final locationService = ref.read(locationServiceProvider);
-                  final position = await locationService.getCurrentPosition();
-                  
-                  if (position != null && mounted) {
-                    debugPrint('✅ Moving map to user location: ${position.latitude}, ${position.longitude}');
-                    await controller.animateCamera(
-                      CameraUpdate.newCameraPosition(
-                        CameraPosition(
-                          target: LatLng(position.latitude, position.longitude),
-                          zoom: 14.0,
-                        ),
-                      ),
+
+              Position? position;
+
+              // Check if we already have position data from provider
+              debugPrint('🗺️ [DEBUG] currentPosition AsyncValue state:');
+              debugPrint('   - isLoading: ${currentPosition.isLoading}');
+              debugPrint('   - hasValue: ${currentPosition.hasValue}');
+              debugPrint('   - isRefreshing: ${currentPosition.isRefreshing}');
+              debugPrint('   - value: ${currentPosition.value}');
+              debugPrint('   - hasError: ${currentPosition.hasError}');
+
+              final currentPosFromProvider = currentPosition.hasValue ? currentPosition.value : null;
+              debugPrint('🗺️ [DEBUG] currentPos from provider: ${currentPosFromProvider != null ? "Position(" + currentPosFromProvider.latitude.toString() + ", " + currentPosFromProvider.longitude.toString() + ")" : "null"}');
+
+              // Always try to get position - if provider has it, use it; otherwise fetch it
+              if (currentPosFromProvider != null) {
+                debugPrint('✅ [DEBUG] Using position from provider: ${currentPosFromProvider.latitude}, ${currentPosFromProvider.longitude}');
+                position = currentPosFromProvider;
+              } else {
+                debugPrint('📍 [DEBUG] No position from provider, attempting to fetch...');
+
+                if (kIsWeb) {
+                  debugPrint('🌐 [DEBUG] WEB branch: Attempting to get location directly');
+                  debugPrint('🌐 [DEBUG] About to call Geolocator.getCurrentPosition...');
+                  // On web, just call getCurrentPosition directly - browser handles permission
+                  try {
+                    position = await Geolocator.getCurrentPosition(
+                      desiredAccuracy: LocationAccuracy.high,
                     );
+                    debugPrint('✅ [DEBUG] WEB: Successfully got position: ${position.latitude}, ${position.longitude}');
+                    debugPrint('✅ [DEBUG] Position accuracy: ${position.accuracy} meters');
+                    debugPrint('✅ [DEBUG] Position timestamp: ${position.timestamp}');
+                  } catch (e) {
+                    debugPrint('💥 [DEBUG] WEB: Error getting location: $e');
+                    debugPrint('💥 [DEBUG] Error type: ${e.runtimeType}');
+                    debugPrint('💥 [DEBUG] Error toString: ${e.toString()}');
                   }
                 } else {
-                  debugPrint('✅ Map already initialized at user location: ${currentPos.latitude}, ${currentPos.longitude}');
+                  debugPrint('📱 [DEBUG] MOBILE branch: Using permission flow');
+                  // On mobile, check and request permission first
+                  final locationService = ref.read(locationServiceProvider);
+                  debugPrint('📱 [DEBUG] About to check permission...');
+                  final permission = await locationService.checkPermission();
+                  debugPrint('🔐 [DEBUG] Current permission status: $permission');
+
+                  if (permission == LocationPermission.denied) {
+                    debugPrint('📤 [DEBUG] Permission denied, requesting...');
+                    final requestedPermission = await locationService.requestPermission();
+                    debugPrint('📤 [DEBUG] Requested permission status: $requestedPermission');
+                  }
+
+                  debugPrint('📱 [DEBUG] About to call getCurrentPosition...');
+                  position = await locationService.getCurrentPosition();
+                  debugPrint('📍 [DEBUG] MOBILE: Position fetch result: ${position != null ? position.latitude : null}, ${position != null ? position.longitude : null}');
                 }
-              } else {
-                debugPrint('⚠️ No location permission, using default position');
               }
-              
+
+              debugPrint('📍 [DEBUG] Final position variable: ${position != null ? "Position(" + position!.latitude.toString() + ", " + position!.longitude.toString() + ")" : "null"}');
+              debugPrint('📍 [DEBUG]mounted check: $mounted');
+
+              // Always move camera to position if we have it
+              // The initialCameraPosition might not have been set correctly because the provider wasn't ready when widget built
+              if (position != null && mounted) {
+                debugPrint('✅ [DEBUG] About to animate camera to user location...');
+                debugPrint('✅ [DEBUG] Target: ${position.latitude}, ${position.longitude}');
+                await controller.animateCamera(
+                  CameraUpdate.newCameraPosition(
+                    CameraPosition(
+                      target: LatLng(position.latitude, position.longitude),
+                      zoom: 14.0,
+                    ),
+                  ),
+                );
+                debugPrint('✅ [DEBUG] Camera animation completed');
+              } else {
+                debugPrint('⚠️ [DEBUG] Could not get user location, using default position');
+                debugPrint('⚠️ [DEBUG] position is ${position == null ? "NULL" : "NOT NULL"}');
+                debugPrint('⚠️ [DEBUG]mounted is ${mounted ? "TRUE" : "FALSE"}');
+              }
+
               // Mark map as loaded after a short delay to ensure tiles are rendered
               await Future.delayed(const Duration(milliseconds: 500));
               if (mounted) {
                 setState(() {
                   _isMapLoaded = true;
                 });
+                debugPrint('✅ [DEBUG] Map marked as loaded');
               }
             },
             initialCameraPosition: CameraPosition(
