@@ -14,6 +14,8 @@ import 'package:maypole/features/maypolechat/domain/maypole.dart';
 import 'package:maypole/features/maypolechat/presentation/maypole_chat_providers.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import 'package:maypole/core/ads/widgets/banner_ad_widget.dart';
+import 'package:maypole/core/ads/widgets/web_ad_widget.dart';
+import 'package:maypole/core/ads/ad_config.dart';
 
 
 /// A panel showing the list of maypole chats and DM threads.
@@ -158,14 +160,59 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
       );
     }
 
-    // Calculate total items including ads (1 ad per 6 threads) for mobile
-    final adCount = filteredMaypoleThreads.length ~/ 6;
-    final totalItems = filteredMaypoleThreads.length + adCount;
+    // Calculate total items including ads
+    int totalItems;
+    int adCount;
+    
+    if (kIsWeb && AdConfig.webAdsEnabled) {
+      // Web: Square ads - every 5 items if >=5, or at end if <5
+      if (filteredMaypoleThreads.length < 5) {
+        adCount = 1; // One ad at the end
+        totalItems = filteredMaypoleThreads.length + 1;
+      } else {
+        adCount = (filteredMaypoleThreads.length / 5).ceil();
+        totalItems = filteredMaypoleThreads.length + adCount;
+      }
+    } else {
+      // Mobile: Banner ads every 6 items
+      adCount = filteredMaypoleThreads.length ~/ 6;
+      totalItems = filteredMaypoleThreads.length + adCount;
+    }
 
     return ListView.builder(
       itemCount: totalItems,
       itemBuilder: (context, index) {
-        // Show ad every 6 items (at positions 6, 13, 20, etc.) - mobile only
+        // Web ads (square ads)
+        if (kIsWeb && AdConfig.webAdsEnabled) {
+          if (filteredMaypoleThreads.length < 5) {
+            // Show ad at the end if fewer than 5 items
+            if (index == filteredMaypoleThreads.length) {
+              return WebRectangleAd(
+                adSlot: '3398941414',
+                padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+              );
+            }
+            final thread = filteredMaypoleThreads[index];
+            return _buildMaypoleListTile(context, thread);
+          } else {
+            // Show ad every 5 items (at positions 5, 11, 17, etc.)
+            if (index > 0 && (index + 1) % 6 == 0) {
+              return WebRectangleAd(
+                adSlot: '3398941414',
+                padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+              );
+            }
+            // Calculate the actual thread index (accounting for ads)
+            final threadIndex = index - (index ~/ 6);
+            if (threadIndex >= filteredMaypoleThreads.length) {
+              return const SizedBox.shrink();
+            }
+            final thread = filteredMaypoleThreads[threadIndex];
+            return _buildMaypoleListTile(context, thread);
+          }
+        }
+        
+        // Mobile ads (banner ads every 6 items)
         if (index > 0 && (index + 1) % 7 == 0) {
           return const BannerAdWidget(
             padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -179,47 +226,51 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
         }
         
         final thread = filteredMaypoleThreads[threadIndex];
-        final isSelected = widget.selectedThreadId == thread.id && widget.isMaypoleThread;
+        return _buildMaypoleListTile(context, thread);
+      },
+    );
+  }
 
-        return GestureDetector(
-          key: ValueKey('maypole_${thread.id}_$isSelected'),
-          onTap: () {
-            widget.onMaypoleThreadSelected(
-              thread.id, 
-              thread.name, 
-              thread.address,
-              thread.latitude,
-              thread.longitude,
-            );
-          },
-          onLongPress: () {
-            _showMaypoleThreadContextMenu(
-              context,
-              thread,
-              widget.user.firebaseID,
-            );
-          },
-          child: Container(
-            color: isSelected ? Colors.grey.withValues(alpha: 0.15) : Colors.transparent,
-            child: ListTile(
-              leading: const Icon(Icons.location_on),
-              title: Text(
-                thread.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: thread.address.isNotEmpty
-                  ? Text(
-                      thread.address,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.5),
-                      ),
-                    )
-                  : null,
-            ),
-          ),
+  Widget _buildMaypoleListTile(BuildContext context, MaypoleMetaData thread) {
+    final isSelected = widget.selectedThreadId == thread.id && widget.isMaypoleThread;
+    
+    return GestureDetector(
+      key: ValueKey('maypole_${thread.id}_$isSelected'),
+      onTap: () {
+        widget.onMaypoleThreadSelected(
+          thread.id, 
+          thread.name, 
+          thread.address,
+          thread.latitude,
+          thread.longitude,
         );
       },
+      onLongPress: () {
+        _showMaypoleThreadContextMenu(
+          context,
+          thread,
+          widget.user.firebaseID,
+        );
+      },
+      child: Container(
+        color: isSelected ? Colors.grey.withValues(alpha: 0.15) : Colors.transparent,
+        child: ListTile(
+          leading: const Icon(Icons.location_on),
+          title: Text(
+            thread.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: thread.address.isNotEmpty
+              ? Text(
+                  thread.address,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.5),
+                  ),
+                )
+              : null,
+        ),
+      ),
     );
   }
 
