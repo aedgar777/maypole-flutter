@@ -316,6 +316,18 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                       ? darkPurple.withOpacity(0.9) // 90% opacity when focused/has text
                       : Colors.transparent, // Transparent when unfocused and empty
                 ),
+              // Web ad banner above search bar - fixed height to prevent search bar from jumping
+              if (kIsWeb)
+                SizedBox(
+                  height: 106, // Fixed height for banner ad (90px ad + 16px padding)
+                  child: AdConfig.webAdsEnabled
+                      ? Container(
+                          color: darkPurple,
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                          child: WebHorizontalBannerAd(adSlot: '3398941414'),
+                        )
+                      : null, // Empty space when ads are disabled
+                ),
               // Search bar with conditional background and padding
               // Extra left padding on iOS to make room for back button
               AnimatedContainer(
@@ -896,12 +908,6 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Web ad banner
-              if (kIsWeb && AdConfig.webAdsEnabled)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: WebHorizontalBannerAd(adSlot: '3398941414'), // Maypole Web Banner
-                ),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(

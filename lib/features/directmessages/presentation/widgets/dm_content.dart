@@ -16,7 +16,6 @@ import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/core/widgets/report_content_dialog.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:maypole/core/ads/widgets/banner_ad_widget.dart';
-import 'package:maypole/core/ads/widgets/web_ad_widget.dart';
 import 'package:maypole/core/ads/ad_config.dart';
 import 'package:maypole/core/services/hive_moderation_provider.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
@@ -293,17 +292,6 @@ class _DmContentState extends ConsumerState<DmContent> {
             ],
           ],
         ),
-        // Sticky banner ad at top on web only
-        if (kIsWeb && AdConfig.webAdsEnabled)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              child: WebHorizontalBannerAd(adSlot: '3398941414'), // Maypole Web Banner
-            ),
-          ),
       ],
     );
 
