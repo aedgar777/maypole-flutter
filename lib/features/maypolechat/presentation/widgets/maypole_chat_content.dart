@@ -26,10 +26,9 @@ import 'package:maypole/features/maypolechat/presentation/widgets/message_with_m
 import 'package:maypole/features/maypolechat/presentation/widgets/image_upload_notification.dart';
 import 'package:maypole/features/settings/settings_providers.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:maypole/core/ads/widgets/banner_ad_widget.dart';
 import 'package:maypole/core/ads/ad_config.dart';
-import 'package:maypole/core/ads/widgets/web_ad_widget.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import '../maypole_chat_providers.dart';
 
 /// The content of a maypole chat screen without the Scaffold wrapper.
@@ -549,17 +548,6 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
               _buildMessageInput(currentUser, l10n),
           ],
         ),
-        // Sticky banner ad at top on web only
-        if (kIsWeb && AdConfig.webAdsEnabled)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              child: WebHorizontalBannerAd(adSlot: '3398941414'), // Maypole Web Banner
-            ),
-          ),
       ],
     );
 
