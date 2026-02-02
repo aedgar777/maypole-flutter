@@ -12,13 +12,6 @@ cd "$PROJECT_DIR"
 
 echo "🌐 Building and deploying Web Dev to Firebase Hosting..."
 
-# Bump build number
-echo "📱 Bumping build number..."
-chmod +x scripts/auto-bump-build.sh scripts/get-version.sh
-./scripts/auto-bump-build.sh
-echo "✅ Version bumped to: $(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')"
-echo ""
-
 # Load environment variables
 set -a
 source "$(dirname "$0")/../../.env"

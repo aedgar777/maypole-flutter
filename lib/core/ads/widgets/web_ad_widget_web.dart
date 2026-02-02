@@ -25,6 +25,9 @@ class WebAdWidget extends StatefulWidget {
   /// Fixed height (only used if not responsive)
   final int? height;
 
+  /// Optional padding around the ad
+  final EdgeInsetsGeometry? padding;
+
   const WebAdWidget({
     super.key,
     required this.adSlot,
@@ -32,6 +35,7 @@ class WebAdWidget extends StatefulWidget {
     this.isResponsive = true,
     this.width,
     this.height,
+    this.padding,
   });
 
   @override
@@ -308,7 +312,7 @@ class _WebAdWidgetState extends State<WebAdWidget> {
     }
 
     // Show a subtle loading placeholder initially, or the ad if loaded
-    return Container(
+    Widget adContainer = Container(
       height: containerHeight,
       width: double.infinity,
       // Use dark purple background when loading, transparent when ad is loaded
@@ -317,6 +321,16 @@ class _WebAdWidgetState extends State<WebAdWidget> {
         viewType: _viewType,
       ),
     );
+
+    // Wrap with padding if specified
+    if (widget.padding != null) {
+      adContainer = Padding(
+        padding: widget.padding!,
+        child: Center(child: adContainer),
+      );
+    }
+
+    return adContainer;
   }
 }
 
@@ -373,8 +387,9 @@ class WebVerticalBannerAd extends StatelessWidget {
 /// Rectangle ad (300x250)
 class WebRectangleAd extends StatelessWidget {
   final String adSlot;
+  final EdgeInsetsGeometry? padding;
 
-  const WebRectangleAd({super.key, required this.adSlot});
+  const WebRectangleAd({super.key, required this.adSlot, this.padding});
 
   @override
   Widget build(BuildContext context) {
@@ -384,6 +399,7 @@ class WebRectangleAd extends StatelessWidget {
       isResponsive: false,
       width: 300,
       height: 250,
+      padding: padding,
     );
   }
 }
