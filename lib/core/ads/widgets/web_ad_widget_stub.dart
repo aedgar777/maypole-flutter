@@ -67,3 +67,19 @@ class WebVerticalBannerAd extends StatelessWidget {
     return const SizedBox.shrink();
   }
 }
+
+class WebRectangleAd extends StatelessWidget {
+  final String adSlot;
+  final EdgeInsetsGeometry? padding;
+
+  const WebRectangleAd({
+    super.key,
+    required this.adSlot,
+    this.padding,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox.shrink();
+  }
+}
