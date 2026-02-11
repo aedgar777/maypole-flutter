@@ -15,6 +15,92 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
+// ============================================================================
+// AdSense ads.txt serving and verification
+// ============================================================================
+
+/**
+ * Serves ads.txt file for AdSense verification
+ * This provides a backup method to ensure ads.txt is always accessible
+ * Even if it gets removed from static hosting
+ * 
+ * Access: https://us-central1-maypole-flutter-ce6c3.cloudfunctions.net/serveAdsTxt
+ */
+exports.serveAdsTxt = functions.https.onRequest((req, res) => {
+  // AdSense publisher ID
+  const adsTxtContent = 'google.com, pub-9803674282352310, DIRECT, f08c47fec0942fa0';
+  
+  console.log('📱 Serving ads.txt from Cloud Function');
+  
+  res.set('Content-Type', 'text/plain');
+  res.set('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+  res.status(200).send(adsTxtContent);
+});
+
+/**
+ * Verifies that ads.txt is accessible from the main domain
+ * This health check endpoint can be called to verify AdSense setup
+ * 
+ * Access: https://us-central1-maypole-flutter-ce6c3.cloudfunctions.net/verifyAdsTxt
+ * 
+ * Returns JSON with:
+ * - accessible: boolean
+ * - content: string (if accessible)
+ * - error: string (if not accessible)
+ * - timestamp: ISO string
+ * - url: string (the URL checked)
+ */
+exports.verifyAdsTxt = functions.https.onRequest(async (req, res) => {
+  const domain = req.query.domain || 'https://maypole.app';
+  const adsTxtUrl = `${domain}/ads.txt`;
+  
+  console.log(`🔍 Verifying ads.txt at: ${adsTxtUrl}`);
+  
+  try {
+    // Use native fetch (available in Node.js 18+)
+    const response = await fetch(adsTxtUrl);
+    const content = await response.text();
+    
+    const isAccessible = response.status === 200 && content.includes('google.com');
+    const expectedPublisher = 'pub-9803674282352310';
+    const hasCorrectPublisher = content.includes(expectedPublisher);
+    
+    const result = {
+      accessible: isAccessible && hasCorrectPublisher,
+      status: response.status,
+      content: content,
+      url: adsTxtUrl,
+      timestamp: new Date().toISOString(),
+      checks: {
+        statusOk: response.status === 200,
+        containsGoogle: content.includes('google.com'),
+        hasPublisherId: hasCorrectPublisher,
+        expectedPublisherId: expectedPublisher
+      }
+    };
+    
+    console.log(`✅ Verification result: ${result.accessible ? 'PASS' : 'FAIL'}`);
+    
+    res.set('Content-Type', 'application/json');
+    res.status(200).json(result);
+    
+  } catch (error) {
+    console.error(`❌ Error verifying ads.txt: ${error.message}`);
+    
+    res.set('Content-Type', 'application/json');
+    res.status(200).json({
+      accessible: false,
+      error: error.message,
+      url: adsTxtUrl,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// ============================================================================
+// Authentication Triggers
+// ============================================================================
+
 /**
  * Triggered when a Firebase Auth user is deleted.
  * Automatically cleans up all associated Firestore data:

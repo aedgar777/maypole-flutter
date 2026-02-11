@@ -41,6 +41,23 @@ flutter build web \
 echo "✅ Build complete!"
 echo ""
 
+# Copy deeplink verification files to build directory
+echo "🔗 Copying verification files..."
+mkdir -p build/web/.well-known
+
+# Copy Apple App Site Association files
+cp public/apple-app-site-association build/web/apple-app-site-association
+cp public/.well-known/apple-app-site-association build/web/.well-known/apple-app-site-association
+
+# Copy Android Asset Links file
+cp public/.well-known/assetlinks.json build/web/.well-known/assetlinks.json
+
+# Copy ads.txt file for AdSense
+cp web/ads.txt build/web/ads.txt
+
+echo "✅ Verification files copied!"
+echo ""
+
 # Deploy to Firebase Hosting beta site
 # Note: You need to set up a beta hosting site first using:
 #   firebase hosting:channel:create beta --project maypole-flutter-ce6c3
