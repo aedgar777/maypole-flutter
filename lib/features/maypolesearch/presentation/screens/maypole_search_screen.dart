@@ -316,6 +316,63 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                       ? darkPurple.withOpacity(0.9) // 90% opacity when focused/has text
                       : Colors.transparent, // Transparent when unfocused and empty
                 ),
+              // Mobile search bar (no web ads)
+              if (!kIsWeb && !AppConfig.isWideScreen)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: double.infinity,
+                  color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
+                      ? darkPurple.withValues(alpha: 0.9)
+                      : Colors.transparent,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8.0, 0, 8.0, 8.0),
+                    child: TextField(
+                      controller: _searchController,
+                      focusNode: _searchFocusNode,
+                      decoration: InputDecoration(
+                        hintText: l10n.searchForMaypole,
+                        hintStyle: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.3),
+                        ),
+                        filled: true,
+                        fillColor: lightPurple,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide(
+                            color: skyBlue,
+                            width: 2.0,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        suffixIcon: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _searchFocusNode.unfocus();
+                                  ref.read(maypoleSearchViewModelProvider.notifier).searchMaypoles('');
+                                },
+                              )
+                            : null,
+                      ),
+                    ),
+                  ),
+                ),
+
               // Web ad banner + search bar in the same container that dims together
               if (kIsWeb && AdConfig.webAdsEnabled)
                 AnimatedContainer(

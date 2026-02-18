@@ -494,7 +494,8 @@ class _DmContentState extends ConsumerState<DmContent> {
                 controller: _messageController,
                 focusNode: _messageFocusNode,
                 maxLength: 1000,
-                buildCounter: (context, {currentLength, maxLength, isFocused}) => null,
+                maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                buildCounter: (context, {required currentLength, required isFocused, required maxLength}) => null,
                 decoration: InputDecoration(
                   hintText: 'Enter a message',
                   hintStyle: TextStyle(
