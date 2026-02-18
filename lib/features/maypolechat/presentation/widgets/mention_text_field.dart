@@ -13,6 +13,7 @@ class MentionTextField extends ConsumerStatefulWidget {
   final String threadId;
   final VoidCallback? onSubmitted;
   final FocusNode? focusNode;
+  final int? maxLength;
 
   const MentionTextField({
     super.key,
@@ -20,6 +21,7 @@ class MentionTextField extends ConsumerStatefulWidget {
     required this.threadId,
     this.onSubmitted,
     this.focusNode,
+    this.maxLength,
   });
 
   @override
@@ -250,6 +252,8 @@ class _MentionTextFieldState extends ConsumerState<MentionTextField> {
       child: TextField(
         controller: widget.controller,
         focusNode: widget.focusNode,
+        maxLength: widget.maxLength,
+        buildCounter: (context, {currentLength, maxLength, isFocused}) => null,
         decoration: InputDecoration(
           hintText: l10n.enterMessage,
           hintStyle: TextStyle(

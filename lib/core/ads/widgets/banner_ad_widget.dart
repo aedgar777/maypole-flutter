@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -100,6 +101,11 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
 
   @override
   Widget build(BuildContext context) {
+    // Banner ads don't work on web - return nothing immediately (no placeholder)
+    if (kIsWeb) {
+      return const SizedBox.shrink();
+    }
+
     // If ads are not enabled or failed to load, return nothing
     if (!AdConfig.adsEnabled || _failedToLoad) {
       return const SizedBox.shrink();
@@ -240,6 +246,11 @@ class _ListBannerAdWidgetState extends ConsumerState<ListBannerAdWidget> {
 
   @override
   Widget build(BuildContext context) {
+    // Banner ads don't work on web - return nothing immediately (no placeholder)
+    if (kIsWeb) {
+      return const SizedBox.shrink();
+    }
+
     // If ads are not enabled or failed to load, return nothing
     if (!AdConfig.adsEnabled || _failedToLoad) {
       return const SizedBox.shrink();
