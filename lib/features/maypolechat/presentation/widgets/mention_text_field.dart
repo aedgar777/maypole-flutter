@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
@@ -253,7 +254,8 @@ class _MentionTextFieldState extends ConsumerState<MentionTextField> {
         controller: widget.controller,
         focusNode: widget.focusNode,
         maxLength: widget.maxLength,
-        buildCounter: (context, {currentLength, maxLength, isFocused}) => null,
+        maxLengthEnforcement: MaxLengthEnforcement.enforced,
+        buildCounter: (context, {required currentLength, required isFocused, required maxLength}) => null,
         decoration: InputDecoration(
           hintText: l10n.enterMessage,
           hintStyle: TextStyle(
