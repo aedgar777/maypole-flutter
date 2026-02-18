@@ -44,56 +44,9 @@ jobs:
       - name: Run unit tests
         run: flutter test
 
-  bump_version:
-    name: Bump Build Number
-    needs: run_tests
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    outputs:
-      new_version: ${{ steps.bump.outputs.new_version }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-
-      - name: Bump build number
-        id: bump
-        run: |
-          chmod +x scripts/auto-bump-build.sh scripts/get-version.sh
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin develop || echo "⚠️ Pull failed, but continuing..."
-          echo "📱 Current version:"
-          ./scripts/get-version.sh
-          ./scripts/auto-bump-build.sh
-          echo "✅ New version:"
-          ./scripts/get-version.sh
-          if git diff --quiet pubspec.yaml; then
-            echo "ℹ️ No version changes detected, skipping commit"
-            exit 0
-          fi
-          NEW_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          git add pubspec.yaml
-          git commit -m "chore: bump build number to $NEW_VERSION [skip ci]"
-          for i in {1..3}; do
-            if git push origin develop; then
-              echo "✅ Successfully pushed version bump"
-              exit 0
-            else
-              echo "⚠️ Push failed (attempt $i/3), pulling and retrying..."
-              git pull --rebase origin develop
-            fi
-          done
-          echo "❌ Failed to push after 3 attempts"
-          exit 1
-
   deploy_firebase:
     name: Deploy Firebase Tools
-    needs: bump_version
+    needs: run_tests
     runs-on: ubuntu-latest
     environment: development
     steps:

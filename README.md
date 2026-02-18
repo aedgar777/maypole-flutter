@@ -21,7 +21,7 @@ Imagine walking into your favorite coffee shop and instantly being able to chat 
 - **🎨 Modern UI/UX**: Beautiful, responsive design with dark theme
 - **🔒 Privacy-First**: Control who can message you, block users, and manage your data
 - **🛡️ Content Moderation**: AI-powered moderation via Hive to keep communities safe
-- **📱 Cross-Platform Ads**: AdMob for mobile and AdSense for web with feature flag control
+- **📱 Cross-Platform Ads**: AdMob for mobile and Adsterra for web with feature flag control
 
 ### User Experience Highlights
 
@@ -70,7 +70,7 @@ Imagine walking into your favorite coffee shop and instantly being able to chat 
 **External Services**
 - **Google Places API** - Location search and place data
 - **Google Mobile Ads 5.2** - AdMob integration for mobile monetization
-- **Google AdSense** - Web platform ad monetization with display ads
+- **Adsterra** - Web platform ad monetization with display ads
 - **Hive Moderation API** - AI-powered content moderation for text and images
 
 **Development Tools**
@@ -175,7 +175,7 @@ Imagine walking into your favorite coffee shop and instantly being able to chat 
 
 **Multi-Platform Ad Integration**
 - **Mobile (iOS/Android)**: Google AdMob with native banner and interstitial ads
-- **Web**: Google AdSense with responsive display ads
+- **Web**: Adsterra with responsive display ads
 - **Feature Flags**: Firebase Remote Config for ad control
   - `ads_enabled`: Master kill switch for all ads
   - `ads_web_enabled`: Web-specific ad toggle
@@ -195,7 +195,7 @@ maypole-flutter/
 │   │   ├── app_router.dart      # Navigation configuration
 │   │   ├── app_theme.dart       # UI theming
 │   │   ├── firebase_options.dart # Firebase configuration
-│   │   ├── ads/                 # Monetization (AdMob & AdSense)
+│   │   ├── ads/                 # Monetization (AdMob & Adsterra)
 │   │   │   ├── ad_config.dart   # Ad unit IDs and feature flags
 │   │   │   └── widgets/         # Ad display widgets
 │   │   └── services/            # Shared services
@@ -215,8 +215,8 @@ maypole-flutter/
 ├── ios/                         # iOS native code & Fastlane
 ├── macos/                       # macOS native code
 ├── web/                         # Web platform code
-│   ├── index.html               # Main HTML with AdSense integration
-│   └── ads.txt                  # AdSense site verification
+│   ├── index.html               # Main HTML with Adsterra integration
+│   └── ads.txt                  # Ad site verification (for web ads)
 ├── scripts/                     # Build automation scripts
 ├── test/                        # Unit and widget tests
 ├── assets/                      # Images, fonts, and resources

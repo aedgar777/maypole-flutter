@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io' show Platform;
 
-import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:http/http.dart' as http;
 import 'ad_config.dart';
@@ -29,7 +29,7 @@ class AdService {
     }
 
     try {
-      debugPrint('🚀 Initializing AdMob SDK on ${Platform.isIOS ? 'iOS' : 'Android'}...');
+      debugPrint('🚀 Initializing AdMob SDK on ${Platform.operatingSystem}...');
       await MobileAds.instance.initialize();
       _isInitialized = true;
       debugPrint('✅ AdMob SDK initialized successfully');

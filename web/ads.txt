@@ -1,1 +1,3 @@
-google.com, pub-9803674282352310, DIRECT, f08c47fec0942fa0
+# This file is used for ad network verification
+# For Adsterra, verification is typically done via DNS or meta tags
+# Contact Adsterra support for specific verification requirements
