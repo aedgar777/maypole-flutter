@@ -1,6 +1,7 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show debugPrint;
+
+import 'package:flutter/foundation.dart' show debugPrint, defaultTargetPlatform;
+import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -48,7 +49,7 @@ class NotificationService {
 
       bool granted;
       
-      if (Platform.isIOS) {
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
         // On iOS, use Firebase Messaging to request permission
         // This is required for FCM to work properly
         final messaging = FirebaseMessaging.instance;
@@ -111,7 +112,7 @@ class NotificationService {
     try {
       // On iOS, use Firebase Messaging for more accurate permission checking
       // because permission_handler can be unreliable for notifications on iOS
-      if (Platform.isIOS) {
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
         final messaging = FirebaseMessaging.instance;
         final settings = await messaging.getNotificationSettings();
         final isGranted = settings.authorizationStatus == AuthorizationStatus.authorized ||

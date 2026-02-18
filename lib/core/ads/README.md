@@ -1,227 +1,178 @@
-# Ads System Documentation
+# Ad System
 
-This directory contains the complete ad implementation for both mobile (AdMob) and web (AdSense) platforms.
+This directory contains the complete ad implementation for both mobile (AdMob) and web (Adsterra) platforms.
 
-## 📁 Directory Structure
+## Architecture
 
 ```
 lib/core/ads/
+├── ad_config.dart               # Configuration and ad unit IDs
+├── ad_providers.dart            # Riverpod providers for ad state
+├── ad_service.dart              # AdMob initialization and loading
 ├── README.md                    # This file
-├── FEATURE_FLAGS.md            # Feature flag documentation
-├── USAGE_EXAMPLES.md           # Code examples for using ads
-├── ad_config.dart              # Ad configuration & feature flags
-├── ad_providers.dart           # Riverpod providers for ads
-├── ad_service.dart             # AdMob service (mobile)
 └── widgets/
-    ├── banner_ad_widget.dart        # Mobile banner ads (AdMob)
-    ├── interstitial_ad_manager.dart # Mobile interstitial ads (AdMob)
-    ├── web_ad_widget.dart           # Web ads (AdSense) ⭐ NEW
-    └── platform_adaptive_ad.dart    # Cross-platform ad widget ⭐ NEW
+    ├── banner_ad_widget.dart    # Mobile banner ads (AdMob)
+    ├── interstitial_ad_manager.dart  # Full-screen mobile ads
+    ├── platform_adaptive_ad.dart     # Automatically shows correct ad type
+    ├── web_ad_widget.dart       # Entry point with conditional exports
+    ├── web_ad_widget_stub.dart  # Stub for non-web platforms
+    └── web_ad_widget_web.dart   # Web ads (Adsterra) - Web only
 ```
 
-## 🚀 Quick Start
+## Platform Support
+
+| Platform | Ad Network | Status |
+|----------|------------|--------|
+| Android | Google AdMob | ✅ Ready |
+| iOS | Google AdMob | ✅ Ready |
+| Web | Adsterra | ✅ Ready (needs IDs) |
+
+## Usage
+
+### Quick Start - Platform Adaptive Ads
+
+The easiest way to show ads is using `PlatformAdaptiveAd`:
+
+```dart
+import 'package:maypole/core/ads/widgets/platform_adaptive_ad.dart';
+
+// Shows AdMob on mobile, Adsterra on web
+PlatformAdaptiveAd(
+  webAdSlot: 'YOUR_ADSTERRA_SLOT_ID',
+  webAdFormat: 'horizontal',
+)
+```
 
 ### For Mobile Ads (AdMob)
 
 ```dart
 import 'package:maypole/core/ads/widgets/banner_ad_widget.dart';
 
-// Simple banner ad
+// Simple banner
 BannerAdWidget()
 ```
 
-### For Web Ads (AdSense)
+### For Web Ads (Adsterra)
 
 ```dart
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:maypole/core/ads/widgets/web_ad_widget.dart';
 
 // Simple web banner
 if (kIsWeb)
-  WebHorizontalBannerAd(adSlot: 'YOUR_AD_SLOT_ID')
+  WebHorizontalBannerAd(adSlot: 'YOUR_ADSTERRA_SLOT_ID')
 ```
 
-### For Cross-Platform Ads (Both)
+## Configuration
+
+### AdMob (Mobile)
+
+Ad unit IDs are managed in `ad_config.dart`:
+- Test ads are used in debug mode automatically
+- Production ads are used in release builds
+
+### Web (Adsterra)
+
+1. Create an Adsterra account at [https://adsterra.com](https://adsterra.com)
+2. Add your website/app URL in the Adsterra dashboard
+3. Create ad placements and get your slot IDs
+4. Update `ad_config.dart` with your Adsterra slot IDs:
 
 ```dart
-import 'package:maypole/core/ads/widgets/platform_adaptive_ad.dart';
-
-// Shows AdMob on mobile, AdSense on web
-PlatformHorizontalBannerAd(
-  webAdSlot: 'YOUR_WEB_AD_SLOT_ID',
-)
+// In ad_config.dart
+static const String adsterraBannerSlot = '123456789';
+static const String adsterraLeaderboardSlot = '987654321';
 ```
 
-## 📚 Documentation
+5. Update your widget code with your slot IDs:
 
-- **[FEATURE_FLAGS.md](FEATURE_FLAGS.md)** - Complete guide to ad feature flags and scenarios
-- **[USAGE_EXAMPLES.md](USAGE_EXAMPLES.md)** - Code examples for implementing ads
-- **[WEB_ADS_IMPLEMENTATION_GUIDE.md](../../WEB_ADS_IMPLEMENTATION_GUIDE.md)** - Full setup guide for web ads
+```dart
+WebRectangleAd(adSlot: AdConfig.adsterraBannerSlot)
+```
 
-## 🎯 Feature Flags
+## Adsterra Ad Formats
 
-Ads are controlled by Firebase Remote Config:
+Adsterra offers several ad formats:
 
-- **`ads_enabled`** - Master flag (all ads)
-- **`ads_web_enabled`** - Web ads only (requires master) ⭐ NEW
-- **`ads_banner_enabled`** - Mobile banner ads (requires master)
-- **`ads_interstitial_enabled`** - Mobile interstitial ads (requires master)
+### Banner Ads
+- **300x250** (Medium Rectangle) - Use `WebRectangleAd`
+- **728x90** (Leaderboard) - Use `WebHorizontalBannerAd`
+- **160x600** (Wide Skyscraper) - Use `WebVerticalBannerAd`
+- **Responsive** - Use `WebDisplayAd`
 
-See [FEATURE_FLAGS.md](FEATURE_FLAGS.md) for details.
+### Special Formats
+- **Social Bar** - Use `WebSocialBarAd`
+- **Native Banner** - Use `WebNativeBannerAd`
 
-## 🛠️ Setup Required
+## Remote Config Feature Flags
 
-### Mobile (Already Configured)
-- ✅ AdMob account configured
-- ✅ Ad unit IDs in `ad_config.dart`
-- ✅ App IDs in AndroidManifest.xml and Info.plist
+Ads can be controlled remotely via Firebase:
 
-### Web (New Setup Required)
-1. Get Google AdSense account and Publisher ID
-2. Create ad units and get ad slot IDs
-3. Update `web/index.html` with your Publisher ID
-4. Update `web_ad_widget.dart` with your Publisher ID
-5. Configure Firebase Remote Config flags
+| Flag | Description |
+|------|-------------|
+| `ads_enabled` | Master switch for all ads |
+| `banner_ads_enabled` | Banner ads specifically |
+| `interstitial_ads_enabled` | Full-screen mobile ads |
+| `web_ads_enabled` | Web platform ads (Adsterra) |
+| `interstitial_frequency` | How often to show interstitials |
 
-See **[WEB_ADS_IMPLEMENTATION_GUIDE.md](../../WEB_ADS_IMPLEMENTATION_GUIDE.md)** for detailed instructions.
-
-## 🎨 Available Ad Widgets
+## Testing
 
 ### Mobile (AdMob)
-- `BannerAdWidget` - Standard mobile banner
-- `InterstitialAdManager` - Full-screen ads
 
-### Web (AdSense)
-- `WebDisplayAd` - Responsive display ad
-- `WebHorizontalBannerAd` - Horizontal banner (leaderboard)
-- `WebVerticalBannerAd` - Vertical banner (skyscraper)
-- `WebRectangleAd` - Fixed 300x250 rectangle
-- `WebAdWidget` - Customizable ad widget
+Test ads are automatically used in debug mode. No configuration needed.
 
-### Cross-Platform
-- `PlatformAdaptiveAd` - Auto-detects platform
-- `PlatformHorizontalBannerAd` - Platform-specific horizontal banner
-- `PlatformDisplayAd` - Platform-specific display ad
+### Web (Adsterra)
 
-## ⚙️ Configuration
+1. Ensure `web_ads_enabled` is true in Remote Config
+2. Use valid Adsterra slot IDs from your dashboard
+3. Test with your site URL registered in Adsterra
 
-### Check if ads are enabled:
+## Troubleshooting
 
-```dart
-import 'package:maypole/core/ads/ad_config.dart';
+### Ads not showing on web
 
-if (AdConfig.adsEnabled) {
-  // Master flag is ON
-}
+1. **Check the browser console** for JavaScript errors
+2. **Verify slot IDs** are correctly entered in AdConfig
+3. **Check Adsterra account** - ensure your site is approved
+4. **Check Remote Config** - ensure `web_ads_enabled` is true
+5. **Test on deployed URL** - Adsterra may require your actual domain
 
-if (AdConfig.webAdsEnabled) {
-  // Web ads are ON (master flag also ON)
-}
+### Build issues
 
-if (AdConfig.bannerAdsEnabled) {
-  // Mobile banner ads are ON (master flag also ON)
-}
-```
-
-### Ad Unit IDs
-
-Mobile ad units are configured in `ad_config.dart`:
-- Test ad units used in debug mode
-- Production ad units used in release mode
-
-Web ad units are passed as parameters to widgets.
-
-## 🧪 Testing
-
-### Mobile Ads
+If you get build errors on web:
 ```bash
-# Run app in debug mode (uses test ads)
-flutter run
-
-# Run in release mode (uses production ads)
-flutter run --release
-```
-
-### Web Ads
-```bash
-# Build and serve web app
+flutter clean
+flutter pub get
 flutter build web
-# Deploy to a real URL (ads won't work on localhost)
 ```
 
-**Important:** AdSense ads require:
-- Approved AdSense account
-- Real domain (not localhost)
-- Correct Publisher ID and ad slot IDs
+### Ad slot IDs format
 
-## 🔍 Debugging
-
-### Check ad status:
-
-```dart
-import 'package:flutter/foundation.dart';
-import 'package:maypole/core/ads/ad_config.dart';
-
-debugPrint('Master flag: ${AdConfig.adsEnabled}');
-debugPrint('Web ads: ${AdConfig.webAdsEnabled}');
-debugPrint('Mobile banner: ${AdConfig.bannerAdsEnabled}');
-debugPrint('Mobile interstitial: ${AdConfig.interstitialAdsEnabled}');
+Adsterra slot IDs are numeric values that appear in your ad script URLs:
+```
+//pl123456789.effectiveratecpm.com/123456789/invoke.js
+    ^^^^^^^^^
+    This is your slot ID
 ```
 
-### Common issues:
+## Migration from AdSense
 
-1. **Ads not showing on web:**
-   - Check AdSense account is approved
-   - Verify Publisher ID in `web/index.html`
-   - Check ad slot IDs are correct
-   - Ensure deployed to real URL (not localhost)
-   - Check browser console for errors
+If you previously used Google AdSense:
 
-2. **Ads not showing on mobile:**
-   - Check feature flags in Remote Config
-   - Verify ad unit IDs in `ad_config.dart`
-   - Check AdMob initialization in `main.dart`
+1. ✅ Remove AdSense script from `web/index.html`
+2. ✅ Update `web_ad_widget_web.dart` for Adsterra format
+3. ✅ Replace AdSense ad slot IDs with Adsterra slot IDs
+4. ✅ Update `ad_config.dart` with new configuration constants
 
-3. **All ads disabled:**
-   - Check `ads_enabled` flag in Remote Config
-   - This is the master kill switch
+## API Reference
 
-## 📱 Platforms Supported
+See inline documentation in:
+- `ad_config.dart` - Configuration options
+- `ad_service.dart` - Initialization and loading
+- `widgets/web_ad_widget_web.dart` - Web widget options
 
-| Platform | Ad Network | Status |
-|----------|-----------|--------|
-| iOS | Google AdMob | ✅ Configured |
-| Android | Google AdMob | ✅ Configured |
-| Web | Google AdSense | ✅ Ready (needs IDs) |
-| macOS | N/A | ❌ Not configured |
-| Windows | N/A | ❌ Not configured |
-| Linux | N/A | ❌ Not configured |
+## Support
 
-## 🤝 Contributing
-
-When adding new ad functionality:
-
-1. Add configuration to `ad_config.dart`
-2. Create widget in `widgets/` directory
-3. Add feature flag to Remote Config
-4. Update documentation
-5. Add usage examples to `USAGE_EXAMPLES.md`
-
-## 📄 License
-
-Part of the Maypole app.
-
-## 🆘 Support
-
-For issues:
-1. Check [FEATURE_FLAGS.md](FEATURE_FLAGS.md) for flag configuration
-2. Check [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md) for implementation examples
-3. Check [WEB_ADS_IMPLEMENTATION_GUIDE.md](../../WEB_ADS_IMPLEMENTATION_GUIDE.md) for web setup
-4. Review Firebase Remote Config settings
-5. Check ad network dashboards (AdMob/AdSense)
-
----
-
-**Last Updated:** January 2026  
-**Version:** 1.1.2  
-**New Features:** Web ads support with feature flags 🎉
+For issues with:
+- **AdMob**: Check [Google AdMob Help](https://support.google.com/admob)
+- **Adsterra**: Contact Adsterra support or check their [Publisher Guide](https://adsterra.com/publisher-guide)

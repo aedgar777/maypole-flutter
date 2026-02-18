@@ -484,36 +484,48 @@ class _DmContentState extends ConsumerState<DmContent> {
                 : 'Add photo',
           ),
           Expanded(
-            child: TextField(
-              controller: _messageController,
-              focusNode: _messageFocusNode,
-              decoration: InputDecoration(
-                hintText: 'Enter a message',
-                hintStyle: TextStyle(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.3),
+            child: CallbackShortcuts(
+              bindings: kIsWeb
+                  ? <ShortcutActivator, VoidCallback>{
+                      const SingleActivator(LogicalKeyboardKey.enter): sendMessage,
+                    }
+                  : {},
+              child: TextField(
+                controller: _messageController,
+                focusNode: _messageFocusNode,
+                maxLength: 1000,
+                buildCounter: (context, {currentLength, maxLength, isFocused}) => null,
+                decoration: InputDecoration(
+                  hintText: 'Enter a message',
+                  hintStyle: TextStyle(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.3),
+                  ),
+                  filled: true,
+                  fillColor: lightPurple,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                 ),
-                filled: true,
-                fillColor: lightPurple,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+                maxLines: kIsWeb ? null : 1,
+                textInputAction: kIsWeb ? TextInputAction.newline : TextInputAction.send,
+                onSubmitted: kIsWeb ? null : (_) => sendMessage(),
+                onTapOutside: (_) => _messageFocusNode.unfocus(),
               ),
-              onSubmitted: AppConfig.isWideScreen ? (_) => sendMessage() : null,
             ),
           ),
           IconButton(

@@ -1,19 +1,27 @@
-import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:maypole/core/app_theme.dart';
 import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
-import 'dart:js' as js;
 import '../ad_config.dart';
 
-/// Widget to display Google AdSense ads on web platform
+/// Widget to display Adsterra ads on web platform
 /// This widget only works on web platform and respects the web ads feature flag
+/// 
+/// Adsterra Integration Guide:
+/// 1. Create an Adsterra account at https://adsterra.com
+/// 2. Get your ad placement codes from the dashboard
+/// 3. Use the ad IDs in the widget (adSlot parameter)
+/// 
+/// Common Adsterra formats:
+/// - 'banner' - Standard banner ads (300x250, 728x90, etc.)
+/// - 'social_bar' - Social bar ad format
+/// - 'native_banner' - Native banner ads
+/// - 'popunder' - Pop-under ads (handled separately)
 class WebAdWidget extends StatefulWidget {
-  /// Ad slot ID from Google AdSense
+  /// Ad placement ID from Adsterra (the numeric ID from dashboard, e.g., '28635540')
   final String adSlot;
   
-  /// Ad format (e.g., 'auto', 'rectangle', 'horizontal', 'vertical')
+  /// Ad format (e.g., 'banner', 'social_bar', 'native_banner')
   final String adFormat;
   
   /// Whether the ad is responsive
@@ -27,15 +35,20 @@ class WebAdWidget extends StatefulWidget {
 
   /// Optional padding around the ad
   final EdgeInsetsGeometry? padding;
+  
+  /// The ad key from Adsterra script (e.g., '5f9bf870d30ef305b76bd374783acc7d')
+  /// If not provided, uses adSlot as fallback
+  final String? adKey;
 
   const WebAdWidget({
     super.key,
     required this.adSlot,
-    this.adFormat = 'auto',
+    this.adFormat = 'banner',
     this.isResponsive = true,
     this.width,
     this.height,
     this.padding,
+    this.adKey,
   });
 
   @override
@@ -43,26 +56,19 @@ class WebAdWidget extends StatefulWidget {
 }
 
 class _WebAdWidgetState extends State<WebAdWidget> {
-  final String _viewType = 'google-adsense-${DateTime.now().millisecondsSinceEpoch}';
+  final String _viewType = 'adsterra-ad-${DateTime.now().millisecondsSinceEpoch}';
   bool _isRegistered = false;
-  bool _isAdLoaded = false;
-  bool _isAdFailed = false;
-  Timer? _periodicCheckTimer;
 
   @override
   void initState() {
     super.initState();
     if (kIsWeb && AdConfig.webAdsEnabled) {
       _registerAdWidget();
-      _checkAdLoadStatus();
-      // Start periodic checking to detect when ads become approved
-      _startPeriodicAdCheck();
     }
   }
 
   @override
   void dispose() {
-    _periodicCheckTimer?.cancel();
     super.dispose();
   }
 
@@ -82,193 +88,80 @@ class _WebAdWidgetState extends State<WebAdWidget> {
             ..style.height = '100%'
             ..style.display = 'block';
 
-          // Create the ins element for Google AdSense
-          final adElement = html.Element.tag('ins')
-            ..className = 'adsbygoogle'
-            ..style.display = 'block'
-            ..setAttribute('data-ad-client', _getAdClient())
-            ..setAttribute('data-ad-slot', widget.adSlot);
+          // Use the provided ad key or fall back to ad slot
+          final key = widget.adKey ?? widget.adSlot;
+          
+          // Get dimensions
+          final height = widget.height ?? _getDefaultHeight();
+          final width = widget.width ?? _getDefaultWidth();
 
-          // Set ad format attributes
-          if (widget.isResponsive) {
-            adElement.setAttribute('data-ad-format', widget.adFormat);
-            adElement.setAttribute('data-full-width-responsive', 'true');
-          } else {
-            if (widget.width != null) {
-              adElement.style.width = '${widget.width}px';
-            }
-            if (widget.height != null) {
-              adElement.style.height = '${widget.height}px';
-            }
-          }
+          // Create the Adsterra ad script with atOptions format
+          final adScript = html.ScriptElement()
+            ..text = '''
+              atOptions = {
+                'key' : '$key',
+                'format' : 'iframe',
+                'height' : $height,
+                'width' : $width,
+                'params' : {}
+              };
+            ''';
 
-          adContainer.children.add(adElement);
-
-          // Push the ad (load it)
-          _pushAd();
+          // Create the invoke script
+          final invokeScript = html.ScriptElement()
+            ..async = true
+            ..src = 'https://www.highperformanceformat.com/$key/invoke.js';
+          
+          adContainer.children.add(adScript);
+          adContainer.children.add(invokeScript);
 
           return adContainer;
         },
       );
       _isRegistered = true;
     } catch (e) {
-      debugPrint('❌ Error registering web ad widget: $e');
+      debugPrint('❌ Error registering web ad widget: \$e');
     }
   }
 
-  /// Get the AdSense client ID from environment or use test client
-  String _getAdClient() {
-    // AdSense Publisher ID for Maypole app
-    return 'ca-pub-9803674282352310';
-  }
-
-  void _pushAd() {
-    // Push ad after a short delay to ensure DOM is ready
-    Future.delayed(const Duration(milliseconds: 100), () {
-      try {
-        // Get the adsbygoogle array from window
-        final adsbygoogle = js.context['adsbygoogle'];
-        if (adsbygoogle != null) {
-          // Push an empty object to trigger ad loading
-          adsbygoogle.callMethod('push', [js.JsObject.jsify({})]);
-        } else {
-          debugPrint('⚠️ adsbygoogle not available yet');
-        }
-      } catch (e) {
-        debugPrint('❌ Error pushing ad: $e');
-      }
-    });
-  }
-
-  /// Check the ad load status periodically to detect if ads are being served
-  void _checkAdLoadStatus() {
-    // Check after a delay to allow ad to attempt loading
-    Future.delayed(const Duration(seconds: 3), () {
-      if (!mounted) return;
-      
-      try {
-        // Query all adsbygoogle elements
-        final adElements = html.document.querySelectorAll('ins.adsbygoogle');
-        
-        for (var element in adElements) {
-          // Check the data-adsbygoogle-status attribute
-          final status = element.getAttribute('data-adsbygoogle-status');
-          
-          if (status == 'done') {
-            // Ad loaded successfully - check if it's filled
-            final parent = element.parent;
-            if (parent != null) {
-              // Check if the ad has content (height > 0 means ad is filled)
-              final clientHeight = (element as html.Element).clientHeight;
-              if (clientHeight > 0) {
-                setState(() {
-                  _isAdLoaded = true;
-                  _isAdFailed = false;
-                });
-                debugPrint('✅ Ad loaded successfully (height: $clientHeight)');
-                return;
-              }
-            }
-            
-            // Status is 'done' but no content - ad is unfilled
-            setState(() {
-              _isAdLoaded = false;
-              _isAdFailed = true;
-            });
-            debugPrint('⚠️ Ad slot is unfilled (likely not approved yet)');
-            return;
-          }
-        }
-        
-        // If we get here, check again after a bit more time
-        Future.delayed(const Duration(seconds: 2), () {
-          if (!mounted) return;
-          _recheckAdStatus();
-        });
-      } catch (e) {
-        debugPrint('❌ Error checking ad status: $e');
-        setState(() {
-          _isAdFailed = true;
-        });
-      }
-    });
-  }
-
-  /// Recheck ad status after initial check
-  void _recheckAdStatus() {
-    try {
-      final adElements = html.document.querySelectorAll('ins.adsbygoogle');
-      
-      for (var element in adElements) {
-        final status = element.getAttribute('data-adsbygoogle-status');
-        final clientHeight = (element as html.Element).clientHeight;
-        
-        if (status == 'done' && clientHeight > 0) {
-          setState(() {
-            _isAdLoaded = true;
-            _isAdFailed = false;
-          });
-          debugPrint('✅ Ad loaded on recheck');
-          return;
-        }
-      }
-      
-      // Still no ad loaded - hide the placeholder
-      setState(() {
-        _isAdLoaded = false;
-        _isAdFailed = true;
-      });
-      debugPrint('📵 No ads loaded - hiding placeholder');
-    } catch (e) {
-      debugPrint('❌ Error rechecking ad status: $e');
-      setState(() {
-        _isAdFailed = true;
-      });
+  int _getDefaultHeight() {
+    switch (widget.adFormat) {
+      case 'horizontal':
+      case '728x90':
+        return 90;
+      case 'vertical':
+      case '160x600':
+        return 600;
+      case 'rectangle':
+      case '300x250':
+        return 250;
+      case 'social_bar':
+        return 50;
+      case 'native_banner':
+        return 100;
+      default:
+        return 250;
     }
   }
 
-  /// Start periodic checking to detect when ads become approved
-  /// This allows ads to automatically appear when the site is approved,
-  /// even if the user has the app open
-  void _startPeriodicAdCheck() {
-    // Only start periodic checking if ads haven't loaded yet
-    if (_isAdLoaded) return;
-    
-    // Check every 30 seconds for new ad status
-    _periodicCheckTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      
-      // If ad is already loaded, stop checking
-      if (_isAdLoaded) {
-        timer.cancel();
-        return;
-      }
-      
-      try {
-        final adElements = html.document.querySelectorAll('ins.adsbygoogle');
-        
-        for (var element in adElements) {
-          final status = element.getAttribute('data-adsbygoogle-status');
-          final clientHeight = (element as html.Element).clientHeight;
-          
-          // Check if ad is now filled
-          if (status == 'done' && clientHeight > 0) {
-            setState(() {
-              _isAdLoaded = true;
-              _isAdFailed = false;
-            });
-            debugPrint('🎉 Ads are now approved and serving! Showing ad units.');
-            timer.cancel();
-            return;
-          }
-        }
-      } catch (e) {
-        debugPrint('⚠️ Error in periodic ad check: $e');
-      }
-    });
+  int _getDefaultWidth() {
+    switch (widget.adFormat) {
+      case 'horizontal':
+      case '728x90':
+        return 728;
+      case 'vertical':
+      case '160x600':
+        return 160;
+      case 'rectangle':
+      case '300x250':
+        return 300;
+      case 'social_bar':
+        return 728;
+      case 'native_banner':
+        return 300;
+      default:
+        return 300;
+    }
   }
 
   @override
@@ -280,13 +173,6 @@ class _WebAdWidgetState extends State<WebAdWidget> {
 
     // Check if web ads are enabled
     if (!AdConfig.webAdsEnabled) {
-      debugPrint('📵 Web ads are disabled');
-      return const SizedBox.shrink();
-    }
-
-    // Hide the ad container if the ad failed to load or is unfilled
-    // This will automatically hide placeholders when ads aren't approved
-    if (_isAdFailed) {
       return const SizedBox.shrink();
     }
 
@@ -298,86 +184,96 @@ class _WebAdWidgetState extends State<WebAdWidget> {
       // Adjust height based on format
       switch (widget.adFormat) {
         case 'horizontal':
+        case '728x90':
           containerHeight = 90.0;
           break;
         case 'vertical':
+        case '160x600':
           containerHeight = 600.0;
           break;
         case 'rectangle':
+        case '300x250':
           containerHeight = 250.0;
+          break;
+        case 'social_bar':
+          containerHeight = 50.0;
+          break;
+        case 'native_banner':
+          containerHeight = 100.0;
           break;
         default:
           containerHeight = 250.0;
       }
     }
 
-    // Show a subtle loading placeholder initially, or the ad if loaded
-    Widget adContainer = Container(
+    // Show the ad container - no placeholder, no checking
+    // Just render the HtmlElementView and let the ad load naturally
+    return Container(
       height: containerHeight,
       width: double.infinity,
-      // Use dark purple background when loading, transparent when ad is loaded
-      color: _isAdLoaded ? Colors.transparent : darkPurple,
-      child: HtmlElementView(
-        viewType: _viewType,
+      color: Colors.transparent,
+      alignment: Alignment.center,
+      child: SizedBox(
+        width: widget.width?.toDouble() ?? 728,
+        height: containerHeight,
+        child: HtmlElementView(
+                      viewType: _viewType,
+        ),
       ),
     );
-
-    // Wrap with padding if specified
-    if (widget.padding != null) {
-      adContainer = Padding(
-        padding: widget.padding!,
-        child: Center(child: adContainer),
-      );
-    }
-
-    return adContainer;
   }
 }
 
-/// Preset web ad widgets for common ad formats
+/// Preset web ad widgets for common Adsterra ad formats
 
-/// Display ad (responsive)
+/// Display ad (responsive banner)
 class WebDisplayAd extends StatelessWidget {
   final String adSlot;
+  final String? adKey;
 
-  const WebDisplayAd({super.key, required this.adSlot});
+  const WebDisplayAd({super.key, required this.adSlot, this.adKey});
 
   @override
   Widget build(BuildContext context) {
     return WebAdWidget(
       adSlot: adSlot,
-      adFormat: 'auto',
+      adKey: adKey,
+      adFormat: 'banner',
       isResponsive: true,
     );
   }
 }
 
-/// Horizontal banner ad (leaderboard style)
+/// Horizontal banner ad (leaderboard style - 728x90)
 class WebHorizontalBannerAd extends StatelessWidget {
   final String adSlot;
+  final String? adKey;
 
-  const WebHorizontalBannerAd({super.key, required this.adSlot});
+  const WebHorizontalBannerAd({super.key, required this.adSlot, this.adKey});
 
   @override
   Widget build(BuildContext context) {
     return WebAdWidget(
       adSlot: adSlot,
+      adKey: adKey,
       adFormat: 'horizontal',
       isResponsive: true,
     );
   }
 }
 
-/// Vertical banner ad (skyscraper style)
+/// Vertical banner ad (skyscraper style - 160x600)
 class WebVerticalBannerAd extends StatelessWidget {
   final String adSlot;
+  final String? adKey;
 
-  const WebVerticalBannerAd({super.key, required this.adSlot});
+  const WebVerticalBannerAd({super.key, required this.adSlot, this.adKey});
 
   @override
   Widget build(BuildContext context) {
     return WebAdWidget(
       adSlot: adSlot,
+      adKey: adKey,
       adFormat: 'vertical',
       isResponsive: true,
     );
@@ -388,18 +284,56 @@ class WebVerticalBannerAd extends StatelessWidget {
 class WebRectangleAd extends StatelessWidget {
   final String adSlot;
   final EdgeInsetsGeometry? padding;
+  final String? adKey;
 
-  const WebRectangleAd({super.key, required this.adSlot, this.padding});
+  const WebRectangleAd({super.key, required this.adSlot, this.padding, this.adKey});
 
   @override
   Widget build(BuildContext context) {
     return WebAdWidget(
       adSlot: adSlot,
+      adKey: adKey,
       adFormat: 'rectangle',
       isResponsive: false,
       width: 300,
       height: 250,
       padding: padding,
+    );
+  }
+}
+
+/// Social bar ad (Adsterra specific format)
+class WebSocialBarAd extends StatelessWidget {
+  final String adSlot;
+  final String? adKey;
+
+  const WebSocialBarAd({super.key, required this.adSlot, this.adKey});
+
+  @override
+  Widget build(BuildContext context) {
+    return WebAdWidget(
+      adSlot: adSlot,
+      adKey: adKey,
+      adFormat: 'social_bar',
+      isResponsive: true,
+    );
+  }
+}
+
+/// Native banner ad (Adsterra specific format)
+class WebNativeBannerAd extends StatelessWidget {
+  final String adSlot;
+  final String? adKey;
+
+  const WebNativeBannerAd({super.key, required this.adSlot, this.adKey});
+
+  @override
+  Widget build(BuildContext context) {
+    return WebAdWidget(
+      adSlot: adSlot,
+      adKey: adKey,
+      adFormat: 'native_banner',
+      isResponsive: true,
     );
   }
 }

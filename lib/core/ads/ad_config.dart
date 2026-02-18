@@ -1,10 +1,11 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:maypole/core/services/remote_config_service.dart';
 
 /// AdMob configuration for different ad unit IDs
 /// Automatically detects environment and uses test ads in dev, production ads in prod.
+/// 
+/// Web ads are served via Adsterra (https://adsterra.com)
 class AdConfig {
   /// Whether ads are enabled in the app
   /// Now controlled by Firebase Remote Config feature flag
@@ -100,9 +101,9 @@ class AdConfig {
     if (!adsEnabled) return '';
     
     if (useTestAds) {
-      return Platform.isIOS ? _testBannerIosId : _testBannerAndroidId;
+      return defaultTargetPlatform == TargetPlatform.iOS ? _testBannerIosId : _testBannerAndroidId;
     }
-    return Platform.isIOS ? _prodBannerIosId : _prodBannerAndroidId;
+    return defaultTargetPlatform == TargetPlatform.iOS ? _prodBannerIosId : _prodBannerAndroidId;
   }
 
   /// Get the interstitial ad unit ID for the current platform
@@ -111,12 +112,64 @@ class AdConfig {
     if (!adsEnabled) return '';
     
     if (useTestAds) {
-      return Platform.isIOS ? _testInterstitialIosId : _testInterstitialAndroidId;
+      return defaultTargetPlatform == TargetPlatform.iOS ? _testInterstitialIosId : _testInterstitialAndroidId;
     }
-    return Platform.isIOS ? _prodInterstitialIosId : _prodInterstitialAndroidId;
+    return defaultTargetPlatform == TargetPlatform.iOS ? _prodInterstitialIosId : _prodInterstitialAndroidId;
   }
 
   /// AdMob App IDs (required in AndroidManifest.xml and Info.plist)
   static const String androidAppId = 'ca-app-pub-9803674282352310~3165030367';
   static const String iosAppId = 'ca-app-pub-9803674282352310~6862207571';
+
+  // ==================== ADSTERRA WEB AD CONFIGURATION ====================
+  
+  /// Helper to check if we're in production environment
+  static bool get _isProduction {
+    // Check environment from build configuration
+    const dartDefineEnv = String.fromEnvironment('ENVIRONMENT', defaultValue: '');
+    
+    // Check environment from .env file
+    String dotenvEnv = 'dev';
+    try {
+      dotenvEnv = dotenv.env['ENVIRONMENT'] ?? 'dev';
+    } catch (e) {
+      dotenvEnv = 'dev';
+    }
+    
+    final environment = dartDefineEnv.isNotEmpty ? dartDefineEnv : dotenvEnv;
+    return environment.toLowerCase() == 'production' || 
+           environment.toLowerCase() == 'prod';
+  }
+  
+  /// Adsterra Publisher ID - DEV (5613140 for maypole-flutter-dev.web.app)
+  static const String _adsterraDevPublisherId = '5613140';
+  
+  /// Adsterra Publisher ID - PROD (5613117 for maypole.app)
+  static const String _adsterraProdPublisherId = '5613117';
+  
+  /// Get the appropriate Adsterra Publisher ID for current environment
+  static String get adsterraPublisherId => 
+      _isProduction ? _adsterraProdPublisherId : _adsterraDevPublisherId;
+  
+  /// Adsterra DEV Slot ID for 728x90 Leaderboard Banner
+  /// Used on maypole-flutter-dev.web.app
+  static const String _adsterraDevLeaderboardSlot = '28635586';
+  
+  /// Adsterra PROD Slot ID for 728x90 Leaderboard Banner  
+  /// Used on maypole.app
+  static const String _adsterraProdLeaderboardSlot = '28635540';
+  
+  /// Get the appropriate Adsterra Slot ID for current environment
+  static String get adsterraLeaderboardSlot => 
+      _isProduction ? _adsterraProdLeaderboardSlot : _adsterraDevLeaderboardSlot;
+  
+  /// Adsterra Script Key - PROD (for slot 28635540)
+  static const String _adsterraProdLeaderboardKey = '5f9bf870d30ef305b76bd374783acc7d';
+  
+  /// Adsterra Script Key - DEV (for slot 28635586)
+  static const String _adsterraDevLeaderboardKey = '25512f1619501c99306a893e0937e5d8';
+  
+  /// Get the appropriate Adsterra Script Key for current environment
+  static String get adsterraLeaderboardKey => 
+      _isProduction ? _adsterraProdLeaderboardKey : _adsterraDevLeaderboardKey;
 }

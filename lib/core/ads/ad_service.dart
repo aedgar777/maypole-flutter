@@ -29,7 +29,7 @@ class AdService {
     }
 
     try {
-      debugPrint('🚀 Initializing AdMob SDK on ${Platform.isIOS ? 'iOS' : 'Android'}...');
+      debugPrint('🚀 Initializing AdMob SDK on ${defaultTargetPlatform == TargetPlatform.iOS ? 'iOS' : 'Android'}...');
       await MobileAds.instance.initialize();
       _isInitialized = true;
       debugPrint('✅ AdMob SDK initialized successfully');

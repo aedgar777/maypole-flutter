@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
@@ -14,8 +13,6 @@ import 'package:maypole/features/maypolechat/domain/maypole.dart';
 import 'package:maypole/features/maypolechat/presentation/maypole_chat_providers.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import 'package:maypole/core/ads/widgets/banner_ad_widget.dart';
-import 'package:maypole/core/ads/widgets/web_ad_widget.dart';
-import 'package:maypole/core/ads/ad_config.dart';
 
 
 /// A panel showing the list of maypole chats and DM threads.
@@ -160,58 +157,17 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
       );
     }
 
-    // Calculate total items including ads
+    // Calculate total items including mobile ads only (web ads moved to top)
     int totalItems;
     int adCount;
     
-    if (kIsWeb && AdConfig.webAdsEnabled) {
-      // Web: Square ads - every 5 items if >=5, or at end if <5
-      if (filteredMaypoleThreads.length < 5) {
-        adCount = 1; // One ad at the end
-        totalItems = filteredMaypoleThreads.length + 1;
-      } else {
-        adCount = (filteredMaypoleThreads.length / 5).ceil();
-        totalItems = filteredMaypoleThreads.length + adCount;
-      }
-    } else {
-      // Mobile: Banner ads every 6 items
-      adCount = filteredMaypoleThreads.length ~/ 6;
-      totalItems = filteredMaypoleThreads.length + adCount;
-    }
+    // Mobile: Banner ads every 6 items (web ads now shown at top of screen)
+    adCount = filteredMaypoleThreads.length ~/ 6;
+    totalItems = filteredMaypoleThreads.length + adCount;
 
     return ListView.builder(
       itemCount: totalItems,
       itemBuilder: (context, index) {
-        // Web ads (square ads)
-        if (kIsWeb && AdConfig.webAdsEnabled) {
-          if (filteredMaypoleThreads.length < 5) {
-            // Show ad at the end if fewer than 5 items
-            if (index == filteredMaypoleThreads.length) {
-              return WebRectangleAd(
-                adSlot: '3398941414',
-                padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-              );
-            }
-            final thread = filteredMaypoleThreads[index];
-            return _buildMaypoleListTile(context, thread);
-          } else {
-            // Show ad every 5 items (at positions 5, 11, 17, etc.)
-            if (index > 0 && (index + 1) % 6 == 0) {
-              return WebRectangleAd(
-                adSlot: '3398941414',
-                padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-              );
-            }
-            // Calculate the actual thread index (accounting for ads)
-            final threadIndex = index - (index ~/ 6);
-            if (threadIndex >= filteredMaypoleThreads.length) {
-              return const SizedBox.shrink();
-            }
-            final thread = filteredMaypoleThreads[threadIndex];
-            return _buildMaypoleListTile(context, thread);
-          }
-        }
-        
         // Mobile ads (banner ads every 6 items)
         if (index > 0 && (index + 1) % 7 == 0) {
           return const BannerAdWidget(
