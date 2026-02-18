@@ -27,7 +27,7 @@ import 'package:maypole/features/maypolechat/presentation/widgets/image_upload_n
 import 'package:maypole/features/settings/settings_providers.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:maypole/core/ads/widgets/banner_ad_widget.dart';
+import 'package:maypole/core/ads/widgets/web_ad_widget.dart';
 import 'package:maypole/core/ads/ad_config.dart';
 import '../maypole_chat_providers.dart';
 
@@ -460,9 +460,28 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       children: [
         Column(
           children: [
-            // Spacer for sticky ad banner
+            // Web ad banner at the top with gradient background
+            // Gradient: light/transparent at bottom, dark at top
             if (kIsWeb && AdConfig.webAdsEnabled)
-              const SizedBox(height: 90), // Height for banner ad
+              Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black87,
+                    ],
+                  ),
+                ),
+                child: Center(
+                  child: WebHorizontalBannerAd(
+                    adSlot: AdConfig.adsterraLeaderboardSlot,
+                    adKey: AdConfig.adsterraLeaderboardKey,
+                  ),
+                ),
+              ),
             Expanded(
               child: messagesAsyncValue.when(
             data: (messages) {
@@ -583,11 +602,6 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
         ],
       ),
       body: body,
-      bottomNavigationBar: AdConfig.adsEnabled
-          ? const BannerAdWidget(
-              padding: EdgeInsets.all(4),
-            )
-          : null,
     );
   }
 
@@ -718,11 +732,19 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                       : 'Location required to add photo',
                 ),
           Expanded(
-            child: MentionTextField(
-              controller: _messageController,
-              threadId: widget.threadId,
-              focusNode: _messageFocusNode,
-              onSubmitted: AppConfig.isWideScreen ? sendMessage : null,
+            child: CallbackShortcuts(
+              bindings: kIsWeb
+                  ? <ShortcutActivator, VoidCallback>{
+                      const SingleActivator(LogicalKeyboardKey.enter): sendMessage,
+                    }
+                  : {},
+              child: MentionTextField(
+                controller: _messageController,
+                threadId: widget.threadId,
+                focusNode: _messageFocusNode,
+                maxLength: 1000,
+                onSubmitted: kIsWeb || AppConfig.isWideScreen ? sendMessage : null,
+              ),
             ),
           ),
           IconButton(

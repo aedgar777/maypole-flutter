@@ -4,10 +4,10 @@ import 'package:maypole/core/ads/widgets/banner_ad_widget.dart';
 import 'package:maypole/core/ads/widgets/web_ad_widget.dart';
 
 /// Platform-adaptive ad widget that shows the appropriate ad type
-/// - Web: Shows Google AdSense ads
+/// - Web: Shows Adsterra ads
 /// - Mobile (iOS/Android): Shows Google AdMob ads
 class PlatformAdaptiveAd extends StatelessWidget {
-  /// Ad slot ID for web platform (required if on web)
+  /// Ad slot ID for web platform (Adsterra slot ID, required if on web)
   final String? webAdSlot;
   
   /// Ad format for web ads
@@ -26,7 +26,7 @@ class PlatformAdaptiveAd extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (kIsWeb) {
-      // Show Google AdSense ad on web
+      // Show Adsterra ad on web
       if (webAdSlot == null) {
         debugPrint('⚠️ Web ad slot not provided for PlatformAdaptiveAd');
         return const SizedBox.shrink();

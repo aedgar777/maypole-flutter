@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
@@ -13,6 +14,7 @@ class MentionTextField extends ConsumerStatefulWidget {
   final String threadId;
   final VoidCallback? onSubmitted;
   final FocusNode? focusNode;
+  final int? maxLength;
 
   const MentionTextField({
     super.key,
@@ -20,6 +22,7 @@ class MentionTextField extends ConsumerStatefulWidget {
     required this.threadId,
     this.onSubmitted,
     this.focusNode,
+    this.maxLength,
   });
 
   @override
@@ -250,6 +253,9 @@ class _MentionTextFieldState extends ConsumerState<MentionTextField> {
       child: TextField(
         controller: widget.controller,
         focusNode: widget.focusNode,
+        maxLength: widget.maxLength,
+        maxLengthEnforcement: MaxLengthEnforcement.enforced,
+        buildCounter: (context, {required currentLength, required isFocused, required maxLength}) => null,
         decoration: InputDecoration(
           hintText: l10n.enterMessage,
           hintStyle: TextStyle(

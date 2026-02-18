@@ -1,10 +1,21 @@
 # Cloud Functions for Firebase for Python
 # Deploy with `firebase deploy --only functions`
+#
+# MIGRATION NOTE (2025):
+# This codebase has been migrated from the legacy Runtime Configuration API
+# to use Firebase Secrets Manager for sensitive configuration.
+#
+# To set secrets:
+#   firebase functions:secrets:set GOOGLE_PLACES_API_KEY
+#
+# To deploy:
+#   firebase deploy --only functions
 
 import sys
 print(f"Python version: {sys.version}", flush=True)
 
-from firebase_functions import https_fn, options, firestore_fn, storage_fn
+from firebase_functions import https_fn, options, firestore_fn, storage_fn, params
+from firebase_functions.params import SecretParam
 print("Loaded firebase_functions", flush=True)
 
 from firebase_admin import initialize_app, firestore, messaging, storage, auth
@@ -26,12 +37,24 @@ def _get_pil_image():
 initialize_app()
 print("Firebase Admin initialized", flush=True)
 
+# Define secrets using the new Secret Manager approach
+# These are set via: firebase functions:secrets:set SECRET_NAME
+# For local development, you can use .env files with firebase functions:config:export
+
+# Google Places API Key - used for Places Autocomplete
+goog_places_api_key = SecretParam("GOOGLE_PLACES_API_KEY")
+
+# Hive.ai Content Moderation API credentials
+hive_access_id = SecretParam("HIVE_ACCESS_ID_KEY")
+hive_api_token = SecretParam("HIVE_API_TOKEN")
+
 @https_fn.on_request(
     cors=options.CorsOptions(
         cors_origins="*",
         cors_methods=["get", "post", "options"],
     ),
-    max_instances=10
+    max_instances=10,
+    secrets=[goog_places_api_key],  # Inject the secret into the function
 )
 def places_autocomplete(req: https_fn.Request) -> https_fn.Response:
     """
@@ -49,8 +72,8 @@ def places_autocomplete(req: https_fn.Request) -> https_fn.Response:
         )
     
     try:
-        # Get API key from environment or request headers
-        api_key = os.environ.get('GOOGLE_PLACES_API_KEY')
+        # Get API key from the injected secret or request headers
+        api_key = goog_places_api_key.value
         if not api_key:
             api_key = req.headers.get('X-Goog-Api-Key')
         

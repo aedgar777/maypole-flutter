@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
@@ -186,7 +186,7 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
             onMapCreated: (controller) async {
               _mapController = controller;
               debugPrint('🗺️ [DEBUG] Map created');
-              debugPrint('🗺️ [DEBUG] Platform: ${kIsWeb ? "Web" : !kIsWeb && Platform.isIOS ? "iOS" : !kIsWeb && Platform.isAndroid ? "Android" : "Unknown"}');
+              debugPrint('🗺️ [DEBUG] Platform: ${kIsWeb ? "Web" : defaultTargetPlatform == TargetPlatform.iOS ? "iOS" : defaultTargetPlatform == TargetPlatform.android ? "Android" : "Unknown"}');
 
               // Apply dark map style
               try {
@@ -316,76 +316,143 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                       ? darkPurple.withOpacity(0.9) // 90% opacity when focused/has text
                       : Colors.transparent, // Transparent when unfocused and empty
                 ),
-              // Web ad banner above search bar - fixed height to prevent search bar from jumping
-              if (kIsWeb)
-                SizedBox(
-                  height: 106, // Fixed height for banner ad (90px ad + 16px padding)
-                  child: AdConfig.webAdsEnabled
-                      ? Container(
-                          color: darkPurple,
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                          child: WebHorizontalBannerAd(adSlot: '3398941414'),
-                        )
-                      : null, // Empty space when ads are disabled
-                ),
-              // Search bar with conditional background and padding
-              // Extra left padding on iOS to make room for back button
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
-                    ? darkPurple.withOpacity(0.9) // 90% opacity when focused/has text
-                    : Colors.transparent, // Transparent when unfocused and empty
-                padding: EdgeInsets.fromLTRB(
-                  (!kIsWeb && Platform.isIOS) ? 56.0 : 8.0, // Extra left padding on iOS for back button
-                  8.0,
-                  8.0,
-                  4.0,
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  focusNode: _searchFocusNode,
-                  decoration: InputDecoration(
-                    hintText: l10n.searchForMaypole,
-                    hintStyle: TextStyle(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.3),
-                    ),
-                    filled: true,
-                    fillColor: lightPurple,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(18),
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(18),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(18),
-                      borderSide: BorderSide(
-                        color: skyBlue,
-                        width: 2.0,
+              // Mobile search bar (no web ads)
+              if (!kIsWeb && !AppConfig.isWideScreen)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: double.infinity,
+                  color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
+                      ? darkPurple.withValues(alpha: 0.9)
+                      : Colors.transparent,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8.0, 0, 8.0, 8.0),
+                    child: TextField(
+                      controller: _searchController,
+                      focusNode: _searchFocusNode,
+                      decoration: InputDecoration(
+                        hintText: l10n.searchForMaypole,
+                        hintStyle: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.3),
+                        ),
+                        filled: true,
+                        fillColor: lightPurple,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide(
+                            color: skyBlue,
+                            width: 2.0,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        suffixIcon: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _searchFocusNode.unfocus();
+                                  ref.read(maypoleSearchViewModelProvider.notifier).searchMaypoles('');
+                                },
+                              )
+                            : null,
                       ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    suffixIcon: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              _searchFocusNode.unfocus();
-                              ref.read(maypoleSearchViewModelProvider.notifier).searchMaypoles('');
-                            },
-                          )
-                        : null,
                   ),
                 ),
-              ),
+
+              // Web ad banner + search bar in the same container that dims together
+              if (kIsWeb && AdConfig.webAdsEnabled)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: double.infinity,
+                  color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
+                      ? darkPurple.withValues(alpha: 0.9)
+                      : Colors.transparent,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Ad with gradient background (light at bottom, dark at top)
+                      Container(
+                        width: double.infinity,
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black87,
+                            ],
+                          ),
+                        ),
+                        child: WebHorizontalBannerAd(
+                          adSlot: AdConfig.adsterraLeaderboardSlot,
+                          adKey: AdConfig.adsterraLeaderboardKey,
+                        ),
+                      ),
+                      const SizedBox(height: 8), // Padding between ad and search bar
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(8.0, 0, 8.0, 8.0),
+                        child: TextField(
+                          controller: _searchController,
+                          focusNode: _searchFocusNode,
+                          decoration: InputDecoration(
+                            hintText: l10n.searchForMaypole,
+                            hintStyle: TextStyle(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.3),
+                            ),
+                            filled: true,
+                            fillColor: lightPurple,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(18),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(18),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(18),
+                              borderSide: BorderSide(
+                                color: skyBlue,
+                                width: 2.0,
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            suffixIcon: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      _searchFocusNode.unfocus();
+                                      ref.read(maypoleSearchViewModelProvider.notifier).searchMaypoles('');
+                                    },
+                                  )
+                                : null,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
               // Animated search results list with semi-transparent background
               Expanded(
@@ -393,11 +460,8 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                   opacity: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty) ? 1.0 : 0.0,
                   duration: const Duration(milliseconds: 300),
                   child: IgnorePointer(
-                    // When search is NOT active, ignore pointer events (allow map clicks through)
-                    // When search IS active, don't ignore (block map clicks)
                     ignoring: !_searchFocusNode.hasFocus && _searchController.text.isEmpty,
                     child: GestureDetector(
-                      // Absorb taps on the background to close search and prevent map clicks
                       onTap: () {
                         if (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty) {
                           _searchController.clear();
@@ -406,7 +470,7 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                         }
                       },
                       child: Container(
-                        color: darkPurple.withOpacity(0.9), // 90% opacity background
+                        color: darkPurple.withValues(alpha: 0.9),
                         child: searchState.when(
                           data: (predictions) => _buildPredictionsList(predictions),
                           loading: () => const Center(child: CircularProgressIndicator()),
@@ -441,7 +505,7 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
             _buildBottomSheet(_contextMenuPlace!, _contextMenuLocation!),
           
           // Back button for iOS (upper left - iOS standard)
-          if (!kIsWeb && Platform.isIOS)
+          if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
             Positioned(
               top: MediaQuery.of(context).padding.top + (kToolbarHeight / 2) + 8,
               left: 8,
