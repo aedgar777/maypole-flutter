@@ -43,6 +43,12 @@ cp public/.well-known/assetlinks.json build/web/.well-known/assetlinks.json
 echo "✅ Verification files copied!"
 echo ""
 
+# Copy ads.txt file for AdSense
+echo "📱 Copying ads.txt for AdSense..."
+cp web/ads.txt build/web/ads.txt
+echo "✅ ads.txt copied!"
+echo ""
+
 # Deploy to Firebase Hosting production
 echo "☁️  Deploying to Firebase Hosting (production)..."
 firebase deploy --only hosting --project maypole-flutter-ce6c3
@@ -51,9 +57,10 @@ echo ""
 echo "🎉 Web app deployed to Production Firebase Hosting!"
 echo "   View at: https://maypole.app"
 echo ""
-echo "🔗 Deeplink verification files deployed:"
+echo "🔗 Verification files deployed:"
 echo "   - https://maypole.app/apple-app-site-association"
 echo "   - https://maypole.app/.well-known/assetlinks.json"
+echo "   - https://maypole.app/ads.txt"
 echo ""
 echo "📊 Production Console:"
 echo "   https://console.firebase.google.com/project/maypole-flutter-ce6c3"

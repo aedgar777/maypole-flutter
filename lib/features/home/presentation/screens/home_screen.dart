@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/services/prefetch_service_provider.dart';
+import 'package:maypole/core/services/remote_config_provider.dart';
 import 'package:maypole/core/widgets/adaptive_scaffold.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/directmessages/domain/dm_thread.dart';
@@ -13,6 +14,7 @@ import 'package:maypole/features/maypolesearch/data/models/autocomplete_response
 import 'package:maypole/features/settings/settings_providers.dart';
 import 'package:maypole/core/ads/widgets/interstitial_ad_manager.dart';
 import 'package:maypole/core/ads/ad_config.dart';
+import 'package:maypole/core/ads/ad_providers.dart';
 import 'package:maypole/core/services/permissions_provider.dart';
 import '../../../identity/auth_providers.dart';
 import '../../../directmessages/presentation/dm_providers.dart';
@@ -83,12 +85,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     // Request permissions and initialize services after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeRemoteConfig();
+      _initializeAds();
       _requestPermissionsIfNeeded();
       _initializeFcm();
       _prefetchUserDataIfNeeded();
       _checkEmailVerificationIfNeeded();
       _initializeDmPreloader();
     });
+  }
+
+  /// Initialize Firebase Remote Config in the background
+  /// This loads feature flags for ads and other remote-controlled features
+  Future<void> _initializeRemoteConfig() async {
+    try {
+      final remoteConfig = ref.read(remoteConfigServiceProvider);
+      await remoteConfig.initialize();
+      debugPrint('✅ Remote Config initialized in home screen');
+    } catch (e) {
+      debugPrint('⚠️ Warning: Could not initialize Remote Config: $e');
+      // Continue anyway - will use default values
+    }
+  }
+
+  /// Initialize AdMob SDK in the background
+  /// This enables ads throughout the app after user has logged in
+  Future<void> _initializeAds() async {
+    try {
+      final adService = ref.read(adServiceProvider);
+      await adService.initialize();
+      ref.read(adInitializedProvider.notifier).setInitialized(true);
+      debugPrint('✅ AdMob initialized in home screen');
+    } catch (e) {
+      debugPrint('⚠️ Warning: Could not initialize AdMob: $e');
+      // Continue anyway - app will work without ads
+    }
   }
 
   /// Initialize the global DM message preloader

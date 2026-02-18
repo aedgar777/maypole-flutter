@@ -19,4 +19,12 @@ flutter build web \
   --dart-define=GOOGLE_PLACES_API_KEY="${GOOGLE_PLACES_PROD_API_KEY}" \
   --dart-define=CLOUD_FUNCTIONS_URL="${CLOUD_FUNCTIONS_PROD_URL}"
 
-echo "✅ Web build complete! Deploy with: firebase deploy --only hosting"
+echo "✅ Web build complete!"
+echo ""
+
+# Copy ads.txt file for AdSense
+echo "📱 Copying ads.txt for AdSense..."
+cp web/ads.txt build/web/ads.txt
+echo "✅ ads.txt copied!"
+echo ""
+echo "Deploy with: firebase deploy --only hosting"
