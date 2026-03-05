@@ -1,7 +1,9 @@
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/services/prefetch_service_provider.dart';
 import 'package:maypole/core/services/remote_config_provider.dart';
 import 'package:maypole/core/widgets/adaptive_scaffold.dart';
@@ -9,13 +11,16 @@ import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/directmessages/domain/dm_thread.dart';
 import 'package:maypole/features/directmessages/presentation/widgets/dm_content.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
+import 'package:maypole/features/maypolechat/presentation/screens/maypole_gallery_screen.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/maypole_chat_content.dart';
 import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
 import 'package:maypole/features/settings/settings_providers.dart';
 import 'package:maypole/core/ads/widgets/interstitial_ad_manager.dart';
+import 'package:maypole/core/ads/widgets/web_ad_widget.dart';
 import 'package:maypole/core/ads/ad_config.dart';
 import 'package:maypole/core/ads/ad_providers.dart';
 import 'package:maypole/core/services/permissions_provider.dart';
+import 'package:maypole/core/utils/screen_utils.dart';
 import '../../../identity/auth_providers.dart';
 import '../../../directmessages/presentation/dm_providers.dart';
 import '../../../maypolechat/presentation/maypole_chat_providers.dart';
@@ -227,7 +232,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildAdaptiveLayout(BuildContext context, DomainUser user) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isWideScreen = constraints.maxWidth >= 600;
+        final isWideScreen = ScreenUtils.isWideScreen(constraints);
 
         // Handle transition from wide to narrow screen with a selected thread
         if (!isWideScreen && _selectedThread.threadId != null) {
@@ -271,6 +276,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               onDmThreadSelected: (threadId) =>
                   _handleDmThreadSelected(context, threadId, isWideScreen),
               onTabChanged: (tabIndex) => _handleTabChanged(tabIndex, isWideScreen),
+              onThreadDeleted: () {
+                // Clear selection when current thread is deleted
+                setState(() {
+                  _selectedThread = const _SelectedThreadState();
+                });
+              },
             ),
             contentPanel: _buildContentPanel(),
           ),
@@ -314,7 +325,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     if (_selectedThread.isMaypoleThread &&
         _selectedThread.maypoleName != null) {
-      return MaypoleChatContent(
+      // Build the maypole chat content
+      final chatContent = MaypoleChatContent(
         threadId: _selectedThread.threadId!,
         maypoleName: _selectedThread.maypoleName!,
         address: _selectedThread.address,
@@ -322,7 +334,106 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         longitude: _selectedThread.longitude,
         showAppBar: false,
         autoFocus: true,
+        showWebAd: false, // Hide ad since we'll show it with share buttons in the header
       );
+
+      // On web/wide screen, add share and gallery icons in the gradient header above the ad
+      if (kIsWeb || AppConfig.isWideScreen) {
+        return Column(
+          children: [
+            // Web header with gradient background - share/gallery buttons and ad in same row
+            if (kIsWeb && AdConfig.webAdsEnabled)
+              Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black87,
+                    ],
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    // Centered ad
+                    Center(
+                      child: WebHorizontalBannerAd(
+                        adSlot: AdConfig.adsterraLeaderboardSlot,
+                        adKey: AdConfig.adsterraLeaderboardKey,
+                      ),
+                    ),
+                    // Share and gallery buttons in top right
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.share, color: Colors.white70),
+                            onPressed: () => _shareMaypoleConversation(context),
+                            tooltip: 'Share conversation',
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.photo_library, color: Colors.white70),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => MaypoleGalleryScreen(
+                                    threadId: _selectedThread.threadId!,
+                                    maypoleName: _selectedThread.maypoleName!,
+                                  ),
+                                ),
+                              );
+                            },
+                            tooltip: 'View gallery',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            // If no ad, just show share/gallery buttons in a simple header
+            if (kIsWeb && !AdConfig.webAdsEnabled)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.share),
+                      onPressed: () => _shareMaypoleConversation(context),
+                      tooltip: 'Share conversation',
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.photo_library),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => MaypoleGalleryScreen(
+                              threadId: _selectedThread.threadId!,
+                              maypoleName: _selectedThread.maypoleName!,
+                            ),
+                          ),
+                        );
+                      },
+                      tooltip: 'View gallery',
+                    ),
+                  ],
+                ),
+              ),
+            // Chat content
+            Expanded(child: chatContent),
+          ],
+        );
+      }
+
+      return chatContent;
     } else if (!_selectedThread.isMaypoleThread &&
         _selectedThread.dmThread != null) {
       return DmContent(
@@ -333,6 +444,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     return null;
+  }
+
+  Future<void> _shareMaypoleConversation(BuildContext context) async {
+    final threadId = _selectedThread.threadId;
+    final maypoleName = _selectedThread.maypoleName;
+    final address = _selectedThread.address;
+    
+    if (threadId == null || maypoleName == null) return;
+    
+    try {
+      final shareUrl = '${AppConfig.appUrl}/chat/$threadId';
+      final locationInfo = address != null
+          ? ' at $address'
+          : '';
+      final shareText = 'Check out the conversation at $maypoleName$locationInfo!\n\n$shareUrl';
+
+      await Share.share(
+        shareText,
+        subject: 'Join the conversation on Maypole',
+      );
+    } catch (e) {
+      debugPrint('Error sharing conversation: $e');
+    }
   }
 
   Future<void> _handleAddPressed(BuildContext context) async {

@@ -23,6 +23,7 @@ import 'package:maypole/features/identity/domain/domain_user.dart';
 import '../../domain/direct_message.dart';
 import '../../domain/dm_thread.dart';
 import '../../domain/pending_message.dart';
+import '../../domain/staged_image_info.dart';
 import '../dm_providers.dart';
 import 'dm_message_bubble.dart';
 import 'staged_images_widget.dart';
@@ -52,7 +53,7 @@ class _DmContentState extends ConsumerState<DmContent> {
   final FocusNode _messageFocusNode = FocusNode();
   final Set<String> _animatedMessageIds = {};
   final ImagePicker _picker = ImagePicker();
-  final List<String> _stagedImagePaths = [];
+  final List<StagedImageInfo> _stagedImages = [];
   bool _isFirstLoad = true; // Track if this is the first load
   
   // Track pending messages with their upload states
@@ -285,7 +286,7 @@ class _DmContentState extends ConsumerState<DmContent> {
             if (currentUser != null && partner != null) ...[
               // Staged images area (above message input)
               StagedImagesWidget(
-                imagePaths: _stagedImagePaths,
+                images: _stagedImages,
                 onRemoveImage: _removeStagedImage,
               ),
               _buildMessageInput(currentUser.username, partner.id),
@@ -337,7 +338,7 @@ class _DmContentState extends ConsumerState<DmContent> {
 
   Widget _buildMessageInput(String senderUsername, String recipientId) {
     Future<void> sendMessage() async {
-      if (_messageController.text.isEmpty && _stagedImagePaths.isEmpty) {
+      if (_messageController.text.isEmpty && _stagedImages.isEmpty) {
         return;
       }
 
@@ -345,17 +346,22 @@ class _DmContentState extends ConsumerState<DmContent> {
       if (currentUser == null) return;
 
       final messageText = _messageController.text;
-      final imagePaths = List<String>.from(_stagedImagePaths);
+      final imagesToUpload = List<StagedImageInfo>.from(_stagedImages);
+      final imagePaths = imagesToUpload.map((img) => img.path).toList();
+      final mimeTypes = imagesToUpload.map((img) => img.mimeType).toList();
       
       // Clear input immediately for better UX
       _messageController.clear();
       setState(() {
-        _stagedImagePaths.clear();
+        _stagedImages.clear();
       });
 
       // Create pending message with local image paths
       final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
-      final pendingImages = imagePaths.map((path) => PendingImage(localPath: path)).toList();
+      final pendingImages = imagesToUpload.map((img) => PendingImage(
+        localPath: img.path,
+        mimeType: img.mimeType,
+      )).toList();
       
       final pendingMessage = PendingMessage(
         tempId: tempId,
@@ -387,6 +393,7 @@ class _DmContentState extends ConsumerState<DmContent> {
               threadId: widget.thread.id,
               userId: currentUser.firebaseID,
               filePaths: [imagePaths[i]],
+              mimeTypes: [mimeTypes[i]],
             );
             
             if (urls.isNotEmpty) {
@@ -476,10 +483,10 @@ class _DmContentState extends ConsumerState<DmContent> {
           IconButton(
             icon: const Icon(Icons.image),
             color: Colors.white70,
-            onPressed: _stagedImagePaths.length >= 5
+            onPressed: _stagedImages.length >= 5
                 ? null
                 : () => _pickImages(),
-            tooltip: _stagedImagePaths.length >= 5
+            tooltip: _stagedImages.length >= 5
                 ? 'Maximum 5 images per message'
                 : 'Add photo',
           ),
@@ -540,7 +547,7 @@ class _DmContentState extends ConsumerState<DmContent> {
   }
 
   Future<void> _pickImages() async {
-    if (_stagedImagePaths.length >= 5) {
+    if (_stagedImages.length >= 5) {
       AppToast.showError(context, 'Maximum 5 images per message');
       return;
     }
@@ -582,9 +589,12 @@ class _DmContentState extends ConsumerState<DmContent> {
       if (image == null) return;
 
       // Add to staged images
-      if (mounted && _stagedImagePaths.length < 5) {
+      if (mounted && _stagedImages.length < 5) {
         setState(() {
-          _stagedImagePaths.add(image.path);
+          _stagedImages.add(StagedImageInfo(
+            path: image.path,
+            mimeType: image.mimeType,
+          ));
         });
       }
     } catch (e) {
@@ -596,7 +606,7 @@ class _DmContentState extends ConsumerState<DmContent> {
 
   void _removeStagedImage(int index) {
     setState(() {
-      _stagedImagePaths.removeAt(index);
+      _stagedImages.removeAt(index);
     });
   }
 

@@ -76,6 +76,7 @@ class _MaypoleGalleryScreenState extends ConsumerState<MaypoleGalleryScreen> {
         builder: (context) => _ImageFullscreenView(
           image: image,
           allImages: allImages,
+          threadId: widget.threadId,
         ),
       ),
     );
@@ -288,10 +289,12 @@ class _ImageThumbnail extends StatelessWidget {
 class _ImageFullscreenView extends ConsumerStatefulWidget {
   final MaypoleImage image;
   final List<MaypoleImage> allImages;
+  final String threadId;
 
   const _ImageFullscreenView({
     required this.image,
     required this.allImages,
+    required this.threadId,
   });
 
   @override
@@ -419,9 +422,51 @@ class _ImageFullscreenViewState extends ConsumerState<_ImageFullscreenView> {
     );
 
     if (confirm == true && mounted) {
-      // TODO: Implement delete functionality with provider
-      // For now, just close the view
-      Navigator.pop(context);
+      final currentUser = AppSession().currentUser;
+      if (currentUser == null) return;
+
+      try {
+        // Show loading indicator
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+
+        // Delete the image using the service
+        await ref.read(maypoleImageServiceProvider).deleteImage(
+          widget.threadId,
+          image.id,
+          currentUser.firebaseID,
+        );
+
+        // Close loading dialog
+        if (mounted) {
+          Navigator.pop(context);
+        }
+
+        // Close the fullscreen view
+        if (mounted) {
+          Navigator.pop(context);
+        }
+
+        // Show success message
+        if (mounted) {
+          AppToast.showSuccess(context, 'Image deleted successfully');
+        }
+      } catch (e) {
+        // Close loading dialog if still open
+        if (mounted) {
+          Navigator.pop(context);
+        }
+
+        // Show error message
+        if (mounted) {
+          AppToast.showError(context, 'Failed to delete image: ${e.toString()}');
+        }
+      }
     }
   }
 

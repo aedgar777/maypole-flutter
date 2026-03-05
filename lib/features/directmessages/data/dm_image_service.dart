@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:image_picker/image_picker.dart';
 
 /// Service for uploading images to Firebase Storage for DM messages
 class DmImageService {
@@ -13,6 +15,7 @@ class DmImageService {
   /// [threadId] - The ID of the DM thread
   /// [userId] - The uploader's Firebase user ID
   /// [filePath] - The local file path of the image to upload
+  /// [mimeType] - Optional MIME type for web uploads (e.g., 'image/png')
   /// 
   /// Returns the download URL of the uploaded image
   /// Throws an exception if upload fails
@@ -20,12 +23,22 @@ class DmImageService {
     required String threadId,
     required String userId,
     required String filePath,
+    String? mimeType,
   }) async {
     try {
       debugPrint('Starting DM image upload for thread: $threadId');
 
-      // Get file extension
-      final extension = filePath.split('.').last.toLowerCase();
+      // Get file extension from path or mimeType
+      String extension;
+      if (mimeType != null && mimeType.isNotEmpty) {
+        // Extract from mimeType (e.g., 'image/png' -> 'png')
+        extension = mimeType.split('/').last.toLowerCase();
+        // Handle jpeg -> jpg
+        if (extension == 'jpeg') extension = 'jpg';
+      } else {
+        // Fallback to path extension
+        extension = filePath.split('.').last.toLowerCase();
+      }
       
       // Validate extension
       if (!['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(extension)) {
@@ -40,11 +53,25 @@ class DmImageService {
       // Path: dm_images/{threadId}/{filename}
       final storageRef = _storage.ref().child('dm_images/$threadId/$filename');
 
-      // Upload file
+      // Upload file - handle web vs mobile differently
       UploadTask uploadTask;
       if (kIsWeb) {
-        throw UnimplementedError('Web upload not implemented yet');
+        // On web, read the file as bytes using XFile
+        final xFile = XFile(filePath);
+        final bytes = await xFile.readAsBytes();
+        
+        uploadTask = storageRef.putData(
+          bytes,
+          SettableMetadata(
+            contentType: 'image/$extension',
+            customMetadata: {
+              'uploadedBy': userId,
+              'threadId': threadId,
+            },
+          ),
+        );
       } else {
+        // On mobile, use File
         final file = File(filePath);
         uploadTask = storageRef.putFile(
           file,
@@ -78,6 +105,7 @@ class DmImageService {
   /// [threadId] - The ID of the DM thread
   /// [userId] - The uploader's Firebase user ID
   /// [filePaths] - List of local file paths to upload (max 5)
+  /// [mimeTypes] - Optional list of MIME types corresponding to filePaths
   /// 
   /// Returns a list of download URLs for the uploaded images
   /// Throws an exception if upload fails or if more than 5 images are provided
@@ -85,6 +113,7 @@ class DmImageService {
     required String threadId,
     required String userId,
     required List<String> filePaths,
+    List<String?>? mimeTypes,
   }) async {
     if (filePaths.length > maxImagesPerMessage) {
       throw Exception('Cannot upload more than $maxImagesPerMessage images per message');
@@ -92,12 +121,13 @@ class DmImageService {
 
     final List<String> uploadedUrls = [];
     
-    for (final filePath in filePaths) {
+    for (int i = 0; i < filePaths.length; i++) {
       try {
         final url = await uploadImage(
           threadId: threadId,
           userId: userId,
-          filePath: filePath,
+          filePath: filePaths[i],
+          mimeType: mimeTypes != null && i < mimeTypes.length ? mimeTypes[i] : null,
         );
         uploadedUrls.add(url);
       } catch (e) {

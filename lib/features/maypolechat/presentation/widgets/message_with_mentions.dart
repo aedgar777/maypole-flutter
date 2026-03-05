@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_theme.dart';
+import 'package:maypole/core/widgets/adaptive_context_menu_trigger.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/maypolechat/data/user_search_service.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
@@ -61,8 +62,9 @@ class MessageWithMentions extends StatelessWidget {
 
     return Opacity(
       opacity: opacity,
-      child: GestureDetector(
-        onLongPress: () => _showContextMenu(context),
+      child: AdaptiveContextMenuTrigger(
+        onMenuOpened: () => _showContextMenu(context),
+        alignment: isOwnMessage ? Alignment.centerRight : Alignment.centerLeft,
         child: RichText(
           text: TextSpan(
             style: theme.textTheme.bodyMedium,

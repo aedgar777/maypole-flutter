@@ -39,12 +39,14 @@ class PendingMessage {
 @immutable
 class PendingImage {
   final String localPath; // Local file path
+  final String? mimeType; // MIME type for web uploads
   final String? uploadedUrl; // URL after upload completes
   final ImageUploadStatus status;
   final String? errorMessage;
 
   const PendingImage({
     required this.localPath,
+    this.mimeType,
     this.uploadedUrl,
     this.status = ImageUploadStatus.uploading,
     this.errorMessage,
@@ -52,12 +54,14 @@ class PendingImage {
 
   PendingImage copyWith({
     String? localPath,
+    String? mimeType,
     String? uploadedUrl,
     ImageUploadStatus? status,
     String? errorMessage,
   }) {
     return PendingImage(
       localPath: localPath ?? this.localPath,
+      mimeType: mimeType ?? this.mimeType,
       uploadedUrl: uploadedUrl ?? this.uploadedUrl,
       status: status ?? this.status,
       errorMessage: errorMessage ?? this.errorMessage,
