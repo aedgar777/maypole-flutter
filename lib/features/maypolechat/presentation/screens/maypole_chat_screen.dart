@@ -5,6 +5,7 @@ import 'package:maypole/core/widgets/adaptive_scaffold.dart';
 import 'package:maypole/features/identity/auth_providers.dart';
 import 'package:maypole/features/home/presentation/widgets/maypole_list_panel.dart';
 import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
+import 'package:maypole/core/utils/screen_utils.dart';
 import '../widgets/maypole_chat_content.dart';
 
 /// Maypole chat screen that adapts based on authentication state.
@@ -38,7 +39,7 @@ class MaypoleChatScreen extends ConsumerWidget {
 
         return LayoutBuilder(
           builder: (context, constraints) {
-            final isWideScreen = constraints.maxWidth >= 600;
+            final isWideScreen = ScreenUtils.isWideScreen(constraints);
 
             // Authenticated users on wide screens see the normal layout
             if (isAuthenticated && isWideScreen) {

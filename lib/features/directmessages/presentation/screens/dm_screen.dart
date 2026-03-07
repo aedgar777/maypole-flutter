@@ -7,6 +7,7 @@ import 'package:maypole/features/identity/auth_providers.dart';
 import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
 import 'package:maypole/features/home/presentation/widgets/maypole_list_panel.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/maypole_chat_content.dart';
+import 'package:maypole/core/utils/screen_utils.dart';
 import '../../domain/dm_thread.dart';
 import '../widgets/dm_content.dart';
 import '../dm_providers.dart';
@@ -53,7 +54,7 @@ class _DmScreenState extends ConsumerState<DmScreen> {
 
             return LayoutBuilder(
               builder: (context, constraints) {
-                final isWideScreen = constraints.maxWidth >= 600;
+                final isWideScreen = ScreenUtils.isWideScreen(constraints);
 
                 if (isWideScreen) {
                   // Wide screen: show adaptive layout with chat list

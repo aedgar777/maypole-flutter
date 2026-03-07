@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
+import 'package:maypole/core/widgets/hover_menu_button.dart';
 import 'package:maypole/core/widgets/lazy_profile_avatar.dart';
 import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/core/services/profile_picture_cache_service.dart';
@@ -26,6 +27,7 @@ class MaypoleListPanel extends ConsumerStatefulWidget {
   final Function(int tabIndex)? onTabChanged;
   final String? selectedThreadId;
   final bool isMaypoleThread;
+  final VoidCallback? onThreadDeleted; // Called when current thread is deleted
 
   const MaypoleListPanel({
     super.key,
@@ -37,6 +39,7 @@ class MaypoleListPanel extends ConsumerStatefulWidget {
     this.onTabChanged,
     this.selectedThreadId,
     this.isMaypoleThread = true,
+    this.onThreadDeleted,
   });
 
   @override
@@ -190,8 +193,22 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
   Widget _buildMaypoleListTile(BuildContext context, MaypoleMetaData thread) {
     final isSelected = widget.selectedThreadId == thread.id && widget.isMaypoleThread;
     
-    return GestureDetector(
-      key: ValueKey('maypole_${thread.id}_$isSelected'),
+    return HoverListTile(
+      tileColor: isSelected ? Colors.grey.withValues(alpha: 0.15) : null,
+      leading: const Icon(Icons.location_on),
+      title: Text(
+        thread.name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: thread.address.isNotEmpty
+          ? Text(
+              thread.address,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.5),
+              ),
+            )
+          : null,
       onTap: () {
         widget.onMaypoleThreadSelected(
           thread.id, 
@@ -201,32 +218,13 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
           thread.longitude,
         );
       },
-      onLongPress: () {
+      onMenuTap: () {
         _showMaypoleThreadContextMenu(
           context,
           thread,
           widget.user.firebaseID,
         );
       },
-      child: Container(
-        color: isSelected ? Colors.grey.withValues(alpha: 0.15) : Colors.transparent,
-        child: ListTile(
-          leading: const Icon(Icons.location_on),
-          title: Text(
-            thread.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          subtitle: thread.address.isNotEmpty
-              ? Text(
-                  thread.address,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
-                  ),
-                )
-              : null,
-        ),
-      ),
     );
   }
 
@@ -296,64 +294,59 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
                 ? '$formattedTimestamp • ${threadMetadata.lastMessageBody}'
                 : formattedTimestamp;
 
-            return GestureDetector(
-              key: ValueKey('dm_${threadMetadata.id}_$isSelected'),
+            return HoverListTile(
+              tileColor: isSelected ? Colors.grey.withValues(alpha: 0.15) : null,
+              leading: Stack(
+                children: [
+                  LazyProfileAvatar(
+                    userId: threadMetadata.partnerId,
+                    initialProfilePictureUrl: threadMetadata.partnerProfpic,
+                  ),
+                  // Unread indicator badge
+                  if (threadMetadata.hasUnread)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Theme.of(context).scaffoldBackgroundColor,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              title: Text(
+                threadMetadata.partnerName,
+                style: TextStyle(
+                  fontWeight: threadMetadata.hasUnread ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              subtitle: Text(
+                subtitleText,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(threadMetadata.hasUnread ? 0.9 : 0.5),
+                  fontWeight: threadMetadata.hasUnread ? FontWeight.w500 : FontWeight.normal,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               onTap: () {
                 widget.onDmThreadSelected(threadMetadata.id);
               },
-              onLongPress: () {
+              onMenuTap: () {
                 _showThreadContextMenu(
                   context,
                   threadMetadata,
                   userId,
                 );
               },
-              child: Container(
-                color: isSelected ? Colors.grey.withValues(alpha: 0.15) : Colors.transparent,
-                child: ListTile(
-                  leading: Stack(
-                    children: [
-                      LazyProfileAvatar(
-                        userId: threadMetadata.partnerId,
-                        initialProfilePictureUrl: threadMetadata.partnerProfpic,
-                      ),
-                      // Unread indicator badge
-                      if (threadMetadata.hasUnread)
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            width: 12,
-                            height: 12,
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Theme.of(context).scaffoldBackgroundColor,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  title: Text(
-                    threadMetadata.partnerName,
-                    style: TextStyle(
-                      fontWeight: threadMetadata.hasUnread ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                  subtitle: Text(
-                    subtitleText,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(threadMetadata.hasUnread ? 0.9 : 0.5),
-                      fontWeight: threadMetadata.hasUnread ? FontWeight.w500 : FontWeight.normal,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ),
             );
           },
         );
@@ -451,6 +444,11 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
     setState(() {
       _pendingDeletions.add(threadMetadata.id);
     });
+
+    // Notify parent if this is the currently selected thread
+    if (widget.selectedThreadId == threadMetadata.id && widget.onThreadDeleted != null) {
+      widget.onThreadDeleted!();
+    }
 
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     
@@ -572,6 +570,11 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
     setState(() {
       _pendingMaypoleDeletions.add(threadMetadata.id);
     });
+
+    // Notify parent if this is the currently selected thread
+    if (widget.selectedThreadId == threadMetadata.id && widget.onThreadDeleted != null) {
+      widget.onThreadDeleted!();
+    }
 
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     
