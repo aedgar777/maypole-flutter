@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/utils/string_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
-import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -181,57 +180,66 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           flex: 4,
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  AuthFormField(
-                    controller: _emailController,
-                    labelText: l10n.email,
-                    keyboardType: TextInputType.emailAddress,
-                    maxLength: StringUtils.maxEmailLength,
-                    onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
-                        _handleSignIn() : null,
-                    validator: (value) => StringUtils.validateEmail(value, l10n),
-                  ),
-                  const SizedBox(height: 20),
-                  AuthFormField(
-                    controller: _passwordController,
-                    labelText: l10n.password,
-                    obscureText: true,
-                    maxLength: StringUtils.maxPasswordLength,
-                    onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
-                        _handleSignIn() : null,
-                    validator: (value) => StringUtils.validatePassword(value, l10n),
-                  ),
-                  const SizedBox(height: 30),
-                  if (loginState.isLoading)
-                    const CircularProgressIndicator()
-                  else
-                    Column(
-                      children: [
-                        ElevatedButton(
-                          onPressed: _handleSignIn,
-                          child: Text(l10n.signIn, style: const TextStyle(
-                              fontSize: 18)),
-                        ),
-                        const SizedBox(height: 10),
-                        TextButton(
-                          onPressed: () => context.go('/register'),
-                          child: Text(l10n.register),
-                        ),
-                        if (loginState.errorMessage != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 16),
-                            child: Text(
-                              loginState.errorMessage!,
-                              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: AppConfig.isWideScreen
+                      ? MediaQuery.of(context).size.width / 3
+                      : double.infinity,
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      AuthFormField(
+                        controller: _emailController,
+                        labelText: l10n.email,
+                        keyboardType: TextInputType.emailAddress,
+                        maxLength: StringUtils.maxEmailLength,
+                        onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
+                            _handleSignIn() : null,
+                        validator: (value) => StringUtils.validateEmail(value, l10n),
+                      ),
+                      const SizedBox(height: 20),
+                      AuthFormField(
+                        controller: _passwordController,
+                        labelText: l10n.password,
+                        obscureText: true,
+                        maxLength: StringUtils.maxPasswordLength,
+                        onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
+                            _handleSignIn() : null,
+                        validator: (value) => StringUtils.validatePassword(value, l10n),
+                      ),
+                      const SizedBox(height: 30),
+                      if (loginState.isLoading)
+                        const CircularProgressIndicator()
+                      else
+                        Column(
+                          children: [
+                            ElevatedButton(
+                              onPressed: _handleSignIn,
+                              child: Text(l10n.signIn, style: const TextStyle(
+                                  fontSize: 18)),
                             ),
-                          ),
-                      ],
-                    ),
-                ],
+                            const SizedBox(height: 10),
+                            TextButton(
+                              onPressed: () => context.go('/register'),
+                              child: Text(l10n.register),
+                            ),
+                            if (loginState.errorMessage != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 16),
+                                child: Text(
+                                  loginState.errorMessage!,
+                                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                                ),
+                              ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),

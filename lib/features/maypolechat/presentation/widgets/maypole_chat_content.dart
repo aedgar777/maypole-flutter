@@ -44,6 +44,7 @@ class MaypoleChatContent extends ConsumerStatefulWidget {
   final bool showAppBar;
   final bool autoFocus;
   final bool readOnly; // If true, shows join prompt instead of input
+  final bool showWebAd; // If false, hides web ad banner (used when embedded in home screen)
 
   const MaypoleChatContent({
     super.key,
@@ -56,6 +57,7 @@ class MaypoleChatContent extends ConsumerStatefulWidget {
     this.showAppBar = true,
     this.autoFocus = false,
     this.readOnly = false,
+    this.showWebAd = true,
   });
 
   @override
@@ -191,166 +193,19 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
   }
   
   /// Check if image upload button should be enabled
-  /// Image uploads require BOTH:
-  /// 1. "Show When at Location" feature to be enabled
-  /// 2. User to be within the place's geofence range (which requires location permission)
+  /// TEMPORARILY DISABLED: All proximity requirements bypassed for testing
+  /// Original requirements: "Show When at Location" enabled + within geofence range
   bool get _canUploadImage {
-    debugPrint('🖼️ IMAGE UPLOAD CHECK for ${widget.maypoleName}:');
-    debugPrint('   Widget placeType: ${widget.placeType}');
-    debugPrint('   Widget latitude: ${widget.latitude}');
-    debugPrint('   Widget longitude: ${widget.longitude}');
-    
-    final locationState = ref.watch(locationSettingsViewModelProvider);
-    final showWhenAtLocationEnabled = locationState.preferences.showWhenAtLocation;
-    final hasLocationPermission = locationState.preferences.systemPermissionGranted;
-    
-    // Feature must be enabled to upload images
-    if (!showWhenAtLocationEnabled) {
-      debugPrint('   ❌ Cannot upload: Show when at location is disabled');
-      return false;
-    }
-    
-    // Must have location permission
-    if (!hasLocationPermission) {
-      debugPrint('   ❌ Cannot upload: No location permission');
-      return false;
-    }
-    
-    // If no coordinates for the place, cannot verify proximity - disallow
-    if (widget.latitude == null || widget.longitude == null) {
-      debugPrint('   ⚠️ Cannot upload: No place coordinates to verify proximity');
-      return false;
-    }
-    
-    // Must have current position
-    if (_currentPosition == null) {
-      debugPrint('   ❌ Cannot upload: No current position');
-      return false;
-    }
-    
-    // Must be within the place's geofence range (dynamic based on place type)
-    final radius = PlaceGeofenceUtils.getRadiusForPlaceType(widget.placeType);
-    debugPrint('   Place type: ${widget.placeType}');
-    debugPrint('   Calculated radius: ${radius}m (${PlaceGeofenceUtils.getRadiusDescription(widget.placeType)})');
-    
-    final locationService = ref.read(locationServiceProvider);
-    final isInRange = locationService.isPositionInRangeOfPlace(
-      placeLatitude: widget.latitude!,
-      placeLongitude: widget.longitude!,
-      position: _currentPosition,
-      placeType: widget.placeType,
-    );
-    
-    final canUpload = isInRange ?? false;
-    debugPrint('   ${canUpload ? "✅" : "❌"} Can upload: $canUpload');
-    return canUpload;
+    // TEMPORARY: Bypass all proximity checks for image uploads
+    return true;
   }
   
   /// Show explanatory dialog when image upload is disabled
+  /// TEMPORARILY DISABLED: This dialog will not be shown since proximity checks are bypassed
   Future<void> _showImageUploadDisabledDialog() async {
-    debugPrint('🚫 SHOWING UPLOAD DISABLED DIALOG:');
-    debugPrint('   Widget placeType: ${widget.placeType}');
-    
-    final locationState = ref.read(locationSettingsViewModelProvider);
-    final showWhenAtLocationEnabled = locationState.preferences.showWhenAtLocation;
-    final hasLocationPermission = locationState.preferences.systemPermissionGranted;
-    
-    String title;
-    String message;
-    List<Widget> actions;
-
-    if (!showWhenAtLocationEnabled) {
-      // Feature is disabled
-      final requiredRange = PlaceGeofenceUtils.getRadiusDescription(widget.placeType);
-      debugPrint('   Required range: $requiredRange');
-      title = 'Feature Not Enabled';
-      message = '"Show When at Location" must be enabled to upload images to maypoles.\n\n'
-          'This feature ensures photo authenticity by requiring you to be within $requiredRange of the location.\n\n'
-          'Enable it in Preferences to start uploading images.';
-      actions = [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-            context.push('/settings/preferences');
-          },
-          child: const Text('Preferences'),
-        ),
-      ];
-    } else if (!hasLocationPermission) {
-      // No location permission
-      title = 'Location Permission Required';
-      message = '"Show When at Location" requires location permission to verify you\'re at ${widget.maypoleName}.\n\n'
-          'Please grant location permission in Settings.';
-      actions = [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () async {
-            Navigator.pop(context);
-            final locationService = ref.read(locationServiceProvider);
-            await locationService.openAppSettings();
-          },
-          child: const Text('Open Settings'),
-        ),
-      ];
-    } else {
-      // Has permission but not within range
-      debugPrint('   ERROR: Not within range');
-      debugPrint('   widget.placeType being used: ${widget.placeType}');
-      
-      final radius = PlaceGeofenceUtils.getRadiusForPlaceType(widget.placeType);
-      debugPrint('   Calculated radius for error: ${radius}m');
-      
-      final requiredRange = PlaceGeofenceUtils.getRadiusDescription(widget.placeType);
-      debugPrint('   Required range string: $requiredRange');
-      
-      final placeCategory = PlaceGeofenceUtils.getPlaceCategory(widget.placeType);
-      debugPrint('   Place category: $placeCategory');
-      
-      // Get current distance if available
-      String distanceInfo = '';
-      if (_currentPosition != null && widget.latitude != null && widget.longitude != null) {
-        final distance = PlaceGeofenceUtils.getDistanceToPlace(
-          position: _currentPosition,
-          placeLatitude: widget.latitude!,
-          placeLongitude: widget.longitude!,
-        );
-        debugPrint('   Actual distance: ${distance}m');
-        if (distance != null) {
-          final distanceStr = distance >= 1000 
-              ? '${(distance / 1000).toStringAsFixed(1)} km'
-              : '${distance.toStringAsFixed(0)} m';
-          distanceInfo = '\n\nYou are currently $distanceStr away.';
-        }
-      }
-      
-      title = 'Not at Location';
-      message = 'You must be within $requiredRange of ${widget.maypoleName} to upload images.$distanceInfo\n\n'
-          'This ensures photo authenticity. Move closer to the location to upload.';
-      actions = [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('OK'),
-        ),
-      ];
-    }
-    
-    if (!mounted) return;
-    
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: actions,
-      ),
-    );
+    // TEMPORARY: All proximity checks bypassed - this dialog won't be triggered
+    // Kept for reference when re-enabling proximity requirements
+    return;
   }
   
   /// Check if a message was sent from within the place's geofence range
@@ -462,7 +317,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
           children: [
             // Web ad banner at the top with gradient background
             // Gradient: light/transparent at bottom, dark at top
-            if (kIsWeb && AdConfig.webAdsEnabled)
+            if (kIsWeb && AdConfig.webAdsEnabled && widget.showWebAd)
               Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(

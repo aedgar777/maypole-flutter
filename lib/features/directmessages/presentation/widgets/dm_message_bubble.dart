@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:maypole/core/widgets/error_dialog.dart';
-import 'package:maypole/features/directmessages/data/dm_thread_service.dart';
+import 'package:maypole/core/widgets/adaptive_context_menu_trigger.dart';
 import 'package:maypole/features/directmessages/domain/direct_message.dart';
 
 /// A widget that displays a DM message bubble with context menu support
@@ -66,11 +64,12 @@ class DmMessageBubble extends StatelessWidget {
     final bool hasImages = message.imageUrls.isNotEmpty;
     final bool hasText = message.body.isNotEmpty && !isDeleted;
 
-    return GestureDetector(
-      onLongPress: !isDeleted ? () {
+    return AdaptiveContextMenuTrigger(
+      onMenuOpened: !isDeleted ? () {
         HapticFeedback.mediumImpact();
         onDelete?.call();
-      } : null,
+      } : () {},
+      alignment: isOwnMessage ? Alignment.centerRight : Alignment.centerLeft,
       child: Align(
         alignment: isOwnMessage ? Alignment.centerRight : Alignment.centerLeft,
         child: Container(
