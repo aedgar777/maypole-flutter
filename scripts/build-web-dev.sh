@@ -21,10 +21,4 @@ flutter build web \
 
 echo "✅ Web build complete!"
 echo ""
-
-# Copy ads.txt file for AdSense
-echo "📱 Copying ads.txt for AdSense..."
-cp web/ads.txt build/web/ads.txt
-echo "✅ ads.txt copied!"
-echo ""
 echo "Deploy with: firebase deploy --only hosting"

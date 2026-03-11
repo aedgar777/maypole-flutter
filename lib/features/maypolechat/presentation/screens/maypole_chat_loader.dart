@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../data/maypole_chat_service.dart';
 import '../../domain/maypole.dart';
 import '../../../maypolesearch/data/services/maypole_search_service.dart';
 import 'maypole_chat_screen.dart';
@@ -26,13 +25,13 @@ class MaypoleChatLoader extends ConsumerStatefulWidget {
 }
 
 class _MaypoleChatLoaderState extends ConsumerState<MaypoleChatLoader> {
-  final _chatService = MaypoleChatService();
   final _searchService = MaypoleSearchService();
   
   String? _placeName;
   String? _address;
   double? _latitude;
   double? _longitude;
+  String? _placeType;
   bool _isLoading = true;
   String? _error;
 
@@ -61,6 +60,7 @@ class _MaypoleChatLoaderState extends ConsumerState<MaypoleChatLoader> {
           _address = data['address'] as String?;
           _latitude = data['latitude'] as double?;
           _longitude = data['longitude'] as double?;
+          _placeType = data['placeType'] as String?;
           _isLoading = false;
         });
         
@@ -89,6 +89,15 @@ class _MaypoleChatLoaderState extends ConsumerState<MaypoleChatLoader> {
         final latitude = location?['latitude'] as double?;
         final longitude = location?['longitude'] as double?;
         
+        // Extract place type from Google Places API response
+        String? placeType = placeDetails['primaryType'] as String?;
+        if (placeType == null || placeType.isEmpty) {
+          final types = placeDetails['types'] as List<dynamic>?;
+          if (types != null && types.isNotEmpty) {
+            placeType = types.first as String?;
+          }
+        }
+        
         // Step 3: Create/update Firestore document
         final metaData = MaypoleMetaData(
           id: widget.threadId,
@@ -96,6 +105,7 @@ class _MaypoleChatLoaderState extends ConsumerState<MaypoleChatLoader> {
           address: formattedAddress ?? '',
           latitude: latitude,
           longitude: longitude,
+          placeType: placeType,
         );
         
         await FirebaseFirestore.instance
@@ -110,6 +120,7 @@ class _MaypoleChatLoaderState extends ConsumerState<MaypoleChatLoader> {
           _address = formattedAddress;
           _latitude = latitude;
           _longitude = longitude;
+          _placeType = placeType;
           _isLoading = false;
         });
       } else {
@@ -187,6 +198,7 @@ class _MaypoleChatLoaderState extends ConsumerState<MaypoleChatLoader> {
       address: _address,
       latitude: _latitude,
       longitude: _longitude,
+      placeType: _placeType,
     );
   }
 }

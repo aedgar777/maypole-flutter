@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class AutocompleteResponse {
   final List<PlacePrediction> predictions;
@@ -6,16 +7,62 @@ class AutocompleteResponse {
   AutocompleteResponse({required this.predictions});
 
   factory AutocompleteResponse.fromMap(Map<String, dynamic> map) {
-    return AutocompleteResponse(
-      predictions: (map['suggestions'] as List<dynamic>?)
-              ?.map((e) => PlacePrediction.fromMap(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-    );
+    debugPrint('🔍 Parsing AutocompleteResponse from map with keys: ${map.keys.toList()}');
+    
+    // Handle Cloud Function response format - may be wrapped differently
+    List<dynamic>? suggestions;
+    
+    if (map.containsKey('suggestions')) {
+      // Direct Google Places API format
+      suggestions = map['suggestions'] as List<dynamic>?;
+    } else if (map.containsKey('predictions')) {
+      // Alternative format
+      suggestions = map['predictions'] as List<dynamic>?;
+    } else if (map.containsKey('results')) {
+      // Another possible format
+      suggestions = map['results'] as List<dynamic>?;
+    } else if (map.length == 1) {
+      // Maybe wrapped in a single key
+      final firstValue = map.values.first;
+      if (firstValue is Map<String, dynamic>) {
+        if (firstValue.containsKey('suggestions')) {
+          suggestions = firstValue['suggestions'] as List<dynamic>?;
+        }
+      }
+    }
+    
+    final predictions = suggestions
+            ?.map((e) {
+              if (e is Map<String, dynamic>) {
+                return PlacePrediction.fromMap(e);
+              }
+              debugPrint('⚠️ Unexpected suggestion format: $e');
+              return null;
+            })
+            .where((p) => p != null)
+            .cast<PlacePrediction>()
+            .toList() ??
+        [];
+    
+    debugPrint('✅ Parsed ${predictions.length} predictions');
+    return AutocompleteResponse(predictions: predictions);
   }
 
-  factory AutocompleteResponse.fromJson(String source) =>
-      AutocompleteResponse.fromMap(json.decode(source));
+  factory AutocompleteResponse.fromJson(String source) {
+    try {
+      final decoded = json.decode(source);
+      if (decoded is Map<String, dynamic>) {
+        return AutocompleteResponse.fromMap(decoded);
+      } else {
+        debugPrint('❌ Expected Map but got ${decoded.runtimeType}: $decoded');
+        throw Exception('Invalid response format: expected JSON object');
+      }
+    } catch (e) {
+      debugPrint('💥 Error parsing AutocompleteResponse: $e');
+      debugPrint('💥 Source: ${source.substring(0, source.length > 200 ? 200 : source.length)}...');
+      rethrow;
+    }
+  }
 }
 
 class PlacePrediction {

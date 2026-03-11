@@ -8,7 +8,7 @@ class HoverListTile extends StatefulWidget {
   final Widget? title;
   final Widget? subtitle;
   final VoidCallback? onTap;
-  final VoidCallback onMenuTap;
+  final Function(BuildContext triggerContext) onMenuTap;
   final Color? tileColor;
 
   const HoverListTile({
@@ -35,43 +35,47 @@ class _HoverListTileState extends State<HoverListTile> {
 
   @override
   Widget build(BuildContext context) {
-    final tile = ListTile(
-      leading: widget.leading,
-      title: widget.title,
-      subtitle: widget.subtitle,
-      tileColor: widget.tileColor,
-      onTap: widget.onTap,
-      trailing: _isWideScreen
-          ? AnimatedOpacity(
-              opacity: _isHovered ? 0.6 : 0.0,
-              duration: const Duration(milliseconds: 150),
-              child: GestureDetector(
-                onTap: widget.onMenuTap,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(4),
+    return Builder(
+      builder: (triggerContext) {
+        final tile = ListTile(
+          leading: widget.leading,
+          title: widget.title,
+          subtitle: widget.subtitle,
+          tileColor: widget.tileColor,
+          onTap: widget.onTap,
+          trailing: _isWideScreen
+              ? AnimatedOpacity(
+                  opacity: _isHovered ? 0.6 : 0.0,
+                  duration: const Duration(milliseconds: 150),
+                  child: GestureDetector(
+                    onTap: () => widget.onMenuTap(triggerContext),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Icon(
+                        Icons.more_vert,
+                        size: 18,
+                        color: Colors.white70,
+                      ),
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.more_vert,
-                    size: 18,
-                    color: Colors.white70,
-                  ),
-                ),
-              ),
-            )
-          : null,
-    );
+                )
+              : null,
+        );
 
-    if (!_isWideScreen) {
-      return tile;
-    }
+        if (!_isWideScreen) {
+          return tile;
+        }
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: tile,
+        return MouseRegion(
+          onEnter: (_) => setState(() => _isHovered = true),
+          onExit: (_) => setState(() => _isHovered = false),
+          child: tile,
+        );
+      },
     );
   }
 }
@@ -97,7 +101,7 @@ class HoverMenuButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(4),
           ),
           child: const Icon(

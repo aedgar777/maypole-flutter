@@ -318,7 +318,11 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                 ),
               // Mobile search bar (no web ads)
               if (!kIsWeb && !AppConfig.isWideScreen)
-                AnimatedContainer(
+                GestureDetector(
+                  // Absorb taps to prevent them reaching the map - opaque ensures ALL hits are absorbed
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {},
+                  child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: double.infinity,
                   color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
@@ -359,23 +363,29 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                           vertical: 12,
                         ),
                         suffixIcon: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
-                            ? IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
+                            ? GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () {
                                   _searchController.clear();
                                   _searchFocusNode.unfocus();
                                   ref.read(maypoleSearchViewModelProvider.notifier).searchMaypoles('');
                                 },
+                                child: const Icon(Icons.clear),
                               )
                             : null,
                       ),
                     ),
                   ),
                 ),
+              ),
 
               // Web ad banner + search bar in the same container that dims together
               if (kIsWeb && AdConfig.webAdsEnabled)
-                AnimatedContainer(
+                GestureDetector(
+                  // Absorb taps to prevent them reaching the map - opaque ensures ALL hits are absorbed
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {},
+                  child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: double.infinity,
                   color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
@@ -438,21 +448,23 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                               vertical: 12,
                             ),
                             suffixIcon: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      _searchFocusNode.unfocus();
-                                      ref.read(maypoleSearchViewModelProvider.notifier).searchMaypoles('');
-                                    },
-                                  )
-                                : null,
+                            ? GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () {
+                                  _searchController.clear();
+                                  _searchFocusNode.unfocus();
+                                  ref.read(maypoleSearchViewModelProvider.notifier).searchMaypoles('');
+                                },
+                                child: const Icon(Icons.clear),
+                              )
+                            : null,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
+              ),
 
               // Animated search results list with semi-transparent background
               Expanded(

@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:image_picker/image_picker.dart';
+import '../domain/maypole.dart';
 import '../domain/maypole_image.dart';
 import '../domain/maypole_message.dart';
 
@@ -21,6 +23,12 @@ class MaypoleImageService {
   /// [userId] - The uploader's Firebase user ID
   /// [username] - The uploader's username
   /// [filePath] - The local file path of the image to upload
+  /// [mimeType] - Optional MIME type for web uploads (e.g., 'image/png')
+  /// [address] - Optional address of the maypole
+  /// [latitude] - Optional latitude of the maypole
+  /// [longitude] - Optional longitude of the maypole
+  /// [placeType] - Optional place type of the maypole
+  /// [userMaypoleThreads] - The user's current maypole chat threads (to update lastTypedAt)
   /// 
   /// Returns the MaypoleImage object for the uploaded image
   /// Throws an exception if rate limit is exceeded or upload fails
@@ -30,6 +38,12 @@ class MaypoleImageService {
     required String userId,
     required String username,
     required String filePath,
+    String? mimeType,
+    String? address,
+    double? latitude,
+    double? longitude,
+    String? placeType,
+    List<MaypoleMetaData>? userMaypoleThreads,
   }) async {
     // Check rate limit
     await _checkRateLimit(maypoleId, userId);
@@ -37,8 +51,17 @@ class MaypoleImageService {
     try {
       debugPrint('Starting maypole image upload for maypole: $maypoleId');
 
-      // Get file extension
-      final extension = filePath.split('.').last.toLowerCase();
+      // Get file extension from path or mimeType
+      String extension;
+      if (mimeType != null && mimeType.isNotEmpty) {
+        // Extract from mimeType (e.g., 'image/png' -> 'png')
+        extension = mimeType.split('/').last.toLowerCase();
+        // Handle jpeg -> jpg
+        if (extension == 'jpeg') extension = 'jpg';
+      } else {
+        // Fallback to path extension
+        extension = filePath.split('.').last.toLowerCase();
+      }
       
       // Validate extension
       if (!['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(extension)) {
@@ -53,10 +76,24 @@ class MaypoleImageService {
       // Path: maypole_images/{maypoleId}/{filename}
       final storageRef = _storage.ref().child('maypole_images/$maypoleId/$filename');
 
-      // Upload file
+      // Upload file - handle web vs mobile differently
       UploadTask uploadTask;
       if (kIsWeb) {
-        throw UnimplementedError('Web upload not implemented yet');
+        // On web, read the file as bytes using XFile
+        final xFile = XFile(filePath);
+        final bytes = await xFile.readAsBytes();
+        
+        uploadTask = storageRef.putData(
+          bytes,
+          SettableMetadata(
+            contentType: 'image/$extension',
+            customMetadata: {
+              'uploadedBy': userId,
+              'maypoleId': maypoleId,
+              'maypoleName': maypoleName,
+            },
+          ),
+        );
       } else {
         final file = File(filePath);
         // Compress/resize if needed (optional - could be handled by Cloud Function)
@@ -130,6 +167,50 @@ class MaypoleImageService {
 
       final messageRef = maypoleRef.collection('messages').doc();
       batch.set(messageRef, notificationMessage.toMap());
+
+      // Update user's maypole chat threads with lastTypedAt to move this maypole to top of list
+      if (userMaypoleThreads != null) {
+        final userRef = _firestore.collection('users').doc(userId);
+        final now = DateTime.now();
+        
+        // Check if user already has this maypole in their list
+        final existingThreadIndex = userMaypoleThreads.indexWhere((element) => element.id == maypoleId);
+        
+        if (existingThreadIndex == -1) {
+          // Thread doesn't exist - add it with lastTypedAt
+          final maypoleMetaData = MaypoleMetaData(
+            id: maypoleId,
+            name: maypoleName,
+            address: address ?? '',
+            latitude: latitude,
+            longitude: longitude,
+            lastTypedAt: now,
+            placeType: placeType,
+          );
+          batch.update(userRef, {
+            'maypoleChatThreads': FieldValue.arrayUnion([maypoleMetaData.toMap()])
+          });
+        } else {
+          // Thread exists - update lastTypedAt by removing old and adding updated
+          final oldThread = userMaypoleThreads[existingThreadIndex];
+          final updatedThread = MaypoleMetaData(
+            id: maypoleId,
+            name: maypoleName,
+            address: address ?? oldThread.address,
+            latitude: latitude ?? oldThread.latitude,
+            longitude: longitude ?? oldThread.longitude,
+            lastTypedAt: now,
+            placeType: placeType ?? oldThread.placeType,
+          );
+          
+          batch.update(userRef, {
+            'maypoleChatThreads': FieldValue.arrayRemove([oldThread.toMap()])
+          });
+          batch.update(userRef, {
+            'maypoleChatThreads': FieldValue.arrayUnion([updatedThread.toMap()])
+          });
+        }
+      }
 
       // Commit all changes atomically
       await batch.commit();

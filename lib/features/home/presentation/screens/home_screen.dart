@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
@@ -8,10 +9,10 @@ import 'package:maypole/core/services/prefetch_service_provider.dart';
 import 'package:maypole/core/services/remote_config_provider.dart';
 import 'package:maypole/core/widgets/adaptive_scaffold.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
+import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/features/directmessages/domain/dm_thread.dart';
 import 'package:maypole/features/directmessages/presentation/widgets/dm_content.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
-import 'package:maypole/features/maypolechat/presentation/screens/maypole_gallery_screen.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/maypole_chat_content.dart';
 import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
 import 'package:maypole/features/settings/settings_providers.dart';
@@ -379,14 +380,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           IconButton(
                             icon: const Icon(Icons.photo_library, color: Colors.white70),
                             onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => MaypoleGalleryScreen(
-                                    threadId: _selectedThread.threadId!,
-                                    maypoleName: _selectedThread.maypoleName!,
-                                  ),
-                                ),
+                              context.push(
+                                '/chat/${_selectedThread.threadId}/gallery?name=${Uri.encodeComponent(_selectedThread.maypoleName!)}',
                               );
                             },
                             tooltip: 'View gallery',
@@ -412,14 +407,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     IconButton(
                       icon: const Icon(Icons.photo_library),
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => MaypoleGalleryScreen(
-                              threadId: _selectedThread.threadId!,
-                              maypoleName: _selectedThread.maypoleName!,
-                            ),
-                          ),
+                        context.push(
+                          '/chat/${_selectedThread.threadId}/gallery?name=${Uri.encodeComponent(_selectedThread.maypoleName!)}',
                         );
                       },
                       tooltip: 'View gallery',
@@ -450,22 +439,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final threadId = _selectedThread.threadId;
     final maypoleName = _selectedThread.maypoleName;
     final address = _selectedThread.address;
-    
+
     if (threadId == null || maypoleName == null) return;
-    
+
     try {
       final shareUrl = '${AppConfig.appUrl}/chat/$threadId';
-      final locationInfo = address != null
-          ? ' at $address'
-          : '';
-      final shareText = 'Check out the conversation at $maypoleName$locationInfo!\n\n$shareUrl';
+      final locationInfo = address != null ? ' at $address' : '';
+      final shareText =
+          'Check out the conversation at $maypoleName$locationInfo!\n\n$shareUrl';
 
-      await Share.share(
-        shareText,
-        subject: 'Join the conversation on Maypole',
-      );
+      if (kIsWeb) {
+        // On web, copy to clipboard and show a toast
+        await Clipboard.setData(ClipboardData(text: shareText));
+        if (context.mounted) {
+          AppToast.showSuccess(context, 'Link copied to clipboard');
+        }
+      } else {
+        // On mobile, use the share dialog
+        await Share.share(
+          shareText,
+          subject: 'Join the conversation on Maypole',
+        );
+      }
     } catch (e) {
       debugPrint('Error sharing conversation: $e');
+      if (context.mounted) {
+        AppToast.showError(context, 'Failed to share conversation');
+      }
     }
   }
 

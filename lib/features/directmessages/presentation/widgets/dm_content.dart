@@ -1,15 +1,11 @@
-import 'dart:io';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
-import 'package:maypole/core/widgets/cached_profile_avatar.dart';
 import 'package:maypole/core/widgets/lazy_profile_avatar.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/core/widgets/app_toast.dart';
@@ -18,14 +14,15 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:maypole/core/ads/widgets/banner_ad_widget.dart';
 import 'package:maypole/core/ads/ad_config.dart';
 import 'package:maypole/core/services/hive_moderation_provider.dart';
+import 'package:maypole/core/widgets/animated_message_item.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
-import 'package:maypole/features/identity/domain/domain_user.dart';
 import '../../domain/direct_message.dart';
 import '../../domain/dm_thread.dart';
 import '../../domain/pending_message.dart';
 import '../../domain/staged_image_info.dart';
 import '../dm_providers.dart';
 import 'dm_message_bubble.dart';
+import 'pending_message_bubble.dart';
 import 'staged_images_widget.dart';
 
 /// The content of a DM screen without the Scaffold wrapper.
@@ -256,20 +253,20 @@ class _DmContentState extends ConsumerState<DmContent> {
                     _animatedMessageIds.add(messageKey);
                   }
                   
-                  return _AnimatedMessageItem(
+                  return AnimatedMessageItem(
                     key: ValueKey(messageKey),
                     isNew: isNew,
                     child: DmMessageBubble(
-                      message: message,
-                      isOwnMessage: isMe,
-                      partnerId: partner?.id ?? '',
-                      partnerUsername: partner?.username ?? '',
-                      partnerProfilePicUrl: partner?.profilePicUrl ?? '',
-                      onDelete: !isDeleted ? () => _showMessageContextMenu(context, message) : null,
-                      isGroupedWithNext: isGroupedWithNext,
-                      isGroupedWithPrevious: isGroupedWithPrevious,
-                      isDeleted: isDeleted,
-                    ),
+                    message: message,
+                    isOwnMessage: isMe,
+                    partnerId: partner?.id ?? '',
+                    partnerUsername: partner?.username ?? '',
+                    partnerProfilePicUrl: partner?.profilePicUrl ?? '',
+                    onDelete: !isDeleted ? (triggerContext) => _showMessageContextMenu(context, message, triggerContext) : null,
+                    isGroupedWithNext: isGroupedWithNext,
+                    isGroupedWithPrevious: isGroupedWithPrevious,
+                    isDeleted: isDeleted,
+                  ),
                   );
                 },
               );
@@ -553,30 +550,37 @@ class _DmContentState extends ConsumerState<DmContent> {
     }
 
     try {
-      // Show dialog to choose between camera and gallery
-      final source = await showDialog<ImageSource>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Select Image Source'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Gallery'),
-                onTap: () => Navigator.pop(context, ImageSource.gallery),
-              ),
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('Camera'),
-                onTap: () => Navigator.pop(context, ImageSource.camera),
-              ),
-            ],
+      // On web/desktop, skip the dialog and go straight to gallery
+      // On mobile, show the camera/gallery choice dialog
+      final ImageSource source;
+      if (kIsWeb) {
+        source = ImageSource.gallery;
+      } else {
+        // Show dialog to choose between camera and gallery
+        final selectedSource = await showDialog<ImageSource>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Select Image Source'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.photo_library),
+                  title: const Text('Gallery'),
+                  onTap: () => Navigator.pop(context, ImageSource.gallery),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.camera_alt),
+                  title: const Text('Camera'),
+                  onTap: () => Navigator.pop(context, ImageSource.camera),
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-
-      if (source == null) return;
+        );
+        if (selectedSource == null) return;
+        source = selectedSource;
+      }
 
       // Pick image
       final XFile? image = await _picker.pickImage(
@@ -621,7 +625,7 @@ class _DmContentState extends ConsumerState<DmContent> {
           .whereType<String>()
           .toList();
       
-      return _AnimatedMessageItem(
+      return AnimatedMessageItem(
         key: ValueKey(pendingMsg.tempId),
         isNew: true,
         child: DmMessageBubble(
@@ -646,10 +650,10 @@ class _DmContentState extends ConsumerState<DmContent> {
     }
     
     // Otherwise show pending bubble with overlays
-    return _AnimatedMessageItem(
+    return AnimatedMessageItem(
       key: ValueKey(pendingMsg.tempId),
       isNew: true,
-      child: _PendingMessageBubble(
+      child: PendingMessageBubble(
         pendingMessage: pendingMsg,
         isOwnMessage: true,
         onRetry: (imageIndex) => _retryImageUpload(pendingMsg.tempId, imageIndex),
@@ -713,13 +717,79 @@ class _DmContentState extends ConsumerState<DmContent> {
     }
   }
 
-  void _showMessageContextMenu(BuildContext context, DirectMessage message) {
+  void _showMessageContextMenu(BuildContext context, DirectMessage message, [BuildContext? triggerContext]) {
     final currentUser = AppSession().currentUser;
     if (currentUser == null || message.id == null) return;
 
     final formattedDateTime = DateTimeUtils.formatFullDateTime(message.timestamp);
     final bool isMyMessage = message.sender == currentUser.username;
 
+    // Check if we're on a wide screen (desktop/web)
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWideScreen = screenWidth >= 600 || kIsWeb;
+
+    if (isWideScreen && triggerContext != null) {
+      // Desktop: Show menu at the position of the 3-dot button
+      final RenderBox? renderBox = triggerContext.findRenderObject() as RenderBox?;
+      if (renderBox != null) {
+        final position = renderBox.localToGlobal(Offset.zero);
+        final size = renderBox.size;
+        final isOwnMessage = message.sender == currentUser.username;
+
+        showMenu<dynamic>(
+          context: context,
+          position: RelativeRect.fromLTRB(
+            isOwnMessage ? position.dx - 200 : position.dx + size.width,
+            position.dy,
+            isOwnMessage ? position.dx : position.dx + size.width + 200,
+            position.dy + size.height,
+          ),
+          items: [
+            // Timestamp
+            PopupMenuItem(
+              enabled: false,
+              child: Row(
+                children: [
+                  const Icon(Icons.access_time, size: 20),
+                  const SizedBox(width: 8),
+                  Text(formattedDateTime),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
+            // Only show delete option if it's the user's own message
+            if (isMyMessage) ...[
+              PopupMenuItem(
+                onTap: () => _deleteMessage(message),
+                child: const Row(
+                  children: [
+                    Icon(Icons.delete, color: Colors.red, size: 20),
+                    SizedBox(width: 8),
+                    Text('Delete Message', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
+            // Show report option for messages from other users
+            if (!isMyMessage) ...[
+              PopupMenuItem(
+                onTap: () => _reportMessage(message),
+                child: const Row(
+                  children: [
+                    Icon(Icons.flag, color: Colors.orange, size: 20),
+                    SizedBox(width: 8),
+                    Text('Report Message', style: TextStyle(color: Colors.orange)),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        );
+        return;
+      }
+    }
+
+    // Mobile: Use bottom sheet (existing behavior)
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
@@ -880,363 +950,4 @@ class _DmContentState extends ConsumerState<DmContent> {
   }
 }
 
-/// A stateful widget that animates a message item sliding in from the bottom
-/// with a fade-in effect when it's new
-class _AnimatedMessageItem extends StatefulWidget {
-  final Widget child;
-  final bool isNew;
-
-  const _AnimatedMessageItem({
-    super.key,
-    required this.child,
-    required this.isNew,
-  });
-
-  @override
-  State<_AnimatedMessageItem> createState() => _AnimatedMessageItemState();
-}
-
-class _AnimatedMessageItemState extends State<_AnimatedMessageItem>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _slideAnimation;
-  late Animation<double> _fadeAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 400),
-      vsync: this,
-    );
-
-    _slideAnimation = Tween<double>(
-      begin: widget.isNew ? 30.0 : 0.0,
-      end: 0.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    ));
-
-    _fadeAnimation = Tween<double>(
-      begin: widget.isNew ? 0.0 : 1.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    ));
-
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, _slideAnimation.value),
-          child: Opacity(
-            opacity: _fadeAnimation.value,
-            child: child,
-          ),
-        );
-      },
-      child: widget.child,
-    );
-  }
-}
-
 /// Widget for displaying a pending/uploading message
-class _PendingMessageBubble extends StatelessWidget {
-  final PendingMessage pendingMessage;
-  final bool isOwnMessage;
-  final Function(int imageIndex) onRetry;
-
-  const _PendingMessageBubble({
-    required this.pendingMessage,
-    required this.isOwnMessage,
-    required this.onRetry,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const double standardRadius = 18.0;
-    
-    final borderRadius = BorderRadius.circular(standardRadius);
-    final hasImages = pendingMessage.pendingImages.isNotEmpty;
-    final hasText = pendingMessage.message.body.isNotEmpty;
-
-    return Align(
-      alignment: isOwnMessage ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        margin: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-        child: hasImages && hasText
-            ? _buildImageWithTextBubble(context, borderRadius)
-            : Container(
-                decoration: BoxDecoration(
-                  color: hasImages && !hasText 
-                      ? Colors.transparent 
-                      : (isOwnMessage ? Colors.blue[200] : Colors.grey[300]),
-                  borderRadius: borderRadius,
-                ),
-                padding: hasImages && !hasText 
-                    ? EdgeInsets.zero 
-                    : const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Display uploading images (image-only)
-                    if (hasImages && !hasText) _buildUploadingImages(context, borderRadius),
-                    // Display text (text-only)
-                    if (hasText && !hasImages)
-                      Text(
-                        pendingMessage.message.body,
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 15,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-      ),
-    );
-  }
-
-  /// Build Signal-style bubble with images flush to edges and text below
-  Widget _buildImageWithTextBubble(BuildContext context, BorderRadius borderRadius) {
-    // Image area has top corners rounded
-    final imageRadius = BorderRadius.only(
-      topLeft: const Radius.circular(18.0),
-      topRight: const Radius.circular(18.0),
-    );
-    
-    // Text area has bottom corners rounded
-    final textRadius = BorderRadius.only(
-      bottomLeft: const Radius.circular(18.0),
-      bottomRight: const Radius.circular(18.0),
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Images flush to edges with top rounded corners
-        ClipRRect(
-          borderRadius: imageRadius,
-          child: _buildUploadingImages(context, BorderRadius.zero),
-        ),
-        // Text area with bubble color and bottom rounded corners
-        Container(
-          decoration: BoxDecoration(
-            color: isOwnMessage ? Colors.blue[200] : Colors.grey[300],
-            borderRadius: textRadius,
-          ),
-          padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
-          width: double.infinity,
-          child: Text(
-            pendingMessage.message.body,
-            style: const TextStyle(
-              color: Colors.black,
-              fontSize: 15,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildUploadingImages(BuildContext context, BorderRadius borderRadius) {
-    if (pendingMessage.pendingImages.length == 1) {
-      return _buildSingleUploadingImage(context, 0, borderRadius);
-    }
-    
-    // Multiple images - show in grid
-    return Column(
-      children: List.generate(
-        (pendingMessage.pendingImages.length / 2).ceil(),
-        (rowIndex) {
-          final startIndex = rowIndex * 2;
-          final endIndex = (startIndex + 2).clamp(0, pendingMessage.pendingImages.length);
-          
-          return Row(
-            children: List.generate(
-              endIndex - startIndex,
-              (colIndex) {
-                final imageIndex = startIndex + colIndex;
-                return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(1),
-                    child: _buildUploadingImageTile(context, imageIndex),
-                  ),
-                );
-              },
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSingleUploadingImage(BuildContext context, int index, BorderRadius borderRadius) {
-    final pendingImage = pendingMessage.pendingImages[index];
-    
-    // Use provided borderRadius if not zero, otherwise use 8px for internal rounding
-    final effectiveRadius = borderRadius == BorderRadius.zero 
-        ? BorderRadius.zero 
-        : (pendingMessage.message.body.isEmpty ? borderRadius : BorderRadius.circular(8));
-    
-    return GestureDetector(
-      onTap: pendingImage.status == ImageUploadStatus.failed
-          ? () => onRetry(index)
-          : null,
-      child: ClipRRect(
-        borderRadius: effectiveRadius,
-        child: Stack(
-          children: [
-            // Show uploaded URL if available, otherwise local file
-            if (pendingImage.uploadedUrl != null && pendingImage.status == ImageUploadStatus.uploaded)
-              CachedNetworkImage(
-                imageUrl: pendingImage.uploadedUrl!,
-                height: 250,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  height: 250,
-                  color: Colors.grey[300],
-                ),
-                errorWidget: (context, url, error) => Image.file(
-                  File(pendingImage.localPath),
-                  height: 250,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              )
-            else
-              Image.file(
-                File(pendingImage.localPath),
-                height: 250,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            // Overlay for uploading/failed states
-            if (pendingImage.status != ImageUploadStatus.uploaded)
-              Positioned.fill(
-                child: Container(
-                  color: Colors.black.withValues(alpha: 0.5),
-                  child: Center(
-                    child: pendingImage.status == ImageUploadStatus.uploading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.error_outline, color: Colors.white, size: 40),
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.7),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text(
-                                  'Upload failed, tap to retry',
-                                  style: TextStyle(color: Colors.white, fontSize: 12),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ],
-                          ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUploadingImageTile(BuildContext context, int index) {
-    final pendingImage = pendingMessage.pendingImages[index];
-    
-    return GestureDetector(
-      onTap: pendingImage.status == ImageUploadStatus.failed
-          ? () => onRetry(index)
-          : null,
-      child: AspectRatio(
-        aspectRatio: 1.0,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Stack(
-            children: [
-              // Show uploaded URL if available, otherwise local file
-              if (pendingImage.uploadedUrl != null && pendingImage.status == ImageUploadStatus.uploaded)
-                CachedNetworkImage(
-                  imageUrl: pendingImage.uploadedUrl!,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: double.infinity,
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey[300],
-                  ),
-                  errorWidget: (context, url, error) => Image.file(
-                    File(pendingImage.localPath),
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                  ),
-                )
-              else
-                Image.file(
-                  File(pendingImage.localPath),
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: double.infinity,
-                ),
-              // Overlay for uploading/failed states
-              if (pendingImage.status != ImageUploadStatus.uploaded)
-                Positioned.fill(
-                  child: Container(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    child: Center(
-                      child: pendingImage.status == ImageUploadStatus.uploading
-                          ? const SizedBox(
-                              width: 30,
-                              height: 30,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 3,
-                              ),
-                            )
-                          : const Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.error_outline, color: Colors.white, size: 30),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Tap to retry',
-                                  style: TextStyle(color: Colors.white, fontSize: 10),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

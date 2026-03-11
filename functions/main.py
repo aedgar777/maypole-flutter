@@ -72,15 +72,13 @@ def places_autocomplete(req: https_fn.Request) -> https_fn.Response:
         )
     
     try:
-        # Get API key from the injected secret or request headers
+        # Use API key from Secret Manager only (never use client-provided key to avoid referrer restrictions)
         api_key = goog_places_api_key.value
-        if not api_key:
-            api_key = req.headers.get('X-Goog-Api-Key')
-        
+        print(f"🔑 [places_autocomplete] Using API key from Secret Manager: {api_key[:10]}..." if api_key else "❌ [places_autocomplete] No API key found in Secret Manager", flush=True)
         if not api_key:
             return https_fn.Response(
-                json.dumps({'error': 'API key is required'}),
-                status=400,
+                json.dumps({'error': 'Server configuration error: API key not configured'}),
+                status=500,
                 headers={'Content-Type': 'application/json'}
             )
         
@@ -110,6 +108,172 @@ def places_autocomplete(req: https_fn.Request) -> https_fn.Response:
             places_url,
             headers=headers,
             json=request_data,
+            timeout=10
+        )
+        
+        # Return the response (CORS headers added by decorator)
+        return https_fn.Response(
+            response.text,
+            status=response.status_code,
+            headers={'Content-Type': 'application/json'}
+        )
+        
+    except Exception as e:
+        return https_fn.Response(
+            json.dumps({'error': str(e)}),
+            status=500,
+            headers={'Content-Type': 'application/json'}
+        )
+
+
+@https_fn.on_request(
+    cors=options.CorsOptions(
+        cors_origins="*",
+        cors_methods=["get", "post", "options"],
+    ),
+    max_instances=10,
+    secrets=[goog_places_api_key],
+)
+def places_place_details(req: https_fn.Request) -> https_fn.Response:
+    """
+    Proxy function for Google Places API place details requests.
+    This avoids CORS issues when calling from web clients.
+    """
+    
+    # Only allow GET requests
+    if req.method != 'GET':
+        return https_fn.Response(
+            json.dumps({'error': 'Method not allowed'}),
+            status=405,
+            headers={'Content-Type': 'application/json'}
+        )
+    
+    try:
+        # Use API key from Secret Manager only (never use client-provided key to avoid referrer restrictions)
+        api_key = goog_places_api_key.value
+        print(f"🔑 [places_autocomplete] Using API key from Secret Manager: {api_key[:10]}..." if api_key else "❌ [places_autocomplete] No API key found in Secret Manager", flush=True)
+        if not api_key:
+            return https_fn.Response(
+                json.dumps({'error': 'Server configuration error: API key not configured'}),
+                status=500,
+                headers={'Content-Type': 'application/json'}
+            )
+        
+        # Get place ID from request headers
+        place_id = req.headers.get('X-Place-Id')
+        if not place_id:
+            return https_fn.Response(
+                json.dumps({'error': 'Place ID is required in X-Place-Id header'}),
+                status=400,
+                headers={'Content-Type': 'application/json'}
+            )
+        
+        # Build the Places API URL
+        places_url = f'https://places.googleapis.com/v1/places/{place_id}'
+        
+        # Set up headers for Google Places API
+        headers = {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': api_key,
+            'X-Goog-Field-Mask': 'id,displayName,formattedAddress,location,primaryType,types',
+        }
+        
+        # Make request to Google Places API
+        response = requests.get(
+            places_url,
+            headers=headers,
+            timeout=10
+        )
+        
+        # Return the response (CORS headers added by decorator)
+        return https_fn.Response(
+            response.text,
+            status=response.status_code,
+            headers={'Content-Type': 'application/json'}
+        )
+        
+    except Exception as e:
+        return https_fn.Response(
+            json.dumps({'error': str(e)}),
+            status=500,
+            headers={'Content-Type': 'application/json'}
+        )
+
+
+@https_fn.on_request(
+    cors=options.CorsOptions(
+        cors_origins="*",
+        cors_methods=["get", "post", "options"],
+    ),
+    max_instances=10,
+    secrets=[goog_places_api_key],
+)
+def places_reverse_geocode(req: https_fn.Request) -> https_fn.Response:
+    """
+    Proxy function for Google Places API reverse geocoding (searchNearby) requests.
+    This avoids CORS issues when calling from web clients.
+    """
+    
+    # Only allow POST requests
+    if req.method != 'POST':
+        return https_fn.Response(
+            json.dumps({'error': 'Method not allowed'}),
+            status=405,
+            headers={'Content-Type': 'application/json'}
+        )
+    
+    try:
+        # Use API key from Secret Manager only (never use client-provided key to avoid referrer restrictions)
+        api_key = goog_places_api_key.value
+        print(f"🔑 [places_autocomplete] Using API key from Secret Manager: {api_key[:10]}..." if api_key else "❌ [places_autocomplete] No API key found in Secret Manager", flush=True)
+        if not api_key:
+            return https_fn.Response(
+                json.dumps({'error': 'Server configuration error: API key not configured'}),
+                status=500,
+                headers={'Content-Type': 'application/json'}
+            )
+        
+        # Get request body with latitude and longitude
+        request_data = req.get_json(silent=True)
+        if not request_data or 'latitude' not in request_data or 'longitude' not in request_data:
+            return https_fn.Response(
+                json.dumps({'error': 'Request body with latitude and longitude is required'}),
+                status=400,
+                headers={'Content-Type': 'application/json'}
+            )
+        
+        # Build the request body for searchNearby
+        latitude = request_data.get('latitude')
+        longitude = request_data.get('longitude')
+        
+        places_url = 'https://places.googleapis.com/v1/places:searchNearby'
+        
+        # Set up headers for Google Places API
+        headers = {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': api_key,
+            'X-Goog-Field-Mask': 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types',
+        }
+        
+        # Build the request body for searchNearby
+        body = {
+            'locationRestriction': {
+                'circle': {
+                    'center': {
+                        'latitude': latitude,
+                        'longitude': longitude,
+                    },
+                    'radius': 50.0,  # Search within 50 meters
+                }
+            },
+            'maxResultCount': 1,
+        }
+        
+        # Make request to Google Places API
+        response = requests.post(
+            places_url,
+            headers=headers,
+            json=body,
             timeout=10
         )
         

@@ -20,6 +20,8 @@ import '../features/settings/presentation/screens/account_settings_screen.dart';
 import '../features/settings/presentation/screens/blocked_users_screen.dart';
 import '../features/settings/presentation/screens/help_screen.dart';
 import '../features/identity/auth_providers.dart';
+import '../features/maypolechat/presentation/screens/maypole_gallery_screen.dart';
+
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authService = ref.watch(authServiceProvider);
@@ -167,6 +169,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final thread = state.extra as DMThread;
           return DmScreen(thread: thread);
+        },
+      ),
+      GoRoute(
+        path: '/chat/:threadId/gallery',
+        builder: (context, state) {
+          final threadId = state.pathParameters['threadId']!;
+          final maypoleName = state.uri.queryParameters['name'] ?? 'Unknown';
+          final initialImageId = state.uri.queryParameters['imageId'];
+          return MaypoleGalleryScreen(
+            threadId: threadId,
+            maypoleName: maypoleName,
+            initialImageId: initialImageId,
+          );
         },
       ),
       GoRoute(

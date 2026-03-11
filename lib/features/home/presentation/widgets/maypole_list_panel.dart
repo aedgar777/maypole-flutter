@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
 import 'package:maypole/core/widgets/hover_menu_button.dart';
@@ -205,7 +206,7 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
           ? Text(
               thread.address,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white.withValues(alpha: 0.5),
               ),
             )
           : null,
@@ -218,11 +219,12 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
           thread.longitude,
         );
       },
-      onMenuTap: () {
+      onMenuTap: (triggerContext) {
         _showMaypoleThreadContextMenu(
           context,
           thread,
           widget.user.firebaseID,
+          triggerContext,
         );
       },
     );
@@ -331,7 +333,7 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
               subtitle: Text(
                 subtitleText,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(threadMetadata.hasUnread ? 0.9 : 0.5),
+                  color: Colors.white.withValues(alpha: threadMetadata.hasUnread ? 0.9 : 0.5),
                   fontWeight: threadMetadata.hasUnread ? FontWeight.w500 : FontWeight.normal,
                 ),
                 maxLines: 1,
@@ -340,11 +342,12 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
               onTap: () {
                 widget.onDmThreadSelected(threadMetadata.id);
               },
-              onMenuTap: () {
+              onMenuTap: (triggerContext) {
                 _showThreadContextMenu(
                   context,
                   threadMetadata,
                   userId,
+                  triggerContext,
                 );
               },
             );
@@ -382,7 +385,7 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -397,7 +400,45 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
     BuildContext context,
     DMThreadMetaData threadMetadata,
     String userId,
+    BuildContext triggerContext,
   ) {
+    // Check if we're on a wide screen (desktop/web)
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWideScreen = screenWidth >= 600 || kIsWeb;
+
+    if (isWideScreen) {
+      // Desktop: Show menu at the position of the 3-dot button
+      final RenderBox? renderBox = triggerContext.findRenderObject() as RenderBox?;
+      if (renderBox != null) {
+        final position = renderBox.localToGlobal(Offset.zero);
+        final size = renderBox.size;
+
+        showMenu(
+          context: context,
+          position: RelativeRect.fromLTRB(
+            position.dx + size.width,
+            position.dy,
+            position.dx + size.width + 200,
+            position.dy + size.height,
+          ),
+          items: [
+            PopupMenuItem(
+              onTap: () => _showDeleteSnackbar(context, threadMetadata, userId),
+              child: const Row(
+                children: [
+                  Icon(Icons.delete, color: Colors.red, size: 20),
+                  SizedBox(width: 8),
+                  Text('Delete Conversation', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+          ],
+        );
+        return;
+      }
+    }
+
+    // Mobile: Use bottom sheet (existing behavior)
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
@@ -523,7 +564,45 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
     BuildContext context,
     MaypoleMetaData threadMetadata,
     String userId,
+    BuildContext triggerContext,
   ) {
+    // Check if we're on a wide screen (desktop/web)
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWideScreen = screenWidth >= 600 || kIsWeb;
+
+    if (isWideScreen) {
+      // Desktop: Show menu at the position of the 3-dot button
+      final RenderBox? renderBox = triggerContext.findRenderObject() as RenderBox?;
+      if (renderBox != null) {
+        final position = renderBox.localToGlobal(Offset.zero);
+        final size = renderBox.size;
+
+        showMenu(
+          context: context,
+          position: RelativeRect.fromLTRB(
+            position.dx + size.width,
+            position.dy,
+            position.dx + size.width + 200,
+            position.dy + size.height,
+          ),
+          items: [
+            PopupMenuItem(
+              onTap: () => _showMaypoleDeleteSnackbar(context, threadMetadata, userId),
+              child: const Row(
+                children: [
+                  Icon(Icons.delete, color: Colors.red, size: 20),
+                  SizedBox(width: 8),
+                  Text('Delete Conversation', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+          ],
+        );
+        return;
+      }
+    }
+
+    // Mobile: Use bottom sheet (existing behavior)
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
