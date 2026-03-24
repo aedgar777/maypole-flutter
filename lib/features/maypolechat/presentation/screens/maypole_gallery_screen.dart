@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
+import 'package:maypole/core/utils/screen_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/core/widgets/report_content_dialog.dart';
 import 'package:maypole/core/widgets/app_toast.dart';
@@ -90,14 +91,14 @@ class _MaypoleGalleryScreenState extends ConsumerState<MaypoleGalleryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.maypoleName} Gallery'),
-        // Only show back button on mobile - web uses browser back button
-        automaticallyImplyLeading: !kIsWeb,
-        leading: kIsWeb
-            ? null
-            : IconButton(
+        // Only show in-app back button on legacy iOS without swipe-back support.
+        automaticallyImplyLeading: ScreenUtils.shouldShowAppBarBackButton(),
+        leading: ScreenUtils.shouldShowAppBarBackButton()
+            ? IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () => Navigator.of(context).pop(),
-              ),
+              )
+            : null,
       ),
       body: imagesAsyncValue.when(
         data: (images) {
@@ -391,14 +392,14 @@ class _ImageFullscreenViewState extends ConsumerState<_ImageFullscreenView> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        // Only show back button on mobile - web uses browser back button
-        automaticallyImplyLeading: !kIsWeb,
-        leading: kIsWeb
-            ? null
-            : IconButton(
+        // Only show in-app back button on legacy iOS without swipe-back support.
+        automaticallyImplyLeading: ScreenUtils.shouldShowAppBarBackButton(),
+        leading: ScreenUtils.shouldShowAppBarBackButton()
+            ? IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () => Navigator.of(context).pop(),
-              ),
+              )
+            : null,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

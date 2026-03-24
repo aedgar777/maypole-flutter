@@ -3,7 +3,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../../domain/pending_message.dart';
-import '../../domain/staged_image_info.dart';
 
 /// Widget for displaying a pending/uploading message with image upload states.
 ///
@@ -38,15 +37,20 @@ class PendingMessageBubble extends StatelessWidget {
     final hasImages = pendingMessage.pendingImages.isNotEmpty;
     final hasText = pendingMessage.message.body.isNotEmpty;
 
+    // On web with single image, constrain to image width (250px)
+    // Otherwise use 75% of screen width
+    final isWebSingleImage = kIsWeb && hasImages && pendingMessage.pendingImages.length == 1;
+    final maxWidth = isWebSingleImage ? 250.0 : MediaQuery.of(context).size.width * 0.75;
+
     return Align(
       alignment: isOwnMessage ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
+          maxWidth: maxWidth,
         ),
         margin: const EdgeInsets.fromLTRB(8, 4, 8, 4),
         child: hasImages && hasText
-            ? _buildImageWithTextBubble(context, borderRadius)
+            ? _buildImageWithTextBubble(context, borderRadius, maxWidth)
             : Container(
                 decoration: BoxDecoration(
                   color: hasImages && !hasText
@@ -80,7 +84,7 @@ class PendingMessageBubble extends StatelessWidget {
   }
 
   /// Build Signal-style bubble with images flush to edges and text below
-  Widget _buildImageWithTextBubble(BuildContext context, BorderRadius borderRadius) {
+  Widget _buildImageWithTextBubble(BuildContext context, BorderRadius borderRadius, double maxWidth) {
     // Image area has top corners rounded
     final imageRadius = BorderRadius.only(
       topLeft: const Radius.circular(18.0),
@@ -93,32 +97,36 @@ class PendingMessageBubble extends StatelessWidget {
       bottomRight: const Radius.circular(18.0),
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Images flush to edges with top rounded corners
-        ClipRRect(
-          borderRadius: imageRadius,
-          child: _buildUploadingImages(context, BorderRadius.zero),
-        ),
-        // Text area with bubble color and bottom rounded corners
-        Container(
-          decoration: BoxDecoration(
-            color: isOwnMessage ? Colors.blue[200] : Colors.grey[300],
-            borderRadius: textRadius,
+    // Use ConstrainedBox to enforce maxWidth on the entire bubble
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: Column(
+        crossAxisAlignment: isOwnMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Images flush to edges with top rounded corners
+          ClipRRect(
+            borderRadius: imageRadius,
+            child: _buildUploadingImages(context, BorderRadius.zero),
           ),
-          padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
-          width: double.infinity,
-          child: Text(
-            pendingMessage.message.body,
-            style: const TextStyle(
-              color: Colors.black,
-              fontSize: 15,
+          // Text area with bubble color and bottom rounded corners
+          Container(
+            decoration: BoxDecoration(
+              color: isOwnMessage ? Colors.blue[200] : Colors.grey[300],
+              borderRadius: textRadius,
+            ),
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+            width: double.infinity, // Fill the constrained width
+            child: Text(
+              pendingMessage.message.body,
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 15,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

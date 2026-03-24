@@ -112,7 +112,25 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/home',
-        builder: (context, state) => const HomeScreen(),
+        pageBuilder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          debugPrint('🔀 ROUTER /home: extra=${extra != null ? 'NOT_NULL' : 'NULL'}');
+          if (extra != null) {
+            debugPrint('🔀 ROUTER /home: initialTab=${extra['initialTab']}');
+            debugPrint('🔀 ROUTER /home: selectedDmThreadId=${extra['selectedDmThreadId']}');
+            debugPrint('🔀 ROUTER /home: selectedDmThread=${extra['selectedDmThread'] != null ? 'NOT_NULL' : 'NULL'}');
+          }
+
+          return MaterialPage(
+            key: state.pageKey,
+            allowSnapshotting: false,
+            child: HomeScreen(
+              initialTab: extra?['initialTab'] as int?,
+              selectedDmThreadId: extra?['selectedDmThreadId'] as String?,
+              selectedDmThread: extra?['selectedDmThread'],
+            ),
+          );
+        },
       ),
       GoRoute(
         path: '/search',

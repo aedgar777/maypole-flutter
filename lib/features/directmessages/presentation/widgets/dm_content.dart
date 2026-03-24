@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
+import 'package:maypole/core/utils/screen_utils.dart';
 import 'package:maypole/core/widgets/lazy_profile_avatar.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/core/widgets/app_toast.dart';
@@ -61,8 +62,19 @@ class _DmContentState extends ConsumerState<DmContent> {
     super.initState();
     _scrollController.addListener(_onScroll);
 
-    // Mark thread as read when opening
-    _markAsRead();
+    // Check if this is an ephemeral thread (hasMessages == false)
+    // If so, set it in the view model so it gets persisted on first message
+    if (!widget.thread.hasMessages) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(dmViewModelProvider(widget.thread.id).notifier).setEphemeralThread(widget.thread);
+        debugPrint('💾 Set ephemeral thread in DmContent initState: ${widget.thread.id}');
+      });
+    }
+
+    // Mark thread as read when opening (skip for ephemeral threads)
+    if (widget.thread.hasMessages) {
+      _markAsRead();
+    }
 
     // Auto-focus if requested
     if (widget.autoFocus) {
@@ -295,11 +307,16 @@ class _DmContentState extends ConsumerState<DmContent> {
 
     if (!widget.showAppBar) {
       // When embedded (no app bar), wrap in Material for TextField
-      return Material(child: body);
+      // Use the scaffold background color to prevent grey screen
+      return Material(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: body,
+      );
     }
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: ScreenUtils.shouldShowAppBarBackButton(),
         title: partner != null
             ? GestureDetector(
                 onTap: () {

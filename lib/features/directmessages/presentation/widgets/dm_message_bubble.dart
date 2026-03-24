@@ -64,6 +64,13 @@ class DmMessageBubble extends StatelessWidget {
     final bool hasImages = message.imageUrls.isNotEmpty;
     final bool hasText = message.body.isNotEmpty && !isDeleted;
 
+    // Keep web single-image message width consistent before/after upload.
+    // Pending bubbles use 250px, so final bubbles should match.
+    final isWebSingleImage = kIsWeb && hasImages && message.imageUrls.length == 1;
+    final maxBubbleWidth = isWebSingleImage
+        ? 250.0
+        : MediaQuery.of(context).size.width * 0.75;
+
     return Builder(
       builder: (triggerContext) {
         // Build the actual bubble content
@@ -120,7 +127,7 @@ class DmMessageBubble extends StatelessWidget {
           alignment: isOwnMessage ? Alignment.centerRight : Alignment.centerLeft,
           child: Container(
             constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.75,
+              maxWidth: maxBubbleWidth,
             ),
             margin: EdgeInsets.fromLTRB(8, topMargin, 8, bottomMargin),
             child: AdaptiveContextMenuTrigger(

@@ -73,7 +73,16 @@ class _SelectedThreadState {
 }
 
 class HomeScreen extends ConsumerStatefulWidget {
-  const HomeScreen({super.key});
+  final int? initialTab;
+  final String? selectedDmThreadId;
+  final DMThread? selectedDmThread;
+
+  const HomeScreen({
+    super.key,
+    this.initialTab,
+    this.selectedDmThreadId,
+    this.selectedDmThread,
+  });
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
@@ -85,10 +94,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _hasPrefetchedData = false;
   int _currentTabIndex = 0;
   int _threadSwitchCount = 0; // Track thread switches for interstitial ads
+  // Flag to track if tab change was programmatic (from navigation) vs user tap
+  bool _isProgrammaticTabChange = false;
 
   @override
   void initState() {
     super.initState();
+    // Initialize tab index from widget parameter, default to 0
+    _currentTabIndex = widget.initialTab ?? 0;
+
+    // If navigating to a specific tab (like DM tab from notification/profile),
+    // mark it as programmatic so we don't clear the selection
+    if (widget.initialTab != null && widget.initialTab != 0) {
+      _isProgrammaticTabChange = true;
+    }
+
+    // Initialize selected thread from widget parameter if provided
+    _initializeFromWidgetParams();
+
     // Request permissions and initialize services after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeRemoteConfig();
@@ -99,6 +122,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _checkEmailVerificationIfNeeded();
       _initializeDmPreloader();
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Handle when navigation passes new parameters (e.g., from profile screen DM button)
+    if (widget.initialTab != oldWidget.initialTab ||
+        widget.selectedDmThreadId != oldWidget.selectedDmThreadId) {
+      // Check if this is a programmatic tab change
+      if (widget.initialTab != null &&
+          widget.initialTab != oldWidget.initialTab &&
+          widget.initialTab != 0) {
+        _isProgrammaticTabChange = true;
+      }
+
+      setState(() {
+        _currentTabIndex = widget.initialTab ?? 0;
+        _initializeFromWidgetParams();
+      });
+    }
+  }
+
+  void _initializeFromWidgetParams() {
+    if (widget.selectedDmThreadId != null && widget.selectedDmThread != null) {
+      final dmThread = widget.selectedDmThread as DMThread;
+      _selectedThread = _SelectedThreadState(
+        threadId: widget.selectedDmThreadId,
+        dmThread: dmThread,
+        isMaypoleThread: false,
+      );
+    }
   }
 
   /// Initialize Firebase Remote Config in the background
@@ -310,13 +365,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _handleTabChanged(int tabIndex, bool isWideScreen) {
+    debugPrint('🏠 HOME_SCREEN: _handleTabChanged called, tabIndex=$tabIndex, isProgrammatic=$_isProgrammaticTabChange');
+    
     setState(() {
       _currentTabIndex = tabIndex;
-      if (isWideScreen) {
+      if (isWideScreen && !_isProgrammaticTabChange) {
         // On wide screen, clear selection when switching tabs
+        // BUT only if this was a user tap (not programmatic navigation)
+        debugPrint('🏠 HOME_SCREEN: Clearing selection (user tab change)');
         _selectedThread = const _SelectedThreadState();
+      } else if (_isProgrammaticTabChange) {
+        debugPrint('🏠 HOME_SCREEN: Keeping selection (programmatic tab change)');
       }
     });
+    
+    // Reset the flag after handling
+    if (_isProgrammaticTabChange) {
+      _isProgrammaticTabChange = false;
+      debugPrint('🏠 HOME_SCREEN: Reset programmatic tab change flag');
+    }
   }
 
   Widget? _buildContentPanel() {

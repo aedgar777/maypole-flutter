@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/features/directmessages/domain/direct_message.dart';
 import 'package:maypole/features/directmessages/data/dm_thread_service.dart';
+import 'package:maypole/features/directmessages/domain/dm_thread.dart';
 import 'package:maypole/features/directmessages/presentation/dm_providers.dart';
 
 class DmViewModel extends AsyncNotifier<List<DirectMessage>> {
@@ -13,6 +14,7 @@ class DmViewModel extends AsyncNotifier<List<DirectMessage>> {
   late final DMThreadService _threadService;
   StreamSubscription<List<DirectMessage>>? _messagesSubscription;
   bool _isLoadingMore = false;
+  DMThread? _ephemeralThread; // Store ephemeral thread if this is a new conversation
 
   @override
   Future<List<DirectMessage>> build() async {
@@ -75,6 +77,13 @@ class DmViewModel extends AsyncNotifier<List<DirectMessage>> {
     });
   }
 
+  /// Set the ephemeral thread for this conversation
+  /// This should be called before sending the first message for new conversations
+  void setEphemeralThread(DMThread thread) {
+    _ephemeralThread = thread;
+    developer.log('💾 Set ephemeral thread for persistence: ${thread.id}', name: 'DmViewModel');
+  }
+
   Future<void> sendDmMessage(
     String body,
     String senderId,
@@ -90,7 +99,17 @@ class DmViewModel extends AsyncNotifier<List<DirectMessage>> {
         senderUsername,
         recipientId,
         imageUrls: imageUrls,
+        ephemeralThread: _ephemeralThread,
       );
+      
+      // After successfully sending, clear the ephemeral thread flag
+      // The thread is now persisted in Firestore
+      if (_ephemeralThread != null) {
+        developer.log('✅ Ephemeral thread persisted: $_threadId', name: 'DmViewModel');
+        // Remove from ephemeral provider
+        ref.read(ephemeralDmThreadsProvider.notifier).removeThread(_threadId);
+        _ephemeralThread = null;
+      }
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }

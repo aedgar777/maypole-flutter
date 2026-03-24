@@ -10,6 +10,7 @@ import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/services/location_provider.dart';
 import 'package:maypole/core/utils/place_geofence_utils.dart';
+import 'package:maypole/core/utils/screen_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/core/widgets/report_content_dialog.dart';
@@ -459,6 +460,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: ScreenUtils.shouldShowAppBarBackButton(),
         title: Text(widget.maypoleName),
         actions: [
           IconButton(
@@ -619,7 +621,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                 threadId: widget.threadId,
                 focusNode: _messageFocusNode,
                 maxLength: 1000,
-                onSubmitted: kIsWeb || AppConfig.isWideScreen ? sendMessage : null,
+                onSubmitted: ScreenUtils.isWideScreenFromContext(context) ? sendMessage : null,
               ),
             ),
           ),
@@ -640,7 +642,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       // On web/desktop, skip the dialog and go straight to gallery
       // On mobile, show the camera/gallery choice dialog
       final ImageSource source;
-      if (kIsWeb || AppConfig.isWideScreen) {
+      if (ScreenUtils.isWideScreenFromContext(context)) {
         source = ImageSource.gallery;
       } else {
         // Show dialog to choose between camera and gallery

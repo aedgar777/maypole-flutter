@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// A hover-aware list tile that shows a 3-dot menu button on the right when hovered.
 /// Only shows the 3-dot menu on web/wide screen.
@@ -28,10 +29,7 @@ class HoverListTile extends StatefulWidget {
 class _HoverListTileState extends State<HoverListTile> {
   bool _isHovered = false;
 
-  bool get _isWideScreen {
-    final screenWidth = MediaQuery.of(context).size.width;
-    return screenWidth >= 600 || kIsWeb;
-  }
+  bool get _showWebMenuButton => kIsWeb;
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +41,13 @@ class _HoverListTileState extends State<HoverListTile> {
           subtitle: widget.subtitle,
           tileColor: widget.tileColor,
           onTap: widget.onTap,
-          trailing: _isWideScreen
+          onLongPress: _showWebMenuButton
+              ? null
+              : () {
+                  HapticFeedback.mediumImpact();
+                  widget.onMenuTap(triggerContext);
+                },
+          trailing: _showWebMenuButton
               ? AnimatedOpacity(
                   opacity: _isHovered ? 0.6 : 0.0,
                   duration: const Duration(milliseconds: 150),
@@ -66,7 +70,7 @@ class _HoverListTileState extends State<HoverListTile> {
               : null,
         );
 
-        if (!_isWideScreen) {
+        if (!_showWebMenuButton) {
           return tile;
         }
 
