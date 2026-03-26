@@ -57,7 +57,6 @@ class UserDataPrefetchService {
           .limit(50) // Prefetch last 50 messages
           .get(const GetOptions(source: Source.server));
 
-      debugPrint('📦 Prefetched ${messagesSnapshot.docs.length} messages for DM thread: $threadId');
     } catch (e) {
       debugPrint('⚠️ Error prefetching messages for thread $threadId: $e');
     }

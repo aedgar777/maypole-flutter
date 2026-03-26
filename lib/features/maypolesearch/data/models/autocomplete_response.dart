@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart';
 
 class AutocompleteResponse {
   final List<PlacePrediction> predictions;
@@ -7,8 +7,6 @@ class AutocompleteResponse {
   AutocompleteResponse({required this.predictions});
 
   factory AutocompleteResponse.fromMap(Map<String, dynamic> map) {
-    debugPrint('🔍 Parsing AutocompleteResponse from map with keys: ${map.keys.toList()}');
-    
     // Handle Cloud Function response format - may be wrapped differently
     List<dynamic>? suggestions;
     
@@ -44,7 +42,6 @@ class AutocompleteResponse {
             .toList() ??
         [];
     
-    debugPrint('✅ Parsed ${predictions.length} predictions');
     return AutocompleteResponse(predictions: predictions);
   }
 

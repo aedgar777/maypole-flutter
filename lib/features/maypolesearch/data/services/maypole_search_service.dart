@@ -184,35 +184,25 @@ class MaypoleSearchService {
   }
 
   Future<AutocompleteResponse> autocomplete(AutocompleteRequest request) async {
-    debugPrint('🔍 Places Autocomplete Request - START');
-    debugPrint('  URL: $_baseUrl');
-    debugPrint('  kIsWeb: $kIsWeb');
-    
     // Build headers based on platform
     Map<String, String> headers;
     
     if (kIsWeb) {
-      debugPrint('  Platform: Web (Cloud Function) - building headers...');
       // Cloud Function uses Secret Manager - don't send API key from client
       headers = {
         'Content-Type': 'application/json',
         'X-Goog-FieldMask': 'suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat',
       };
-      debugPrint('  Headers built for Cloud Function (no API key - uses Secret Manager)');
     } else {
-      debugPrint('  Platform: Mobile (Direct API)');
       headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': _apiKey,
         'X-Goog-FieldMask': 'suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat',
       };
-      debugPrint('  Headers built with API key for direct API');
     }
 
     try {
       final body = request.toJson();
-      debugPrint('📤 Request body: $body');
-      debugPrint('📤 Sending POST to: $_baseUrl');
       
       final response = await http.post(
         Uri.parse(_baseUrl),
@@ -220,10 +210,7 @@ class MaypoleSearchService {
         body: body,
       );
 
-      debugPrint('📡 Response Status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
-        debugPrint('✅ Got 200 response, parsing...');
         return AutocompleteResponse.fromJson(response.body);
       } else {
         debugPrint('❌ Error Response (${response.statusCode}): ${response.body}');

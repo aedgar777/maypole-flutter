@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/autocomplete_request.dart';
 import '../../data/models/autocomplete_response.dart';
@@ -12,31 +12,23 @@ class MaypoleSearchViewModel extends AsyncNotifier<List<PlacePrediction>> {
   }
 
   Future<void> searchMaypoles(String input) async {
-    debugPrint('🔎 ViewModel: searchMaypoles called with input: "$input"');
-    
     // Set state to loading
     state = const AsyncValue.loading();
 
     try {
       if (input.isEmpty) {
-        debugPrint('🔎 ViewModel: Empty input, returning empty list');
         state = const AsyncValue.data([]);
         return;
       }
       
       // Create a request object
-      debugPrint('🔎 ViewModel: Creating AutocompleteRequest');
       final request = AutocompleteRequest(input: input);
 
       // Call the service
-      debugPrint('🔎 ViewModel: Getting search service from provider');
       final maypoleSearchService = ref.read(maypoleSearchServiceProvider);
-      
-      debugPrint('🔎 ViewModel: Calling autocomplete service');
       final response = await maypoleSearchService.autocomplete(request);
 
       // Set state to data
-      debugPrint('🔎 ViewModel: Got ${response.predictions.length} predictions');
       state = AsyncValue.data(response.predictions);
     } catch (e, st) {
       debugPrint('💥 ViewModel: Error during search: $e');

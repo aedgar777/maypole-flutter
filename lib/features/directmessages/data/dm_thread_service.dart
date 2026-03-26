@@ -136,7 +136,6 @@ class DMThreadService {
         .map((snapshot) {
       // Log cache vs server source for monitoring
       if (snapshot.metadata.isFromCache) {
-        debugPrint('📦 DM messages loaded from cache for thread: $threadId');
       } else {
         debugPrint('🌐 DM messages loaded from server for thread: $threadId');
       }
@@ -174,7 +173,6 @@ class DMThreadService {
           .get(const GetOptions(source: Source.cache));
 
       if (cacheSnapshot.docs.isNotEmpty) {
-        debugPrint('📦 Retrieved ${cacheSnapshot.docs.length} DM messages from cache for thread: $threadId');
         return cacheSnapshot.docs
             .map((doc) => DirectMessage.fromMap(doc.data(), documentId: doc.id))
             .toList();
