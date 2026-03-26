@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../../core/app_config.dart';
@@ -69,9 +70,15 @@ class MaypoleSearchService {
     }
   }
 
-  /// Reverse geocode coordinates to get place details
-  Future<Map<String, dynamic>?> reverseGeocode(double latitude, double longitude) async {
-    debugPrint('🗺️ Reverse geocoding: lat=$latitude, lon=$longitude');
+  /// Reverse geocode coordinates to get nearest place details.
+  /// Returns the best match place and its distance from the tap point in meters.
+  Future<Map<String, dynamic>?> reverseGeocode(
+    double latitude,
+    double longitude, {
+    double radiusMeters = 150,
+    int maxResultCount = 5,
+  }) async {
+    debugPrint('🗺️ Reverse geocoding: lat=$latitude, lon=$longitude, radius=$radiusMeters, maxResults=$maxResultCount');
     
     // Use Cloud Function for web to avoid CORS and referrer issues
     final String url;
@@ -87,6 +94,8 @@ class MaypoleSearchService {
       body = json.encode({
         'latitude': latitude,
         'longitude': longitude,
+        'radiusMeters': radiusMeters,
+        'maxResultCount': maxResultCount,
       });
     } else {
       url = 'https://places.googleapis.com/v1/places:searchNearby';
@@ -102,14 +111,18 @@ class MaypoleSearchService {
               'latitude': latitude,
               'longitude': longitude,
             },
-            'radius': 50.0,
+            'radius': radiusMeters,
           }
         },
-        'maxResultCount': 1,
+        'maxResultCount': maxResultCount,
+        'rankPreference': 'DISTANCE',
       });
     }
 
     try {
+      debugPrint('📤 Reverse Geocode Request URL: $url');
+      debugPrint('📤 Reverse Geocode Request Body: $body');
+
       final response = await http.post(
         Uri.parse(url),
         headers: headers,
@@ -124,12 +137,42 @@ class MaypoleSearchService {
         
         final Map<String, dynamic> data = json.decode(response.body);
         final places = data['places'] as List<dynamic>?;
-        
-        if (places != null && places.isNotEmpty) {
-          return places[0] as Map<String, dynamic>;
+
+        if (places == null || places.isEmpty) {
+          return null;
         }
-        
-        return null;
+
+        Map<String, dynamic>? bestPlace;
+        var bestDistance = double.infinity;
+
+        for (final item in places) {
+          if (item is! Map<String, dynamic>) continue;
+          final location = item['location'] as Map<String, dynamic>?;
+          final placeLat = location?['latitude'] as double?;
+          final placeLon = location?['longitude'] as double?;
+          if (placeLat == null || placeLon == null) continue;
+
+          final distance = Geolocator.distanceBetween(
+            latitude,
+            longitude,
+            placeLat,
+            placeLon,
+          );
+
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            bestPlace = item;
+          }
+        }
+
+        if (bestPlace == null) {
+          return null;
+        }
+
+        return {
+          ...bestPlace,
+          '_distanceMeters': bestDistance,
+        };
       } else {
         debugPrint('❌ Error Response: ${response.body}');
         return null;

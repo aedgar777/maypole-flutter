@@ -12,8 +12,6 @@ import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/core/widgets/report_content_dialog.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:maypole/core/ads/widgets/banner_ad_widget.dart';
-import 'package:maypole/core/ads/ad_config.dart';
 import 'package:maypole/core/services/hive_moderation_provider.dart';
 import 'package:maypole/core/widgets/animated_message_item.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
@@ -171,9 +169,6 @@ class _DmContentState extends ConsumerState<DmContent> {
       children: [
         Column(
           children: [
-            // Spacer for sticky ad banner
-            if (kIsWeb && AdConfig.webAdsEnabled)
-              const SizedBox(height: 90), // Height for banner ad
             Expanded(
               child: messagesAsyncValue.when(
                 data: (messages) {
@@ -342,11 +337,6 @@ class _DmContentState extends ConsumerState<DmContent> {
             : Text(AppLocalizations.of(context)!.directMessage),
       ),
       body: body,
-      bottomNavigationBar: AdConfig.adsEnabled
-          ? const BannerAdWidget(
-              padding: EdgeInsets.all(4),
-            )
-          : null,
     );
   }
 

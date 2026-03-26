@@ -19,7 +19,6 @@ class AdService {
 
     // Only initialize AdMob on mobile platforms (Android/iOS)
     if (kIsWeb) {
-      debugPrint('🌐 Skipping AdMob initialization on web (not supported)');
       return;
     }
 

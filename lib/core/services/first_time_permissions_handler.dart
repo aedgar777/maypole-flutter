@@ -40,7 +40,6 @@ class FirstTimePermissionsHandler {
         await _fcmService.requestPermission();
       }
     } else {
-      debugPrint('Already asked for notification permission, skipping...');
       notificationGranted =
           await _notificationService.checkNotificationPermission();
     }
@@ -54,7 +53,6 @@ class FirstTimePermissionsHandler {
       locationGranted = permission == LocationPermission.always ||
           permission == LocationPermission.whileInUse;
     } else {
-      debugPrint('Already have location permission status: $locationPermission');
       locationGranted = locationPermission == LocationPermission.always ||
           locationPermission == LocationPermission.whileInUse;
     }

@@ -412,7 +412,7 @@ class MaypoleChatService {
 
   /// Adds a maypole thread to a user's maypoleChatThreads list
   /// This is called when a user opens a maypole on wide screen to make it immediately visible
-  /// Note: lastTypedAt is null until the user sends their first message
+  /// We set lastTypedAt to now so optimistic/newly added items appear at the top.
   Future<void> addMaypoleToUserList({
     required String userId,
     required String placeId,
@@ -430,7 +430,7 @@ class MaypoleChatService {
         address: address,
         latitude: latitude,
         longitude: longitude,
-        lastTypedAt: null, // Will be set when user sends first message
+        lastTypedAt: DateTime.now(),
         placeType: placeType,
       );
       

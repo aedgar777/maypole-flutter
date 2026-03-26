@@ -289,13 +289,6 @@ class DMThreadService {
       throw error;
     })
         .map((snapshot) {
-      // Log cache vs server source for monitoring
-      if (snapshot.metadata.isFromCache) {
-        debugPrint('📦 DM thread list loaded from cache for user: $userId');
-      } else {
-        debugPrint('🌐 DM thread list loaded from server for user: $userId');
-      }
-      
       return snapshot.docs.map((doc) {
         try {
           final data = doc.data();

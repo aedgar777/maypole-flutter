@@ -54,7 +54,6 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
     }
     
     if (!ref.read(adInitializedProvider)) {
-      debugPrint('⚠️ Banner ad not loaded - AdMob not initialized');
       setState(() => _failedToLoad = true);
       return;
     }

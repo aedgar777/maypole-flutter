@@ -15,6 +15,7 @@ import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:maypole/core/ads/widgets/web_ad_widget.dart';
+import '../widgets/web_place_picker_map.dart';
 import 'package:maypole/core/ads/ad_config.dart';
 import '../../data/models/autocomplete_response.dart';
 import '../../data/services/maypole_search_service_provider.dart';
@@ -119,34 +120,103 @@ const String _darkMapStyle = '''
 ''';
 
 class MaypoleSearchScreen extends ConsumerStatefulWidget {
-  const MaypoleSearchScreen({super.key});
+  final ValueChanged<PlacePrediction>? onPlaceSelected;
+  final VoidCallback? onCloseRequested;
+  final bool embedded;
+
+  const MaypoleSearchScreen({
+    super.key,
+    this.onPlaceSelected,
+    this.onCloseRequested,
+    this.embedded = false,
+  });
 
   @override
   ConsumerState<MaypoleSearchScreen> createState() => _MaypoleSearchScreenState();
 }
 
+class _ResolvedTapPlace {
+  final Map<String, dynamic> placeDetails;
+  final LatLng location;
+
+  const _ResolvedTapPlace({
+    required this.placeDetails,
+    required this.location,
+  });
+}
+
 class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
+  static const Duration _mapWarmCacheTtl = Duration(hours: 1);
+  static const double _tapSnapDistanceThresholdMeters = 120;
+  static const double _sampleOffsetDegrees = 0.00035; // ~39m lat offset
+  static const double _webPreferredUserZoom = 17.5;
+  static const double _tapSelectionMinZoom = 16.0;
+  static const double _autoZoomOnTapTarget = 17.5;
+  static DateTime? _mapWarmCacheExpiry;
+  static LatLng? _cachedCameraTarget;
+  static double? _cachedCameraZoom;
+
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
   GoogleMapController? _mapController;
+  Future<void> Function(LatLng target, double zoom)? _webAnimateCamera;
+  Future<void> Function()? _webClearSelection;
   final FocusNode _searchFocusNode = FocusNode();
   Map<String, dynamic>? _selectedPlace;
   LatLng? _selectedLocation;
   bool _isMapLoaded = false;
+  CameraPosition? _latestCameraPosition;
   
   // Context menu state
   Map<String, dynamic>? _contextMenuPlace;
   LatLng? _contextMenuLocation;
 
+  bool get _hasWarmMapCache {
+    final expiry = _mapWarmCacheExpiry;
+    return expiry != null && DateTime.now().isBefore(expiry);
+  }
+
+  CameraPosition _buildInitialCameraPosition(AsyncValue<Position?> currentPosition) {
+    final cachedTarget = _cachedCameraTarget;
+    final cachedZoom = _cachedCameraZoom;
+    if (_hasWarmMapCache && cachedTarget != null) {
+      return CameraPosition(
+        target: cachedTarget,
+        zoom: cachedZoom ?? 14.0,
+      );
+    }
+
+    return CameraPosition(
+      target: currentPosition.whenData((pos) {
+        if (pos != null) {
+          return LatLng(pos.latitude, pos.longitude);
+        }
+        return const LatLng(37.7749, -122.4194);
+      }).value ?? const LatLng(37.7749, -122.4194),
+      zoom: 14.0,
+    );
+  }
+
+  void _refreshMapWarmCacheFromCamera() {
+    final camera = _latestCameraPosition;
+    if (camera == null) return;
+
+    _cachedCameraTarget = camera.target;
+    _cachedCameraZoom = camera.zoom;
+    _mapWarmCacheExpiry = DateTime.now().add(_mapWarmCacheTtl);
+  }
+
   @override
   void initState() {
     super.initState();
+    _isMapLoaded = _hasWarmMapCache;
     _searchController.addListener(_onSearchChanged);
     _searchFocusNode.addListener(_onFocusChanged);
   }
 
   @override
   void dispose() {
+    _refreshMapWarmCacheFromCamera();
     _searchController.removeListener(_onSearchChanged);
     _searchFocusNode.removeListener(_onFocusChanged);
     _searchController.dispose();
@@ -157,12 +227,15 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
   }
 
   void _onFocusChanged() {
-    // When search bar gains focus, close any open bottom sheet
+    // When search bar gains focus, close any open bottom sheet / map selection
     if (_searchFocusNode.hasFocus && _contextMenuPlace != null) {
       setState(() {
         _contextMenuPlace = null;
         _contextMenuLocation = null;
       });
+      if (kIsWeb && _webClearSelection != null) {
+        _webClearSelection!();
+      }
     }
     // Trigger rebuild when focus changes to update background
     setState(() {});
@@ -182,57 +255,91 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
       body: Stack(
         children: [
           // Google Map in the background - full screen
-          GoogleMap(
-            onMapCreated: (controller) async {
-              _mapController = controller;
-              debugPrint('🗺️ [DEBUG] Map created');
-              debugPrint('🗺️ [DEBUG] Platform: ${kIsWeb ? "Web" : defaultTargetPlatform == TargetPlatform.iOS ? "iOS" : defaultTargetPlatform == TargetPlatform.android ? "Android" : "Unknown"}');
+          if (kIsWeb)
+            WebPlacePickerMap(
+              initialCameraPosition: _buildInitialCameraPosition(currentPosition),
+              mapStyle: _darkMapStyle,
+              onCameraMove: (position) {
+                _latestCameraPosition = position;
+              },
+              onMapLoaded: () {
+                if (mounted && !_isMapLoaded) {
+                  setState(() {
+                    _isMapLoaded = true;
+                  });
+                }
+                _refreshMapWarmCacheFromCamera();
+              },
+              onControllerReady: (animateCamera, clearSelection) {
+                _webAnimateCamera = animateCamera;
+                _webClearSelection = clearSelection;
+              },
+              onPlaceSelected: (selection) async {
+                final placeId = selection['placeId'] as String?;
+                final lat = selection['latitude'] as double?;
+                final lon = selection['longitude'] as double?;
+                if (placeId == null || placeId.isEmpty || lat == null || lon == null) {
+                  return;
+                }
 
-              // Apply dark map style
-              try {
-                await controller.setMapStyle(_darkMapStyle);
-                debugPrint('✅ [DEBUG] Map style applied successfully');
-              } catch (e) {
-                debugPrint('⚠️ [DEBUG] Error applying map style: $e');
-              }
+                final searchService = ref.read(maypoleSearchServiceProvider);
+                final details = await searchService.getPlaceDetails(placeId);
+                if (!mounted || details == null) return;
 
-              Position? position;
+                setState(() {
+                  _selectedPlace = details;
+                  _selectedLocation = LatLng(lat, lon);
+                  _contextMenuPlace = details;
+                  _contextMenuLocation = LatLng(lat, lon);
+                });
+              },
+            )
+          else
+            GoogleMap(
+              onMapCreated: (controller) async {
+                _mapController = controller;
+                final shouldUseWarmCache = _hasWarmMapCache;
+                debugPrint('🗺️ [DEBUG] Map created');
+                debugPrint('🗺️ [DEBUG] Platform: ${kIsWeb ? "Web" : defaultTargetPlatform == TargetPlatform.iOS ? "iOS" : defaultTargetPlatform == TargetPlatform.android ? "Android" : "Unknown"}');
 
-              // Check if we already have position data from provider
-              debugPrint('🗺️ [DEBUG] currentPosition AsyncValue state:');
-              debugPrint('   - isLoading: ${currentPosition.isLoading}');
-              debugPrint('   - hasValue: ${currentPosition.hasValue}');
-              debugPrint('   - isRefreshing: ${currentPosition.isRefreshing}');
-              debugPrint('   - value: ${currentPosition.value}');
-              debugPrint('   - hasError: ${currentPosition.hasError}');
+                // Apply dark map style
+                try {
+                  await controller.setMapStyle(_darkMapStyle);
+                  debugPrint('✅ [DEBUG] Map style applied successfully');
+                } catch (e) {
+                  debugPrint('⚠️ [DEBUG] Error applying map style: $e');
+                }
 
-              final currentPosFromProvider = currentPosition.hasValue ? currentPosition.value : null;
-              debugPrint('🗺️ [DEBUG] currentPos from provider: ${currentPosFromProvider != null ? "Position(" + currentPosFromProvider.latitude.toString() + ", " + currentPosFromProvider.longitude.toString() + ")" : "null"}');
-
-              // Always try to get position - if provider has it, use it; otherwise fetch it
-              if (currentPosFromProvider != null) {
-                debugPrint('✅ [DEBUG] Using position from provider: ${currentPosFromProvider.latitude}, ${currentPosFromProvider.longitude}');
-                position = currentPosFromProvider;
-              } else {
-                debugPrint('📍 [DEBUG] No position from provider, attempting to fetch...');
-
-                if (kIsWeb) {
-                  debugPrint('🌐 [DEBUG] WEB branch: Attempting to get location directly');
-                  debugPrint('🌐 [DEBUG] About to call Geolocator.getCurrentPosition...');
-                  // On web, just call getCurrentPosition directly - browser handles permission
-                  try {
-                    position = await Geolocator.getCurrentPosition(
-                      desiredAccuracy: LocationAccuracy.high,
-                    );
-                    debugPrint('✅ [DEBUG] WEB: Successfully got position: ${position.latitude}, ${position.longitude}');
-                    debugPrint('✅ [DEBUG] Position accuracy: ${position.accuracy} meters');
-                    debugPrint('✅ [DEBUG] Position timestamp: ${position.timestamp}');
-                  } catch (e) {
-                    debugPrint('💥 [DEBUG] WEB: Error getting location: $e');
-                    debugPrint('💥 [DEBUG] Error type: ${e.runtimeType}');
-                    debugPrint('💥 [DEBUG] Error toString: ${e.toString()}');
+                if (shouldUseWarmCache) {
+                  debugPrint('⚡ [DEBUG] Using warm map cache (within 1 hour TTL)');
+                  if (mounted && !_isMapLoaded) {
+                    setState(() {
+                      _isMapLoaded = true;
+                    });
                   }
+                  return;
+                }
+
+                Position? position;
+
+                // Check if we already have position data from provider
+                debugPrint('🗺️ [DEBUG] currentPosition AsyncValue state:');
+                debugPrint('   - isLoading: ${currentPosition.isLoading}');
+                debugPrint('   - hasValue: ${currentPosition.hasValue}');
+                debugPrint('   - isRefreshing: ${currentPosition.isRefreshing}');
+                debugPrint('   - value: ${currentPosition.value}');
+                debugPrint('   - hasError: ${currentPosition.hasError}');
+
+                final currentPosFromProvider = currentPosition.hasValue ? currentPosition.value : null;
+                debugPrint('🗺️ [DEBUG] currentPos from provider: ${currentPosFromProvider != null ? "Position(" + currentPosFromProvider.latitude.toString() + ", " + currentPosFromProvider.longitude.toString() + ")" : "null"}');
+
+                // Always try to get position - if provider has it, use it; otherwise fetch it
+                if (currentPosFromProvider != null) {
+                  debugPrint('✅ [DEBUG] Using position from provider: ${currentPosFromProvider.latitude}, ${currentPosFromProvider.longitude}');
+                  position = currentPosFromProvider;
                 } else {
+                  debugPrint('📍 [DEBUG] No position from provider, attempting to fetch...');
+
                   debugPrint('📱 [DEBUG] MOBILE branch: Using permission flow');
                   // On mobile, check and request permission first
                   final locationService = ref.read(locationServiceProvider);
@@ -248,60 +355,54 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
 
                   debugPrint('📱 [DEBUG] About to call getCurrentPosition...');
                   position = await locationService.getCurrentPosition();
-                  debugPrint('📍 [DEBUG] MOBILE: Position fetch result: ${position != null ? position.latitude : null}, ${position != null ? position.longitude : null}');
+                  debugPrint('📍 [DEBUG] MOBILE: Position fetch result: ${position?.latitude}, ${position?.longitude}');
                 }
-              }
 
-              debugPrint('📍 [DEBUG] Final position variable: ${position != null ? "Position(" + position!.latitude.toString() + ", " + position!.longitude.toString() + ")" : "null"}');
-              debugPrint('📍 [DEBUG]mounted check: $mounted');
+                debugPrint('📍 [DEBUG] Final position variable: ${position != null ? 'Position(${position.latitude}, ${position.longitude})' : 'null'}');
+                debugPrint('📍 [DEBUG]mounted check: $mounted');
 
-              // Always move camera to position if we have it
-              // The initialCameraPosition might not have been set correctly because the provider wasn't ready when widget built
-              if (position != null && mounted) {
-                debugPrint('✅ [DEBUG] About to animate camera to user location...');
-                debugPrint('✅ [DEBUG] Target: ${position.latitude}, ${position.longitude}');
-                await controller.animateCamera(
-                  CameraUpdate.newCameraPosition(
-                    CameraPosition(
-                      target: LatLng(position.latitude, position.longitude),
-                      zoom: 14.0,
+                // Always move camera to position if we have it
+                // The initialCameraPosition might not have been set correctly because the provider wasn't ready when widget built
+                if (position != null && mounted) {
+                  debugPrint('✅ [DEBUG] About to animate camera to user location...');
+                  debugPrint('✅ [DEBUG] Target: ${position.latitude}, ${position.longitude}');
+                  await controller.animateCamera(
+                    CameraUpdate.newCameraPosition(
+                      CameraPosition(
+                        target: LatLng(position.latitude, position.longitude),
+                        zoom: 14.0,
+                      ),
                     ),
-                  ),
-                );
-                debugPrint('✅ [DEBUG] Camera animation completed');
-              } else {
-                debugPrint('⚠️ [DEBUG] Could not get user location, using default position');
-                debugPrint('⚠️ [DEBUG] position is ${position == null ? "NULL" : "NOT NULL"}');
-                debugPrint('⚠️ [DEBUG]mounted is ${mounted ? "TRUE" : "FALSE"}');
-              }
-
-              // Mark map as loaded after a short delay to ensure tiles are rendered
-              await Future.delayed(const Duration(milliseconds: 500));
-              if (mounted) {
-                setState(() {
-                  _isMapLoaded = true;
-                });
-                debugPrint('✅ [DEBUG] Map marked as loaded');
-              }
-            },
-            initialCameraPosition: CameraPosition(
-              // Start with user's position if available, otherwise default position
-              target: currentPosition.whenData((pos) {
-                if (pos != null) {
-                  return LatLng(pos.latitude, pos.longitude);
+                  );
+                  debugPrint('✅ [DEBUG] Camera animation completed');
+                } else {
+                  debugPrint('⚠️ [DEBUG] Could not get user location, using default position');
+                  debugPrint('⚠️ [DEBUG] position is ${position == null ? "NULL" : "NOT NULL"}');
+                  debugPrint('⚠️ [DEBUG]mounted is ${mounted ? "TRUE" : "FALSE"}');
                 }
-                return const LatLng(37.7749, -122.4194); // San Francisco as fallback
-              }).value ?? const LatLng(37.7749, -122.4194),
-              zoom: 14.0,
+
+                // Mark map as loaded after a short delay to ensure tiles are rendered
+                await Future.delayed(const Duration(milliseconds: 500));
+                if (mounted) {
+                  setState(() {
+                    _isMapLoaded = true;
+                  });
+                  debugPrint('✅ [DEBUG] Map marked as loaded');
+                }
+              },
+              onCameraMove: (position) {
+                _latestCameraPosition = position;
+              },
+              onCameraIdle: _refreshMapWarmCacheFromCamera,
+              initialCameraPosition: _buildInitialCameraPosition(currentPosition),
+              myLocationEnabled: true,
+              myLocationButtonEnabled: false, // Disable default button - we'll add custom one
+              mapType: MapType.normal,
+              onTap: _onMapTapped,
+              zoomControlsEnabled: false,
+              // Note: Google Maps POI info windows will still appear
+              // This is a limitation of the google_maps_flutter package
             ),
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false, // Disable default button - we'll add custom one
-            mapType: MapType.normal,
-            onTap: _onMapTapped,
-            zoomControlsEnabled: false,
-            // Note: Google Maps POI info windows will still appear
-            // This is a limitation of the google_maps_flutter package
-          ),
 
           // Overlay with search bar and results
           Column(
@@ -526,7 +627,13 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                 borderRadius: BorderRadius.circular(20),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(20),
-                  onTap: () => context.pop(),
+                  onTap: () {
+                    if (widget.embedded && widget.onCloseRequested != null) {
+                      widget.onCloseRequested!();
+                      return;
+                    }
+                    context.pop();
+                  },
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     child: const Icon(
@@ -539,10 +646,10 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
               ),
             ),
           
-          // Custom "My Location" button (bottom right) - placed LAST to appear on top
+          // Custom "My Location" button (bottom left) - placed LAST to appear on top
           Positioned(
             bottom: _contextMenuPlace != null ? 280 : 16, // Move up well above bottom sheet when showing
-            right: 16,
+            left: 40,
             child: Material(
               color: (hasLocationPermission.value == true) 
                   ? skyBlue // Blue background when permission granted
@@ -606,7 +713,7 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
 
       if (placeDetails != null) {
         debugPrint('🗺️ Place Details: $placeDetails');
-        
+
         // Extract coordinates and place type from place details
         // Google Places API v1 structure: { "location": { "latitude": X, "longitude": Y }, "primaryType": "...", "types": [...] }
         final location = placeDetails['location'] as Map<String, dynamic>?;
@@ -673,13 +780,21 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
         debugPrint('✅ Returning prediction with coordinates and type: ${updatedPrediction.latitude}, ${updatedPrediction.longitude}, ${updatedPrediction.placeType}');
         
         if (mounted) {
-          context.pop(updatedPrediction);
+          if (widget.embedded && widget.onPlaceSelected != null) {
+            widget.onPlaceSelected!(updatedPrediction);
+          } else {
+            context.pop(updatedPrediction);
+          }
         }
       } else {
         debugPrint('⚠️ No place details returned, using prediction without coordinates');
         // If we couldn't get details, return prediction without coordinates
         if (mounted) {
-          context.pop(prediction);
+          if (widget.embedded && widget.onPlaceSelected != null) {
+            widget.onPlaceSelected!(prediction);
+          } else {
+            context.pop(prediction);
+          }
         }
       }
     } catch (e) {
@@ -766,22 +881,32 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
       // Force refresh the position
       final locationService = ref.read(locationServiceProvider);
       final position = await locationService.getCurrentPosition();
-      
-      if (position != null && _mapController != null) {
+
+      if (position == null) {
+        debugPrint('⚠️ Could not get user location');
+        return;
+      }
+
+      final target = LatLng(position.latitude, position.longitude);
+
+      if (kIsWeb && _webAnimateCamera != null) {
+        await _webAnimateCamera!(target, _webPreferredUserZoom);
+        debugPrint('✅ Centered on user location (web): ${position.latitude}, ${position.longitude}');
+        return;
+      }
+
+      if (_mapController != null) {
         await _mapController!.animateCamera(
           CameraUpdate.newCameraPosition(
             CameraPosition(
-              target: LatLng(
-                position.latitude,
-                position.longitude,
-              ),
+              target: target,
               zoom: 16.0,
             ),
           ),
         );
         debugPrint('✅ Centered on user location: ${position.latitude}, ${position.longitude}');
       } else {
-        debugPrint('⚠️ Could not get user location');
+        debugPrint('⚠️ Could not center map: no controller available');
       }
     } catch (e) {
       debugPrint('💥 Error centering on location: $e');
@@ -796,6 +921,24 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
 
     debugPrint('🗺️ Map tapped at: ${position.latitude}, ${position.longitude}');
 
+    final currentZoom = _latestCameraPosition?.zoom ?? _cachedCameraZoom ?? 14.0;
+    if (currentZoom < _tapSelectionMinZoom) {
+      debugPrint('🔎 Tap while zoomed out ($currentZoom). Auto-zooming before selection.');
+      if (_mapController != null) {
+        await _mapController!.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: position,
+              zoom: _autoZoomOnTapTarget,
+            ),
+          ),
+        );
+      } else if (_webAnimateCamera != null) {
+        await _webAnimateCamera!(position, _autoZoomOnTapTarget);
+      }
+      return;
+    }
+
     try {
       // Show loading indicator
       showDialog(
@@ -806,46 +949,98 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
         ),
       );
 
-      // Reverse geocode to get place details
-      final searchService = ref.read(maypoleSearchServiceProvider);
-      final placeDetails = await searchService.reverseGeocode(
-        position.latitude,
-        position.longitude,
-      );
+      // Try center + nearby samples and snap to nearest place to the tap
+      final resolved = await _resolveBestPlaceNearTap(position);
 
       if (!mounted) return;
 
       // Close loading dialog
       Navigator.pop(context);
 
-      if (placeDetails != null) {
+      if (resolved != null) {
+        debugPrint('✅ Tap resolved to place id=${resolved.placeDetails['id']} at ${resolved.location.latitude}, ${resolved.location.longitude}');
         setState(() {
-          _selectedPlace = placeDetails;
-          _selectedLocation = position;
-          _contextMenuPlace = placeDetails;
-          _contextMenuLocation = position;
+          _selectedPlace = resolved.placeDetails;
+          _selectedLocation = resolved.location;
+          _contextMenuPlace = resolved.placeDetails;
+          _contextMenuLocation = resolved.location;
         });
       } else {
-        // No place found, show a generic location option
-        setState(() {
-          _contextMenuPlace = {'isGeneric': true};
-          _contextMenuLocation = position;
-        });
+        debugPrint('ℹ️ Tap ignored (no nearby Google place matched tap intent).');
       }
     } catch (e) {
-      debugPrint('💥 Error reverse geocoding: $e');
+      debugPrint('💥 Error resolving tap to place: $e');
       if (!mounted) return;
 
       // Close loading dialog
       Navigator.pop(context);
-
-      // Show error but still allow generic location
       ErrorDialog.show(context, e);
-      setState(() {
-        _contextMenuPlace = {'isGeneric': true};
-        _contextMenuLocation = position;
-      });
     }
+  }
+
+  Future<_ResolvedTapPlace?> _resolveBestPlaceNearTap(LatLng tapPosition) async {
+    final searchService = ref.read(maypoleSearchServiceProvider);
+    final currentZoom = _latestCameraPosition?.zoom ?? _cachedCameraZoom ?? 14.0;
+
+    final radiusMeters = currentZoom >= 18.0
+        ? 40.0
+        : currentZoom >= 17.0
+            ? 60.0
+            : 90.0;
+
+    final samplePoints = kIsWeb
+        ? <LatLng>[tapPosition]
+        : <LatLng>[
+            tapPosition,
+            LatLng(tapPosition.latitude + _sampleOffsetDegrees, tapPosition.longitude),
+            LatLng(tapPosition.latitude - _sampleOffsetDegrees, tapPosition.longitude),
+            LatLng(tapPosition.latitude, tapPosition.longitude + _sampleOffsetDegrees),
+            LatLng(tapPosition.latitude, tapPosition.longitude - _sampleOffsetDegrees),
+          ];
+
+    _ResolvedTapPlace? bestMatch;
+    var bestDistance = double.infinity;
+
+    for (final sample in samplePoints) {
+      final placeDetails = await searchService.reverseGeocode(
+        sample.latitude,
+        sample.longitude,
+        radiusMeters: radiusMeters,
+        maxResultCount: kIsWeb ? 1 : 5,
+      );
+      final placeId = placeDetails?['id'] as String?;
+      final location = placeDetails?['location'] as Map<String, dynamic>?;
+      final lat = location?['latitude'] as double?;
+      final lon = location?['longitude'] as double?;
+
+      if (placeDetails == null || placeId == null || placeId.isEmpty || lat == null || lon == null) {
+        continue;
+      }
+
+      final placeLocation = LatLng(lat, lon);
+      final apiDistance = (placeDetails['_distanceMeters'] as num?)?.toDouble();
+      final distance = apiDistance ??
+          Geolocator.distanceBetween(
+            tapPosition.latitude,
+            tapPosition.longitude,
+            placeLocation.latitude,
+            placeLocation.longitude,
+          );
+
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestMatch = _ResolvedTapPlace(
+          placeDetails: placeDetails,
+          location: placeLocation,
+        );
+      }
+    }
+
+    if (bestMatch == null || bestDistance > _tapSnapDistanceThresholdMeters) {
+      return null;
+    }
+
+    return bestMatch;
   }
 
   Widget _buildBottomSheet(Map<String, dynamic> placeDetails, LatLng position) {
@@ -1044,7 +1239,12 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
       longitude: longitude,
       placeType: placeType,
     );
-    
+
+    if (widget.embedded && widget.onPlaceSelected != null) {
+      widget.onPlaceSelected!(prediction);
+      return;
+    }
+
     context.pop(prediction);
   }
 }

@@ -175,15 +175,19 @@ def places_place_details(req: https_fn.Request) -> https_fn.Response:
         headers = {
             'Content-Type': 'application/json',
             'X-Goog-Api-Key': api_key,
-            'X-Goog-Field-Mask': 'id,displayName,formattedAddress,location,primaryType,types',
+            'X-Goog-FieldMask': 'id,displayName,formattedAddress,location,primaryType,types',
         }
         
+        print(f"📍 [places_place_details] request place_id={place_id}", flush=True)
+
         # Make request to Google Places API
         response = requests.get(
             places_url,
             headers=headers,
             timeout=10
         )
+
+        print(f"📍 [places_place_details] google status={response.status_code}", flush=True)
         
         # Return the response (CORS headers added by decorator)
         return https_fn.Response(
@@ -245,14 +249,18 @@ def places_reverse_geocode(req: https_fn.Request) -> https_fn.Response:
         # Build the request body for searchNearby
         latitude = request_data.get('latitude')
         longitude = request_data.get('longitude')
-        
+        radius_meters = float(request_data.get('radiusMeters', 150.0))
+        max_result_count = int(request_data.get('maxResultCount', 5))
+        radius_meters = max(25.0, min(radius_meters, 500.0))
+        max_result_count = max(1, min(max_result_count, 20))
+
         places_url = 'https://places.googleapis.com/v1/places:searchNearby'
         
         # Set up headers for Google Places API
         headers = {
             'Content-Type': 'application/json',
             'X-Goog-Api-Key': api_key,
-            'X-Goog-Field-Mask': 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types',
+            'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types',
         }
         
         # Build the request body for searchNearby
@@ -263,12 +271,15 @@ def places_reverse_geocode(req: https_fn.Request) -> https_fn.Response:
                         'latitude': latitude,
                         'longitude': longitude,
                     },
-                    'radius': 50.0,  # Search within 50 meters
+                    'radius': radius_meters,
                 }
             },
-            'maxResultCount': 1,
+            'maxResultCount': max_result_count,
+            'rankPreference': 'DISTANCE',
         }
         
+        print(f"📍 [places_reverse_geocode] request lat={latitude}, lon={longitude}, radius={radius_meters}, max={max_result_count}", flush=True)
+
         # Make request to Google Places API
         response = requests.post(
             places_url,
@@ -276,6 +287,8 @@ def places_reverse_geocode(req: https_fn.Request) -> https_fn.Response:
             json=body,
             timeout=10
         )
+
+        print(f"📍 [places_reverse_geocode] google status={response.status_code}", flush=True)
         
         # Return the response (CORS headers added by decorator)
         return https_fn.Response(

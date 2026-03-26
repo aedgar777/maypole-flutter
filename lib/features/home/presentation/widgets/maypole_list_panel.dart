@@ -75,7 +75,6 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
     if (widget.selectedThreadId != null && !widget.isMaypoleThread) {
       _pendingScrollToThreadId = widget.selectedThreadId;
     }
-    debugPrint('📋 LIST_PANEL: initState - initialTab=$widget.initialTab, selectedThreadId=${widget.selectedThreadId}, isMaypoleThread=${widget.isMaypoleThread}, pendingScrollTo=$_pendingScrollToThreadId');
   }
 
   @override
@@ -93,13 +92,10 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
   void didUpdateWidget(covariant MaypoleListPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     
-    debugPrint('📋 LIST_PANEL: didUpdateWidget - oldSelected=${oldWidget.selectedThreadId}, newSelected=${widget.selectedThreadId}, isMaypoleThread=${widget.isMaypoleThread}');
-    
     // If the selected thread changed and it's a DM thread, prepare to scroll to it
     if (widget.selectedThreadId != oldWidget.selectedThreadId &&
         widget.selectedThreadId != null &&
         !widget.isMaypoleThread) {
-      debugPrint('📋 LIST_PANEL: Setting pending scroll to ${widget.selectedThreadId}');
       _pendingScrollToThreadId = widget.selectedThreadId;
     }
   }
@@ -108,10 +104,7 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
   void _executeScrollToThreadIfNeeded(List<DMThreadMetaData> dmThreads) {
     _lastDmThreads = dmThreads; // Store for retry
     
-    debugPrint('📋 LIST_PANEL: _executeScrollToThreadIfNeeded called, pending=$_pendingScrollToThreadId, threadCount=${dmThreads.length}, hasClients=${_dmScrollController.hasClients}');
-    
     if (_pendingScrollToThreadId == null) {
-      debugPrint('📋 LIST_PANEL: No pending scroll target');
       return;
     }
     
@@ -124,8 +117,6 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
       }
     }
     
-    debugPrint('📋 LIST_PANEL: Found threadIndex=$threadIndex');
-    
     if (threadIndex != null) {
       if (_dmScrollController.hasClients) {
         _scrollRetryCount = 0; // Reset retry counter on success
@@ -134,12 +125,10 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
         // ListView not ready yet, retry after a short delay (with limit)
         _scrollRetryCount++;
         if (_scrollRetryCount > _maxScrollRetries) {
-          debugPrint('📋 LIST_PANEL: Max retries reached, giving up on scroll');
           _pendingScrollToThreadId = null;
           _scrollRetryCount = 0;
           return;
         }
-        debugPrint('📋 LIST_PANEL: ListView not ready, scheduling retry $_scrollRetryCount/$_maxScrollRetries...');
         Future.delayed(const Duration(milliseconds: 100), () {
           if (mounted && _lastDmThreads != null && _pendingScrollToThreadId != null) {
             _executeScrollToThreadIfNeeded(_lastDmThreads!);
@@ -147,7 +136,6 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
         });
       }
     } else {
-      debugPrint('📋 LIST_PANEL: Thread not found in list');
     }
   }
   
@@ -159,8 +147,6 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
     final maxScroll = _dmScrollController.position.maxScrollExtent;
     const itemHeight = 72.0; // Approximate height of list tile
     final targetOffset = (listIndex * itemHeight).clamp(0.0, maxScroll);
-    
-    debugPrint('📋 LIST_PANEL: Scrolling to index=$listIndex, offset=$targetOffset');
     
     _dmScrollController.animateTo(
       targetOffset,
@@ -192,7 +178,6 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
           if (_pendingScrollToThreadId != null && 
               _currentTabIndex == 0 && 
               tabController.index != 1) {
-            debugPrint('📋 LIST_PANEL: Animating to DM tab (index 1)');
             WidgetsBinding.instance.addPostFrameCallback((_) {
               tabController.animateTo(1);
             });
@@ -202,8 +187,6 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
             // Update immediately when tab changes, even during animation
             final newIndex = tabController.index;
             final isAnimating = tabController.animation?.isAnimating ?? false;
-            
-            debugPrint('📋 LIST_PANEL: Tab listener - index=$newIndex, isAnimating=$isAnimating, pending=$_pendingScrollToThreadId');
             
             if (_currentTabIndex != newIndex) {
               setState(() {
@@ -216,7 +199,6 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
             
             // If we just switched to DM tab (index 1) and have a pending scroll, try to scroll now
             if (newIndex == 1 && !isAnimating && _pendingScrollToThreadId != null && _dmScrollController.hasClients) {
-              debugPrint('📋 LIST_PANEL: Tab animation complete on DM tab, executing scroll');
               // Find thread index from cached threads
               int? threadIndex;
               if (_lastDmThreads != null) {
@@ -232,7 +214,6 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
                   _performScroll(threadIndex!);
                 });
               } else {
-                debugPrint('📋 LIST_PANEL: Could not find thread index for scroll');
               }
             }
           });

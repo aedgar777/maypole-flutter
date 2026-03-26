@@ -2,7 +2,7 @@
 // ignore_for_file: type=lint
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb, TargetPlatform;
+    show defaultTargetPlatform, kDebugMode, kIsWeb, TargetPlatform;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
@@ -286,7 +286,7 @@ class DefaultFirebaseOptions {
     // Get environment from dart-define, fallback to dotenv, then default to dev
     final environment = _getEnvironment();
 
-    if (kIsWeb) {
+    if (kIsWeb && kDebugMode) {
       // Debug logging for web to help diagnose configuration issues
       print('🔧 Firebase Config Debug:');
       print('  Environment: $environment');
@@ -366,7 +366,7 @@ class DefaultFirebaseOptions {
     final storageBucket = _getFirebaseDevStorageBucket();
     final measurementId = _getFirebaseDevWebMeasurementId();
 
-    if (kIsWeb) {
+    if (kIsWeb && kDebugMode) {
       print('  API Key: ${apiKey.isEmpty ? "❌ MISSING" : "✅ Present (${apiKey
           .substring(0, 10)}...)"}');
       print('  App ID: ${appId.isEmpty ? "❌ MISSING" : "✅ Present"}');
@@ -421,7 +421,7 @@ class DefaultFirebaseOptions {
     final storageBucket = _getFirebaseProdStorageBucket();
     final measurementId = _getFirebaseProdWebMeasurementId();
 
-    if (kIsWeb) {
+    if (kIsWeb && kDebugMode) {
       print('  API Key: ${apiKey.isEmpty ? "❌ MISSING" : "✅ Present (${apiKey
           .substring(0, 10)}...)"}');
       print('  App ID: ${appId.isEmpty ? "❌ MISSING" : "✅ Present"}');

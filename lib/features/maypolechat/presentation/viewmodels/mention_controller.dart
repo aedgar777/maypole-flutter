@@ -8,10 +8,12 @@ import 'package:maypole/features/maypolechat/presentation/maypole_chat_providers
 class UserSearchParams {
   final String threadId;
   final String query;
+  final String? excludeUserId;
 
   const UserSearchParams({
     required this.threadId,
     required this.query,
+    this.excludeUserId,
   });
 
   @override
@@ -20,10 +22,11 @@ class UserSearchParams {
           other is UserSearchParams &&
               runtimeType == other.runtimeType &&
               threadId == other.threadId &&
-              query == other.query;
+              query == other.query &&
+              excludeUserId == other.excludeUserId;
 
   @override
-  int get hashCode => threadId.hashCode ^ query.hashCode;
+  int get hashCode => Object.hash(threadId, query, excludeUserId);
 }
 
 /// Provider for user search service
@@ -52,8 +55,8 @@ final userSearchProvider = Provider.autoDispose
   for (var message in messages) {
     // Create a DomainUser from message data
     // Only add if we haven't seen this user yet
-    if (!uniqueUsers.containsKey(message.senderId) && 
-        message.senderId.isNotEmpty && 
+    if (!uniqueUsers.containsKey(message.senderId) &&
+        message.senderId.isNotEmpty &&
         message.senderName.isNotEmpty) {
       uniqueUsers[message.senderId] = DomainUser(
         firebaseID: message.senderId,
@@ -62,6 +65,11 @@ final userSearchProvider = Provider.autoDispose
         profilePictureUrl: message.senderProfilePictureUrl,
       );
     }
+  }
+
+  // Exclude the current typing user from mention suggestions
+  if (params.excludeUserId != null && params.excludeUserId!.isNotEmpty) {
+    uniqueUsers.remove(params.excludeUserId!);
   }
 
   // If query is empty, return empty list (user hasn't started typing)

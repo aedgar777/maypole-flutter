@@ -21,15 +21,11 @@ class DmMessagePreloader {
   /// Start preloading messages for all DM threads
   Future<void> preloadAllDmThreads(String userId) async {
     try {
-      debugPrint('🚀 Starting DM preloader for user: $userId');
-      
       // Get all DM threads for this user
       final dmThreadsStream = _dmThreadService.getUserDmThreads(userId);
       
       // Listen to thread list changes
       dmThreadsStream.listen((threadMetadataList) {
-        debugPrint('📋 Found ${threadMetadataList.length} DM threads to preload');
-        
         // Start listening to messages for each thread
         for (final threadMetadata in threadMetadataList) {
           _subscribeToThread(threadMetadata.id);
@@ -56,8 +52,6 @@ class DmMessagePreloader {
       return;
     }
     
-    debugPrint('📥 Subscribing to DM thread: $threadId');
-    
     // First, try to load from cache synchronously
     _loadFromCache(threadId);
     
@@ -65,7 +59,6 @@ class DmMessagePreloader {
     final subscription = _dmThreadService.getDmMessages(threadId).listen(
       (messages) {
         _messageCache[threadId] = messages;
-        debugPrint('💬 Cached ${messages.length} messages for DM thread: $threadId');
       },
       onError: (error) {
         debugPrint('❌ Error loading messages for thread $threadId: $error');
@@ -81,7 +74,6 @@ class DmMessagePreloader {
       final cachedMessages = await _dmThreadService.getCachedDmMessages(threadId);
       if (cachedMessages.isNotEmpty) {
         _messageCache[threadId] = cachedMessages;
-        debugPrint('📦 Pre-loaded ${cachedMessages.length} cached messages for thread: $threadId');
       }
     } catch (e) {
       debugPrint('⚠️ Could not load cached messages for thread $threadId: $e');

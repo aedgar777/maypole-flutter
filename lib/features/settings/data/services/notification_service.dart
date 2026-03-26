@@ -93,7 +93,6 @@ class NotificationService {
     final hasAsked = await hasAskedForPermission();
 
     if (hasAsked) {
-      debugPrint('Already asked for notification permission, skipping...');
       // Just check current status
       return await checkNotificationPermission();
     }
@@ -117,13 +116,11 @@ class NotificationService {
         final settings = await messaging.getNotificationSettings();
         final isGranted = settings.authorizationStatus == AuthorizationStatus.authorized ||
             settings.authorizationStatus == AuthorizationStatus.provisional;
-        debugPrint('Notification permission status check (iOS FCM): ${settings.authorizationStatus} (granted: $isGranted)');
         return isGranted;
       } else {
         // On Android, use permission_handler
         final status = await Permission.notification.status;
         final isGranted = status.isGranted;
-        debugPrint('Notification permission status check (Android): $status (granted: $isGranted)');
         return isGranted;
       }
     } catch (e) {

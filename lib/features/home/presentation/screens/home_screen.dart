@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +17,7 @@ import 'package:maypole/features/directmessages/presentation/widgets/dm_content.
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/maypole_chat_content.dart';
 import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
+import 'package:maypole/features/maypolesearch/presentation/screens/maypole_search_screen.dart';
 import 'package:maypole/features/settings/settings_providers.dart';
 import 'package:maypole/core/ads/widgets/interstitial_ad_manager.dart';
 import 'package:maypole/core/ads/widgets/web_ad_widget.dart';
@@ -89,6 +92,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  static const Duration _searchScreenKeepAliveTtl = Duration(hours: 1);
+
   _SelectedThreadState _selectedThread = const _SelectedThreadState();
   bool _hasRequestedPermissions = false;
   bool _hasPrefetchedData = false;
@@ -96,6 +101,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _threadSwitchCount = 0; // Track thread switches for interstitial ads
   // Flag to track if tab change was programmatic (from navigation) vs user tap
   bool _isProgrammaticTabChange = false;
+  bool _isSearchOverlayVisible = false;
+  bool _shouldKeepSearchScreenMounted = false;
+  Timer? _searchOverlayDisposeTimer;
+  Completer<PlacePrediction?>? _searchOverlayCompleter;
+  LocalHistoryEntry? _searchOverlayHistoryEntry;
+  bool _isRemovingSearchOverlayHistoryEntry = false;
 
   @override
   void initState() {
@@ -145,6 +156,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    _searchOverlayDisposeTimer?.cancel();
+    _removeSearchOverlayHistoryEntry();
+    super.dispose();
+  }
+
   void _initializeFromWidgetParams() {
     if (widget.selectedDmThreadId != null && widget.selectedDmThread != null) {
       final dmThread = widget.selectedDmThread as DMThread;
@@ -162,7 +180,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     try {
       final remoteConfig = ref.read(remoteConfigServiceProvider);
       await remoteConfig.initialize();
-      debugPrint('✅ Remote Config initialized in home screen');
     } catch (e) {
       debugPrint('⚠️ Warning: Could not initialize Remote Config: $e');
       // Continue anyway - will use default values
@@ -176,7 +193,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final adService = ref.read(adServiceProvider);
       await adService.initialize();
       ref.read(adInitializedProvider.notifier).setInitialized(true);
-      debugPrint('✅ AdMob initialized in home screen');
     } catch (e) {
       debugPrint('⚠️ Warning: Could not initialize AdMob: $e');
       // Continue anyway - app will work without ads
@@ -194,7 +210,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     try {
       final preloader = ref.read(dmMessagePreloaderProvider);
       await preloader.preloadAllDmThreads(user.firebaseID);
-      debugPrint('✅ DM preloader initialized for user: ${user.firebaseID}');
     } catch (e) {
       debugPrint('⚠️ Error initializing DM preloader: $e');
     }
@@ -213,6 +228,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _initializeFcm() async {
+    if (kIsWeb) {
+      // Web push requires valid firebase-messaging-sw.js hosting; skip noisy init here.
+      return;
+    }
     try {
       final fcmService = ref.read(fcmServiceProvider);
       await fcmService.initialize();
@@ -311,78 +330,103 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           });
         }
 
-        return Scaffold(
-          body: AdaptiveScaffold(
-            navigationPanel: MaypoleListPanel(
-              user: user,
-              selectedThreadId: _selectedThread.threadId,
-              isMaypoleThread: _selectedThread.isMaypoleThread,
-              onSettingsPressed: () => context.push('/settings'),
-              onAddPressed: () => _handleAddPressed(context),
-              onMaypoleThreadSelected: (threadId, maypoleName, address, latitude, longitude) =>
-                  _handleMaypoleThreadSelected(
-                    context,
-                    threadId,
-                    maypoleName,
-                    address,
-                    latitude,
-                    longitude,
-                    isWideScreen,
+        final shouldShowAddFab = _currentTabIndex == 0 && !_isSearchOverlayVisible;
+
+        return PopScope(
+          canPop: !_isSearchOverlayVisible,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            if (_isSearchOverlayVisible) {
+              _closeSearchOverlay();
+            }
+          },
+          child: Scaffold(
+            body: Stack(
+              children: [
+                AdaptiveScaffold(
+                  navigationPanel: MaypoleListPanel(
+                    user: user,
+                    selectedThreadId: _selectedThread.threadId,
+                    isMaypoleThread: _selectedThread.isMaypoleThread,
+                    onSettingsPressed: () => context.push('/settings'),
+                    onAddPressed: () => _handleAddPressed(context),
+                    onMaypoleThreadSelected: (threadId, maypoleName, address, latitude, longitude) =>
+                        _handleMaypoleThreadSelected(
+                          context,
+                          threadId,
+                          maypoleName,
+                          address,
+                          latitude,
+                          longitude,
+                          isWideScreen,
+                        ),
+                    onDmThreadSelected: (threadId) =>
+                        _handleDmThreadSelected(context, threadId, isWideScreen),
+                    onTabChanged: (tabIndex) => _handleTabChanged(tabIndex, isWideScreen),
+                    onThreadDeleted: () {
+                      // Clear selection when current thread is deleted
+                      setState(() {
+                        _selectedThread = const _SelectedThreadState();
+                      });
+                    },
                   ),
-              onDmThreadSelected: (threadId) =>
-                  _handleDmThreadSelected(context, threadId, isWideScreen),
-              onTabChanged: (tabIndex) => _handleTabChanged(tabIndex, isWideScreen),
-              onThreadDeleted: () {
-                // Clear selection when current thread is deleted
-                setState(() {
-                  _selectedThread = const _SelectedThreadState();
-                });
-              },
-            ),
-            contentPanel: _buildContentPanel(),
-          ),
-          // Only show FAB on mobile screens and on Maypole List tab (index 0)
-          floatingActionButton: isWideScreen
-              ? null
-              : AnimatedScale(
-                  scale: _currentTabIndex == 0 ? 1.0 : 0.0,
-                  duration: kTabScrollDuration,
-                  curve: Curves.ease,
-                  child: AnimatedOpacity(
-                    opacity: _currentTabIndex == 0 ? 1.0 : 0.0,
-                    duration: kTabScrollDuration,
-                    curve: Curves.ease,
-                    child: FloatingActionButton(
-                      heroTag: 'home_fab',
-                      onPressed: _currentTabIndex == 0 ? () => _handleAddPressed(context) : null,
-                      child: const Icon(Icons.add),
+                  contentPanel: _buildContentPanel(),
+                ),
+                if (_shouldKeepSearchScreenMounted)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      ignoring: !_isSearchOverlayVisible,
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 180),
+                        opacity: _isSearchOverlayVisible ? 1 : 0,
+                        child: MaypoleSearchScreen(
+                          embedded: true,
+                          onCloseRequested: _closeSearchOverlay,
+                          onPlaceSelected: _onSearchPlaceSelected,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+              ],
+            ),
+            // Only show scaffold FAB on narrow/mobile layout.
+            // Wide/web layout already has the add FAB in the list panel.
+            floatingActionButton: isWideScreen
+                ? null
+                : AnimatedScale(
+                    scale: shouldShowAddFab ? 1.0 : 0.0,
+                    duration: kTabScrollDuration,
+                    curve: Curves.ease,
+                    child: AnimatedOpacity(
+                      opacity: shouldShowAddFab ? 1.0 : 0.0,
+                      duration: kTabScrollDuration,
+                      curve: Curves.ease,
+                      child: FloatingActionButton(
+                        heroTag: 'home_fab',
+                        onPressed: shouldShowAddFab ? () => _handleAddPressed(context) : null,
+                        child: const Icon(Icons.add),
+                      ),
+                    ),
+                  ),
+          ),
         );
       },
     );
   }
 
   void _handleTabChanged(int tabIndex, bool isWideScreen) {
-    debugPrint('🏠 HOME_SCREEN: _handleTabChanged called, tabIndex=$tabIndex, isProgrammatic=$_isProgrammaticTabChange');
-    
     setState(() {
       _currentTabIndex = tabIndex;
       if (isWideScreen && !_isProgrammaticTabChange) {
         // On wide screen, clear selection when switching tabs
         // BUT only if this was a user tap (not programmatic navigation)
-        debugPrint('🏠 HOME_SCREEN: Clearing selection (user tab change)');
         _selectedThread = const _SelectedThreadState();
-      } else if (_isProgrammaticTabChange) {
-        debugPrint('🏠 HOME_SCREEN: Keeping selection (programmatic tab change)');
       }
     });
     
     // Reset the flag after handling
     if (_isProgrammaticTabChange) {
       _isProgrammaticTabChange = false;
-      debugPrint('🏠 HOME_SCREEN: Reset programmatic tab change flag');
     }
   }
 
@@ -537,7 +581,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _handleAddPressed(BuildContext context) async {
-    final result = await context.push<PlacePrediction>('/search');
+    final result = await _openSearchOverlay();
 
     if (result != null && mounted) {
       final isWideScreen = MediaQuery.of(context).size.width >= 600;
@@ -546,11 +590,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         // On wide screen, automatically add to user's maypole list permanently
         final authState = ref.read(authStateProvider);
         final user = authState.value;
-        
+
         if (user != null) {
           final isAlreadyInList = user.maypoleChatThreads
               .any((thread) => thread.id == result.placeId);
-          
+
           if (!isAlreadyInList) {
             // Add maypole to user's list immediately
             try {
@@ -569,7 +613,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             }
           }
         }
-        
+
         // Update the selected thread to show in the content panel
         setState(() {
           _selectedThread = _SelectedThreadState(
@@ -595,6 +639,100 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         }
       }
     }
+  }
+
+  Future<PlacePrediction?> _openSearchOverlay() {
+    _searchOverlayDisposeTimer?.cancel();
+
+    final existing = _searchOverlayCompleter;
+    if (existing != null && !existing.isCompleted) {
+      setState(() {
+        _shouldKeepSearchScreenMounted = true;
+        _isSearchOverlayVisible = true;
+      });
+      return existing.future;
+    }
+
+    final completer = Completer<PlacePrediction?>();
+    _searchOverlayCompleter = completer;
+
+    setState(() {
+      _shouldKeepSearchScreenMounted = true;
+      _isSearchOverlayVisible = true;
+    });
+
+    _registerSearchOverlayHistoryEntry();
+    return completer.future;
+  }
+
+  void _onSearchPlaceSelected(PlacePrediction prediction) {
+    final completer = _searchOverlayCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete(prediction);
+    }
+    _closeSearchOverlay();
+  }
+
+  void _closeSearchOverlay() {
+    final completer = _searchOverlayCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete(null);
+    }
+    _searchOverlayCompleter = null;
+
+    _removeSearchOverlayHistoryEntry();
+
+    setState(() {
+      _isSearchOverlayVisible = false;
+      _shouldKeepSearchScreenMounted = true;
+    });
+
+    _searchOverlayDisposeTimer?.cancel();
+    _searchOverlayDisposeTimer = Timer(_searchScreenKeepAliveTtl, () {
+      if (!mounted || _isSearchOverlayVisible) {
+        return;
+      }
+      setState(() {
+        _shouldKeepSearchScreenMounted = false;
+      });
+    });
+  }
+
+  void _registerSearchOverlayHistoryEntry() {
+    if (!mounted || _searchOverlayHistoryEntry != null) {
+      return;
+    }
+
+    final route = ModalRoute.of(context);
+    if (route == null) {
+      return;
+    }
+
+    _searchOverlayHistoryEntry = LocalHistoryEntry(
+      onRemove: () {
+        _searchOverlayHistoryEntry = null;
+        if (_isRemovingSearchOverlayHistoryEntry) {
+          _isRemovingSearchOverlayHistoryEntry = false;
+          return;
+        }
+        if (_isSearchOverlayVisible) {
+          _closeSearchOverlay();
+        }
+      },
+    );
+
+    route.addLocalHistoryEntry(_searchOverlayHistoryEntry!);
+  }
+
+  void _removeSearchOverlayHistoryEntry() {
+    final entry = _searchOverlayHistoryEntry;
+    if (entry == null) {
+      return;
+    }
+
+    _isRemovingSearchOverlayHistoryEntry = true;
+    entry.remove();
+    _searchOverlayHistoryEntry = null;
   }
 
   void _handleMaypoleThreadSelected(

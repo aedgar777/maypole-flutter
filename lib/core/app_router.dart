@@ -35,13 +35,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       final currentPath = state.matchedLocation;
       final uri = state.uri;
       
-      // Debug logging
-      debugPrint('🔀 Router redirect check:');
-      debugPrint('   URI path: ${uri.path}');
-      debugPrint('   URI toString: ${uri.toString()}');
-      debugPrint('   Matched location: $currentPath');
-      debugPrint('   Full location: ${state.fullPath}');
-      debugPrint('   Auth state: ${authState.runtimeType}');
       
       // Define public routes that don't require authentication
       final publicRoutes = ['/login', '/register', '/privacy-policy', '/child-safety-standards', '/help', '/email-verified'];
@@ -54,12 +47,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       
       final isPublicRoute = publicRoutes.contains(currentPath) || isMaypoleChat;
       
-      debugPrint('   Is maypole chat: $isMaypoleChat');
-      debugPrint('   Is public route: $isPublicRoute');
       
       // If auth is still loading AND it's a maypole chat, allow it immediately
       if (authState.isLoading && isMaypoleChat) {
-        debugPrint('   ⏳ Auth loading but maypole chat detected, allowing route');
+
         return null;
       }
       
@@ -67,22 +58,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       // For protected routes, redirect to login (which will show loading state)
       if (authState.isLoading) {
         if (isPublicRoute) {
-          debugPrint('   ⏳ Auth loading, allowing public route');
           return null;
         }
-        debugPrint('   ⏳ Auth loading, redirecting protected route to login');
         return '/login';
       }
       
       final isAuthenticated = authState.value != null;
-      debugPrint('   Is authenticated: $isAuthenticated');
-      debugPrint('   Auth value: ${authState.value}');
-      debugPrint('   Has value: ${authState.hasValue}');
-      debugPrint('   Has error: ${authState.hasError}');
       
       // If user is not authenticated and trying to access a protected route
       if (!isAuthenticated && !isPublicRoute) {
-        debugPrint('   ➡️  Redirecting to /login (unauthenticated on protected route)');
         return '/login';
       }
       
@@ -92,7 +76,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       // The login screen itself will handle authenticated users appropriately
       
       // No redirect needed
-      debugPrint('   ✅ No redirect needed');
       return null;
     },
     routes: <RouteBase>[
@@ -114,12 +97,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/home',
         pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          debugPrint('🔀 ROUTER /home: extra=${extra != null ? 'NOT_NULL' : 'NULL'}');
-          if (extra != null) {
-            debugPrint('🔀 ROUTER /home: initialTab=${extra['initialTab']}');
-            debugPrint('🔀 ROUTER /home: selectedDmThreadId=${extra['selectedDmThreadId']}');
-            debugPrint('🔀 ROUTER /home: selectedDmThread=${extra['selectedDmThread'] != null ? 'NOT_NULL' : 'NULL'}');
-          }
 
           return MaterialPage(
             key: state.pageKey,

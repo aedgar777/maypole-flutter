@@ -619,6 +619,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
               child: MentionTextField(
                 controller: _messageController,
                 threadId: widget.threadId,
+                currentUserId: sender.firebaseID,
                 focusNode: _messageFocusNode,
                 maxLength: 1000,
                 onSubmitted: ScreenUtils.isWideScreenFromContext(context) ? sendMessage : null,

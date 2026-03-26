@@ -9,8 +9,6 @@ class UserDataPrefetchService {
   /// Prefetches all user-related data to warm up the cache
   /// Call this after successful login or when app starts with authenticated user
   Future<void> prefetchUserData(String userId) async {
-    debugPrint('🔄 Starting user data prefetch for user: $userId');
-    
     try {
       // Run prefetch operations in parallel for better performance
       await Future.wait([
@@ -18,7 +16,6 @@ class UserDataPrefetchService {
         _prefetchUserDocument(userId),
       ]);
       
-      debugPrint('✅ User data prefetch completed successfully');
     } catch (e) {
       debugPrint('⚠️ Error during user data prefetch: $e');
       // Don't throw - prefetch failures shouldn't block app usage
@@ -28,8 +25,6 @@ class UserDataPrefetchService {
   /// Prefetches DM threads and recent messages for the user
   Future<void> _prefetchDmThreads(String userId) async {
     try {
-      debugPrint('📦 Prefetching DM threads for user: $userId');
-      
       // Fetch DM threads - this will cache them
       final threadsSnapshot = await _firestore
           .collection('DMThreads')
@@ -38,7 +33,6 @@ class UserDataPrefetchService {
           .limit(20) // Prefetch top 20 most recent threads
           .get(const GetOptions(source: Source.server));
 
-      debugPrint('📦 Prefetched ${threadsSnapshot.docs.length} DM threads');
 
       // Prefetch recent messages for the top 5 most active threads
       final topThreads = threadsSnapshot.docs.take(5);
@@ -47,7 +41,6 @@ class UserDataPrefetchService {
         topThreads.map((threadDoc) => _prefetchDmMessages(threadDoc.id)),
       );
       
-      debugPrint('✅ DM threads prefetch completed');
     } catch (e) {
       debugPrint('⚠️ Error prefetching DM threads: $e');
     }
@@ -73,8 +66,6 @@ class UserDataPrefetchService {
   /// Prefetches user document which contains maypole thread list
   Future<void> _prefetchUserDocument(String userId) async {
     try {
-      debugPrint('📦 Prefetching user document for user: $userId');
-      
       final userDoc = await _firestore
           .collection('users')
           .doc(userId)
@@ -85,8 +76,6 @@ class UserDataPrefetchService {
         return;
       }
 
-      debugPrint('✅ User document prefetched successfully');
-      
       // Note: Maypole chat messages are intentionally NOT prefetched here
       // as they will use a different caching strategy
       
