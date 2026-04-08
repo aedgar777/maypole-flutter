@@ -1,11 +1,48 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../data/models/autocomplete_request.dart';
 import '../../data/models/autocomplete_response.dart';
 import '../../data/services/maypole_search_service_provider.dart';
 
+typedef SelectedPlaceState = ({Map<String, dynamic> placeDetails, LatLng location});
+
+class SelectedPlaceViewModel extends Notifier<SelectedPlaceState?> {
+  @override
+  SelectedPlaceState? build() => null;
+
+  void setSelectedPlace({
+    required Map<String, dynamic> placeDetails,
+    required LatLng location,
+  }) {
+    state = (placeDetails: placeDetails, location: location);
+  }
+
+  void clearSelectedPlace() {
+    state = null;
+  }
+}
+
+final selectedPlaceViewModelProvider =
+    NotifierProvider<SelectedPlaceViewModel, SelectedPlaceState?>(
+      SelectedPlaceViewModel.new,
+    );
+
 // Async Notifier
 class MaypoleSearchViewModel extends AsyncNotifier<List<PlacePrediction>> {
+  void setSelectedPlace({
+    required Map<String, dynamic> placeDetails,
+    required LatLng location,
+  }) {
+    ref.read(selectedPlaceViewModelProvider.notifier).setSelectedPlace(
+          placeDetails: placeDetails,
+          location: location,
+        );
+  }
+
+  void clearSelectedPlace() {
+    ref.read(selectedPlaceViewModelProvider.notifier).clearSelectedPlace();
+  }
+
   @override
   Future<List<PlacePrediction>> build() async {
     return [];
@@ -31,9 +68,6 @@ class MaypoleSearchViewModel extends AsyncNotifier<List<PlacePrediction>> {
       // Set state to data
       state = AsyncValue.data(response.predictions);
     } catch (e, st) {
-      debugPrint('💥 ViewModel: Error during search: $e');
-      debugPrint('💥 ViewModel: Stack trace: $st');
-      debugPrint('💥 ViewModel: Error type: ${e.runtimeType}');
       
       // Try to extract a meaningful error message
       String errorMessage;

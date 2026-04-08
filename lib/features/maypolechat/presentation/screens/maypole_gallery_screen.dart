@@ -220,7 +220,6 @@ class _AdaptiveNetworkImage extends StatelessWidget {
           return placeholder;
         },
         errorBuilder: (context, error, stackTrace) {
-          debugPrint('❌ Web image load error: $error for URL: $imageUrl');
           return errorWidget;
         },
       );
@@ -239,7 +238,6 @@ class _AdaptiveNetworkImage extends StatelessWidget {
       fadeOutDuration: const Duration(milliseconds: 100),
       placeholder: (context, url) => placeholder,
       errorWidget: (context, url, error) {
-        debugPrint('❌ Mobile image load error: $error for URL: $url');
         return errorWidget;
       },
     );

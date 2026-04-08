@@ -14,7 +14,6 @@ class AdConfig {
     try {
       return RemoteConfigService().adsEnabled;
     } catch (e) {
-      debugPrint('⚠️ Error reading adsEnabled from Remote Config: $e');
       return true; // Default to enabled if Remote Config fails
     }
   }

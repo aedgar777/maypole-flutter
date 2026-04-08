@@ -44,9 +44,7 @@ class MaypoleChatService {
         .map((snapshot) {
       // Log cache vs server source for monitoring
       if (snapshot.metadata.isFromCache) {
-        debugPrint('📦 Maypole messages loaded from cache for thread: $threadId');
       } else {
-        debugPrint('🌐 Maypole messages loaded from server for thread: $threadId');
       }
       
       final messages = snapshot.docs
@@ -86,17 +84,14 @@ class MaypoleChatService {
           .get(const GetOptions(source: Source.cache));
 
       if (cacheSnapshot.docs.isEmpty) {
-        debugPrint('📦 No cached messages found for thread: $threadId');
         return null;
       }
 
-      debugPrint('📦 Retrieved ${cacheSnapshot.docs.length} cached maypole messages for thread: $threadId');
       final messages = cacheSnapshot.docs
           .map((doc) => MaypoleMessage.fromMap(doc.data(), documentId: doc.id))
           .toList();
       return _filterBlockedMessages(messages);
     } catch (e) {
-      debugPrint('⚠️ Cache miss for maypole thread $threadId: $e');
       return null;
     }
   }
@@ -118,10 +113,8 @@ class MaypoleChatService {
       }
 
       final timestamp = (snapshot.docs.first.data()['timestamp'] as Timestamp).toDate();
-      debugPrint('🔍 Most recent message timestamp for $threadId: $timestamp');
       return timestamp;
     } catch (e) {
-      debugPrint('⚠️ Error checking recent message timestamp: $e');
       return null;
     }
   }
@@ -144,7 +137,6 @@ class MaypoleChatService {
     
     if (serverMostRecent == null) {
       // No messages on server, cache is fine
-      debugPrint('✅ No server messages, using cache');
       return CacheValidationResult.cacheValid;
     }
 
@@ -153,26 +145,22 @@ class MaypoleChatService {
     
     if (timeDiff.abs() <= 1) {
       // Cache is current (within 1 second)
-      debugPrint('✅ Cache is current for thread: $threadId');
       return CacheValidationResult.cacheValid;
     } else if (timeDiff > 0) {
       // Server has newer messages
       final newMessageCount = timeDiff ~/ 60; // Rough estimate
-      debugPrint('⚠️ Cache is stale: ~$newMessageCount new messages since last visit');
       
       // Check if cached messages would still be in the "top 100" window
       // If hundreds of new messages exist, cached messages might be beyond the limit
       return CacheValidationResult.cacheStale;
     } else {
       // Cache is somehow newer than server (shouldn't happen, but handle gracefully)
-      debugPrint('⚠️ Unusual: Cache appears newer than server');
       return CacheValidationResult.cacheValid;
     }
   }
 
   /// Fetches fresh messages from server
   Future<List<MaypoleMessage>> getFreshMessages(String threadId) async {
-    debugPrint('🌐 Fetching fresh messages from server for thread: $threadId');
     final snapshot = await _firestore
         .collection('maypoles')
         .doc(threadId)
@@ -405,7 +393,6 @@ class MaypoleChatService {
         await querySnapshot.docs.first.reference.delete();
       }
     } catch (e) {
-      debugPrint('Error deleting message: $e');
       rethrow;
     }
   }
@@ -438,9 +425,7 @@ class MaypoleChatService {
         'maypoleChatThreads': FieldValue.arrayUnion([maypoleMetaData.toMap()])
       });
       
-      debugPrint('✓ Added maypole $placeId to user $userId\'s list');
     } catch (e) {
-      debugPrint('❌ Error adding maypole to user list: $e');
       rethrow;
     }
   }
@@ -453,7 +438,6 @@ class MaypoleChatService {
       final userDoc = await userRef.get();
       
       if (!userDoc.exists) {
-        debugPrint('User $userId does not exist');
         return;
       }
       
@@ -469,9 +453,7 @@ class MaypoleChatService {
         'maypoleChatThreads': maypoleChatThreads,
       });
       
-      debugPrint('✓ Removed maypole thread $threadId from user $userId\'s list');
     } catch (e) {
-      debugPrint('❌ Error removing maypole thread from user: $e');
       rethrow;
     }
   }
@@ -504,7 +486,6 @@ class MaypoleChatService {
         });
       }
     } catch (e) {
-      debugPrint('Error sending tag notifications: $e');
       // Don't throw - we don't want to fail message sending if notifications fail
     }
   }
@@ -527,7 +508,6 @@ class MaypoleChatService {
       final messageDoc = await messageRef.get();
 
       if (!messageDoc.exists) {
-        debugPrint('Message $messageId does not exist');
         return;
       }
 
@@ -542,9 +522,7 @@ class MaypoleChatService {
       // Permanently delete the message from Firebase
       await messageRef.delete();
 
-      debugPrint('✓ Permanently deleted maypole message $messageId');
     } catch (e) {
-      debugPrint('❌ Error deleting maypole message: $e');
       rethrow;
     }
   }

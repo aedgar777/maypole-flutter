@@ -60,7 +60,6 @@ class UserSearchService {
 
       return matchingUsers;
     } catch (e) {
-      debugPrint('Error searching users in maypole: $e');
       return [];
     }
   }
@@ -87,7 +86,6 @@ class UserSearchService {
           .where((user) => user.username.toLowerCase().startsWith(queryLower))
           .toList();
     } catch (e) {
-      debugPrint('Error searching users: $e');
       return [];
     }
   }
@@ -101,7 +99,6 @@ class UserSearchService {
       }
       return null;
     } catch (e) {
-      debugPrint('Error getting user by ID: $e');
       return null;
     }
   }
@@ -120,7 +117,6 @@ class UserSearchService {
       }
       return null;
     } catch (e) {
-      debugPrint('Error getting user by username: $e');
       return null;
     }
   }

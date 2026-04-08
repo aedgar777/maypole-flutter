@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -22,7 +21,6 @@ class MaypoleSearchService {
 
   /// Fetch place details including coordinates and place type
   Future<Map<String, dynamic>?> getPlaceDetails(String placeId) async {
-    debugPrint('📍 Fetching Place Details for: $placeId');
     
     // Use Cloud Function for web to avoid CORS and referrer issues
     final String url;
@@ -50,22 +48,17 @@ class MaypoleSearchService {
         headers: headers,
       );
 
-      debugPrint('📡 Place Details Response Status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        debugPrint("✅ Place Details Response: ${response.body.substring(
-            0, response.body.length > 200 ? 200 : response.body.length)}...");
         
         // Parse the response to extract coordinates and place type
         final Map<String, dynamic> data = json.decode(response.body);
         
         return data;
       } else {
-        debugPrint('❌ Error Response: ${response.body}');
         return null;
       }
     } catch (e) {
-      debugPrint('💥 Exception during place details fetch: $e');
       return null;
     }
   }
@@ -78,7 +71,6 @@ class MaypoleSearchService {
     double radiusMeters = 150,
     int maxResultCount = 5,
   }) async {
-    debugPrint('🗺️ Reverse geocoding: lat=$latitude, lon=$longitude, radius=$radiusMeters, maxResults=$maxResultCount');
     
     // Use Cloud Function for web to avoid CORS and referrer issues
     final String url;
@@ -120,8 +112,6 @@ class MaypoleSearchService {
     }
 
     try {
-      debugPrint('📤 Reverse Geocode Request URL: $url');
-      debugPrint('📤 Reverse Geocode Request Body: $body');
 
       final response = await http.post(
         Uri.parse(url),
@@ -129,11 +119,8 @@ class MaypoleSearchService {
         body: body,
       );
 
-      debugPrint('📡 Reverse Geocode Response Status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        debugPrint("✅ Reverse Geocode Response: ${response.body.substring(
-            0, response.body.length > 200 ? 200 : response.body.length)}...");
         
         final Map<String, dynamic> data = json.decode(response.body);
         final places = data['places'] as List<dynamic>?;
@@ -174,12 +161,102 @@ class MaypoleSearchService {
           '_distanceMeters': bestDistance,
         };
       } else {
-        debugPrint('❌ Error Response: ${response.body}');
         return null;
       }
     } catch (e) {
-      debugPrint('💥 Exception during reverse geocode: $e');
       return null;
+    }
+  }
+
+  /// Search nearby places around a center point.
+  Future<List<Map<String, dynamic>>> searchNearbyPlaces(
+    double latitude,
+    double longitude, {
+    double radiusMeters = 300,
+    int maxResultCount = 20,
+  }) async {
+    final String url;
+    final Map<String, String> headers;
+    final String body;
+
+    if (kIsWeb) {
+      url = AppConfig.cloudFunctionsReverseGeocodeUrl;
+      headers = {
+        'Content-Type': 'application/json',
+      };
+      body = json.encode({
+        'latitude': latitude,
+        'longitude': longitude,
+        'radiusMeters': radiusMeters,
+        'maxResultCount': maxResultCount,
+      });
+    } else {
+      url = 'https://places.googleapis.com/v1/places:searchNearby';
+      headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': _apiKey,
+        'X-Goog-FieldMask':
+            'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types',
+      };
+      body = json.encode({
+        'locationRestriction': {
+          'circle': {
+            'center': {
+              'latitude': latitude,
+              'longitude': longitude,
+            },
+            'radius': radiusMeters,
+          }
+        },
+        'maxResultCount': maxResultCount,
+        'rankPreference': 'DISTANCE',
+      });
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: body,
+      );
+
+      if (response.statusCode != 200) {
+        return const [];
+      }
+
+      final Map<String, dynamic> data = json.decode(response.body);
+      final places = data['places'] as List<dynamic>?;
+      if (places == null || places.isEmpty) {
+        return const [];
+      }
+
+      final results = <Map<String, dynamic>>[];
+      for (final item in places) {
+        if (item is! Map<String, dynamic>) continue;
+        final location = item['location'] as Map<String, dynamic>?;
+        final placeLat = location?['latitude'] as double?;
+        final placeLon = location?['longitude'] as double?;
+        final placeId = item['id'] as String?;
+        if (placeLat == null || placeLon == null || placeId == null || placeId.isEmpty) {
+          continue;
+        }
+
+        final distance = Geolocator.distanceBetween(
+          latitude,
+          longitude,
+          placeLat,
+          placeLon,
+        );
+
+        results.add({
+          ...item,
+          '_distanceMeters': distance,
+        });
+      }
+
+      return results;
+    } catch (_) {
+      return const [];
     }
   }
 
@@ -213,12 +290,9 @@ class MaypoleSearchService {
       if (response.statusCode == 200) {
         return AutocompleteResponse.fromJson(response.body);
       } else {
-        debugPrint('❌ Error Response (${response.statusCode}): ${response.body}');
         throw Exception('Failed to load predictions (${response.statusCode}): ${response.body}');
       }
-    } catch (e, stackTrace) {
-      debugPrint('💥 Exception during autocomplete: $e');
-      debugPrint('💥 Stack trace: $stackTrace');
+    } catch (e) {
       rethrow;
     }
   }

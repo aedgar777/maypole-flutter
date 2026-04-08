@@ -16,17 +16,14 @@ class InterstitialAdManager {
   /// Load an interstitial ad
   Future<void> loadAd() async {
     if (!AdConfig.adsEnabled || !ref.read(adInitializedProvider)) {
-      debugPrint('📵 Interstitial ads are not available');
       return;
     }
 
     if (_isLoading) {
-      debugPrint('⚠️ Interstitial ad is already loading');
       return;
     }
 
     if (_interstitialAd != null) {
-      debugPrint('⚠️ Interstitial ad is already loaded');
       return;
     }
 
@@ -38,24 +35,20 @@ class InterstitialAdManager {
         request: const AdRequest(),
         adLoadCallback: InterstitialAdLoadCallback(
           onAdLoaded: (ad) {
-            debugPrint('✅ Interstitial ad loaded');
             _interstitialAd = ad;
             _isLoading = false;
 
             // Set up full screen content callback
             ad.fullScreenContentCallback = FullScreenContentCallback(
               onAdShowedFullScreenContent: (ad) {
-                debugPrint('📱 Interstitial ad showed full screen content');
               },
               onAdDismissedFullScreenContent: (ad) {
-                debugPrint('📱 Interstitial ad dismissed');
                 ad.dispose();
                 _interstitialAd = null;
                 // Preload the next ad
                 loadAd();
               },
               onAdFailedToShowFullScreenContent: (ad, error) {
-                debugPrint('❌ Interstitial ad failed to show: $error');
                 ad.dispose();
                 _interstitialAd = null;
                 _isLoading = false;
@@ -63,14 +56,12 @@ class InterstitialAdManager {
             );
           },
           onAdFailedToLoad: (error) {
-            debugPrint('❌ Interstitial ad failed to load: $error');
             _isLoading = false;
             _interstitialAd = null;
           },
         ),
       );
     } catch (e) {
-      debugPrint('❌ Error loading interstitial ad: $e');
       _isLoading = false;
     }
   }
@@ -79,7 +70,6 @@ class InterstitialAdManager {
   /// Returns true if the ad was shown, false otherwise
   Future<bool> showAd() async {
     if (_interstitialAd == null) {
-      debugPrint('⚠️ Interstitial ad is not ready');
       return false;
     }
 
@@ -87,7 +77,6 @@ class InterstitialAdManager {
       await _interstitialAd!.show();
       return true;
     } catch (e) {
-      debugPrint('❌ Error showing interstitial ad: $e');
       _interstitialAd?.dispose();
       _interstitialAd = null;
       return false;

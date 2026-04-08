@@ -18,9 +18,6 @@ import 'core/widgets/beta_access_guard.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  debugPrint('Background message received: ${message.messageId}');
-  debugPrint('Title: ${message.notification?.title}');
-  debugPrint('Body: ${message.notification?.body}');
 }
 
 Future<void> main() async {
@@ -34,7 +31,6 @@ Future<void> main() async {
   if (!kIsWeb) {
     try {
       await dotenv.load(fileName: ".env");
-      debugPrint('Loaded .env file (CI/CD environment)');
     } catch (e) {
       try {
         await dotenv.load(fileName: ".env.local");
@@ -52,7 +48,6 @@ Future<void> main() async {
   } catch (e) {
     // If Firebase is already initialized, continue silently
     if (e.toString().contains('duplicate-app')) {
-      debugPrint('Firebase already initialized, continuing...');
     } else {
       // Re-throw other errors
       rethrow;
@@ -67,7 +62,6 @@ Future<void> main() async {
       cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
     );
   } catch (e) {
-    debugPrint('⚠️ Warning: Could not enable Firestore persistence: $e');
     // Continue anyway - app will work without persistence
   }
 

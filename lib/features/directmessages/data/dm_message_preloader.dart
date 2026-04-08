@@ -41,7 +41,6 @@ class DmMessagePreloader {
         }
       });
     } catch (e) {
-      debugPrint('❌ Error starting DM preloader: $e');
     }
   }
   
@@ -61,7 +60,6 @@ class DmMessagePreloader {
         _messageCache[threadId] = messages;
       },
       onError: (error) {
-        debugPrint('❌ Error loading messages for thread $threadId: $error');
       },
     );
     
@@ -76,13 +74,11 @@ class DmMessagePreloader {
         _messageCache[threadId] = cachedMessages;
       }
     } catch (e) {
-      debugPrint('⚠️ Could not load cached messages for thread $threadId: $e');
     }
   }
   
   /// Unsubscribe from a thread
   void _unsubscribeFromThread(String threadId) {
-    debugPrint('📤 Unsubscribing from DM thread: $threadId');
     _subscriptions[threadId]?.cancel();
     _subscriptions.remove(threadId);
     _messageCache.remove(threadId);
@@ -101,7 +97,6 @@ class DmMessagePreloader {
   
   /// Clean up all subscriptions
   void dispose() {
-    debugPrint('🧹 Disposing DM preloader - cleaning up ${_subscriptions.length} subscriptions');
     for (final subscription in _subscriptions.values) {
       subscription.cancel();
     }

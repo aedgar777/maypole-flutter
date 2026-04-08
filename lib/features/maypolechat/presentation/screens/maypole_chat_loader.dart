@@ -43,7 +43,6 @@ class _MaypoleChatLoaderState extends ConsumerState<MaypoleChatLoader> {
 
   Future<void> _fetchPlaceDetails() async {
     try {
-      debugPrint('🔍 Fetching place details for threadId: ${widget.threadId}');
       
       // Step 1: Check Firestore for existing maypole metadata
       final maypoleDoc = await FirebaseFirestore.instance
@@ -53,7 +52,6 @@ class _MaypoleChatLoaderState extends ConsumerState<MaypoleChatLoader> {
       
       if (maypoleDoc.exists && maypoleDoc.data() != null) {
         final data = maypoleDoc.data()!;
-        debugPrint('✅ Found maypole in Firestore');
         
         setState(() {
           _placeName = data['name'] as String?;
@@ -71,11 +69,9 @@ class _MaypoleChatLoaderState extends ConsumerState<MaypoleChatLoader> {
       }
       
       // Step 2: Fetch from Google Places API
-      debugPrint('📍 Fetching from Google Places API...');
       final placeDetails = await _searchService.getPlaceDetails(widget.threadId);
       
       if (placeDetails != null) {
-        debugPrint('✅ Got place details from Google Places API');
         
         // Extract place information
         final displayName = placeDetails['displayName'];
@@ -113,7 +109,6 @@ class _MaypoleChatLoaderState extends ConsumerState<MaypoleChatLoader> {
             .doc(widget.threadId)
             .set(metaData.toMap(), SetOptions(merge: true));
         
-        debugPrint('✅ Updated Firestore with place details');
         
         setState(() {
           _placeName = placeName;
@@ -132,7 +127,6 @@ class _MaypoleChatLoaderState extends ConsumerState<MaypoleChatLoader> {
         });
       }
     } catch (e) {
-      debugPrint('❌ Error fetching place details: $e');
       setState(() {
         _placeName = 'Unknown Place';
         _error = e.toString();

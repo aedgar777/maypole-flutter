@@ -79,15 +79,9 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     _scrollController.addListener(_onScroll);
     _updateCurrentPosition();
 
-    debugPrint('🏠 MaypoleChatContent initialized:');
-    debugPrint('   Place: ${widget.maypoleName}');
-    debugPrint('   Coordinates: lat=${widget.latitude}, lon=${widget.longitude}');
-    debugPrint('   Place Type: ${widget.placeType}');
     if (widget.placeType != null) {
       final radius = PlaceGeofenceUtils.getRadiusForPlaceType(widget.placeType);
-      debugPrint('   Expected range: ${radius}m (${PlaceGeofenceUtils.getRadiusDescription(widget.placeType)})');
     } else {
-      debugPrint('   ⚠️ Place Type is NULL - will use default 1km range');
     }
 
     // Auto-focus if requested
@@ -101,7 +95,6 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
   Future<void> _updateCurrentPosition() async {
     final locationService = ref.read(locationServiceProvider);
     final position = await locationService.getCurrentPosition();
-    debugPrint('📍 Current position: lat=${position?.latitude}, lon=${position?.longitude}');
     if (mounted) {
       setState(() {
         _currentPosition = position;
@@ -112,29 +105,22 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
   /// Check if user is within proximity (100m) of the place
   /// This uses a fixed threshold for the "Show When at Location" feature
   bool get _isWithinProximity {
-    debugPrint('🔍 Checking proximity (100m threshold):');
-    debugPrint('   Place coords: lat=${widget.latitude}, lon=${widget.longitude}');
-    debugPrint('   Current position: lat=${_currentPosition?.latitude}, lon=${_currentPosition?.longitude}');
     
     // Check if user has enabled "Show When at Location" feature
     final locationState = ref.watch(locationSettingsViewModelProvider);
     final showWhenAtLocationEnabled = locationState.preferences.showWhenAtLocation;
     
-    debugPrint('   Show when at location enabled: $showWhenAtLocationEnabled');
     
     // If feature is not enabled, don't check proximity
     if (!showWhenAtLocationEnabled) {
-      debugPrint('   ⚠️ Show when at location disabled - not checking proximity');
       return false;
     }
     
     if (widget.latitude == null || widget.longitude == null) {
-      debugPrint('   ⚠️ No place coordinates - cannot check proximity');
       return false;
     }
     
     if (_currentPosition == null) {
-      debugPrint('   ❌ No current position - cannot check proximity');
       return false;
     }
     
@@ -145,7 +131,6 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       position: _currentPosition,
     );
     
-    debugPrint('   Result: ${isNearby == true ? "✅ Within proximity" : "❌ Not within proximity"}');
     return isNearby ?? false;
   }
 
@@ -153,19 +138,12 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
   /// Uses dynamic geofencing: countries (500km), states (200km), cities (15km), 
   /// neighborhoods (5km), establishments (500m), buildings (200m)
   bool get _isWithinPlaceRange {
-    debugPrint('🔍 Checking place range (type-based geofencing):');
-    debugPrint('   Place: ${widget.maypoleName}');
-    debugPrint('   Place type: ${widget.placeType}');
-    debugPrint('   Place coords: lat=${widget.latitude}, lon=${widget.longitude}');
-    debugPrint('   Current position: lat=${_currentPosition?.latitude}, lon=${_currentPosition?.longitude}');
     
     if (widget.latitude == null || widget.longitude == null) {
-      debugPrint('   ⚠️ No place coordinates - cannot check range');
       return false;
     }
     
     if (_currentPosition == null) {
-      debugPrint('   ❌ No current position - cannot check range');
       return false;
     }
     
@@ -184,10 +162,8 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
         placeLatitude: widget.latitude!,
         placeLongitude: widget.longitude!,
       );
-      debugPrint('   Distance: ${distance?.toStringAsFixed(0)}m / ${radius.toStringAsFixed(0)}m');
     }
     
-    debugPrint('   Result: ${isInRange == true ? "✅ Within range" : "❌ Not within range"}');
     return isInRange ?? false;
   }
   
@@ -810,7 +786,6 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
         subject: 'Join the conversation on Maypole',
       );
     } catch (e) {
-      debugPrint('Error sharing conversation: $e');
       if (mounted) {
         AppToast.showError(
           context,

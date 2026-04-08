@@ -105,7 +105,6 @@ class UserProfileScreen extends ConsumerWidget {
       if (existingThread != null) {
         // Use existing thread
         thread = existingThread;
-        debugPrint('🎯 USER_PROFILE: Using existing DM thread: ${thread.id}');
 
         // If this thread was locally deleted (hidden), unhide it so it reappears in DM list
         if (thread.hiddenFor.contains(currentUser.firebaseID)) {
@@ -113,7 +112,6 @@ class UserProfileScreen extends ConsumerWidget {
             thread.id,
             currentUser.firebaseID,
           );
-          debugPrint('🎯 USER_PROFILE: Unhid existing DM thread for current user');
         }
       } else {
         // Create ephemeral thread (not saved to Firestore yet)
@@ -129,17 +127,14 @@ class UserProfileScreen extends ConsumerWidget {
 
         // Add to ephemeral threads provider so it appears in the list
         ref.read(ephemeralDmThreadsProvider.notifier).addThread(thread);
-        debugPrint('🎯 USER_PROFILE: Created ephemeral DM thread: ${thread.id}');
       }
 
       if (!context.mounted) return;
 
-      debugPrint('🎯 USER_PROFILE: isWideScreen=${ScreenUtils.isWideScreenFromContext(context)}');
 
       // On web/wide screens, navigate to home with DM tab selected
       // and the thread highlighted in the list
       if (ScreenUtils.isWideScreenFromContext(context)) {
-        debugPrint('🎯 USER_PROFILE: Navigating to /home with extra data');
         // Navigate to home with DM tab (index 1) and thread pre-selected
         context.go('/home', extra: {
           'initialTab': 1, // DM tab
@@ -147,7 +142,6 @@ class UserProfileScreen extends ConsumerWidget {
           'selectedDmThread': thread,
         });
       } else {
-        debugPrint('🎯 USER_PROFILE: Navigating directly to /dm/${thread.id}');
         // On mobile, navigate directly to DM screen
         context.push('/dm/${thread.id}', extra: thread);
       }

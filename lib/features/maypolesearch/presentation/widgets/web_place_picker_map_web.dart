@@ -60,7 +60,6 @@ class _WebPlacePickerMapState extends State<WebPlacePickerMap> {
     final google = js_util.getProperty<dynamic>(html.window, 'google');
     final maps = google != null ? js_util.getProperty<dynamic>(google, 'maps') : null;
     if (maps == null) {
-      debugPrint('❌ Google Maps JS API not available on window.google.maps');
       return;
     }
 
@@ -71,7 +70,6 @@ class _WebPlacePickerMapState extends State<WebPlacePickerMap> {
     final addListener = event != null ? js_util.getProperty<dynamic>(event, 'addListener') : null;
 
     if (mapCtor == null || latLngCtor == null || markerCtor == null || addListener == null) {
-      debugPrint('❌ Missing required Google Maps JS constructors');
       return;
     }
 
@@ -93,7 +91,6 @@ class _WebPlacePickerMapState extends State<WebPlacePickerMap> {
         js_util.setProperty(styleOptions, 'styles', style);
         js_util.callMethod(_map, 'setOptions', [styleOptions]);
       } catch (e) {
-        debugPrint('⚠️ Failed to apply web map style: $e');
       }
     }
 

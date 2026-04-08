@@ -37,7 +37,6 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
     // Set a timeout - if ad doesn't load in 5 seconds, hide it
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted && !_isLoaded && !_failedToLoad) {
-        debugPrint('⏰ Banner ad timed out after 5 seconds');
         setState(() {
           _failedToLoad = true;
         });
@@ -64,7 +63,6 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
       adSize: widget.adSize,
       listener: BannerAdListener(
         onAdLoaded: (ad) {
-          debugPrint('✅ Banner ad loaded');
           if (mounted) {
             setState(() {
               _isLoaded = true;
@@ -73,7 +71,6 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
           }
         },
         onAdFailedToLoad: (ad, error) {
-          debugPrint('❌ Banner ad failed to load: $error');
           ad.dispose();
           if (mounted) {
             setState(() {
@@ -83,10 +80,8 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
           }
         },
         onAdOpened: (ad) {
-          debugPrint('📱 Banner ad opened');
         },
         onAdClosed: (ad) {
-          debugPrint('📱 Banner ad closed');
         },
       ),
     )..load();
@@ -174,7 +169,6 @@ class _ListBannerAdWidgetState extends ConsumerState<ListBannerAdWidget> {
     // Set a timeout - if ad doesn't load in 5 seconds, hide it
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted && !_isLoaded && !_failedToLoad) {
-        debugPrint('⏰ List banner ad timed out after 5 seconds');
         setState(() {
           _failedToLoad = true;
         });
@@ -200,7 +194,6 @@ class _ListBannerAdWidgetState extends ConsumerState<ListBannerAdWidget> {
     );
 
     if (size == null) {
-      debugPrint('❌ Unable to get adaptive banner size');
       if (mounted) {
         setState(() {
           _failedToLoad = true;
@@ -215,7 +208,6 @@ class _ListBannerAdWidgetState extends ConsumerState<ListBannerAdWidget> {
       adSize: size,
       listener: BannerAdListener(
         onAdLoaded: (ad) {
-          debugPrint('✅ List banner ad loaded');
           if (mounted) {
             setState(() {
               _isLoaded = true;
@@ -224,7 +216,6 @@ class _ListBannerAdWidgetState extends ConsumerState<ListBannerAdWidget> {
           }
         },
         onAdFailedToLoad: (ad, error) {
-          debugPrint('❌ List banner ad failed to load: $error');
           ad.dispose();
           if (mounted) {
             setState(() {

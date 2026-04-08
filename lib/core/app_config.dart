@@ -18,7 +18,6 @@ class AppConfig {
     try {
       return dotenv.env['ENVIRONMENT'] ?? 'dev';
     } catch (e) {
-      debugPrint('⚠️ Error accessing dotenv for ENVIRONMENT: $e');
       return 'dev';
     }
   }
@@ -236,7 +235,6 @@ class AppConfig {
         return dotenv.env['GOOGLE_PLACES_DEV_API_KEY'] ?? '';
       }
     } catch (e) {
-      debugPrint('⚠️ Error accessing dotenv for Google Places API key: $e');
       return '';
     }
   }
@@ -325,7 +323,6 @@ class AppConfig {
         return dotenv.env['APP_URL_DEV'] ?? 'https://maypole-flutter-dev.web.app';
       }
     } catch (e) {
-      debugPrint('⚠️ Error accessing dotenv for appUrl: $e');
       return 'https://maypole.app';
     }
   }

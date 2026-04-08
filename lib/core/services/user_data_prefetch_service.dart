@@ -17,7 +17,6 @@ class UserDataPrefetchService {
       ]);
       
     } catch (e) {
-      debugPrint('⚠️ Error during user data prefetch: $e');
       // Don't throw - prefetch failures shouldn't block app usage
     }
   }
@@ -42,7 +41,6 @@ class UserDataPrefetchService {
       );
       
     } catch (e) {
-      debugPrint('⚠️ Error prefetching DM threads: $e');
     }
   }
 
@@ -58,7 +56,6 @@ class UserDataPrefetchService {
           .get(const GetOptions(source: Source.server));
 
     } catch (e) {
-      debugPrint('⚠️ Error prefetching messages for thread $threadId: $e');
     }
   }
 
@@ -71,7 +68,6 @@ class UserDataPrefetchService {
           .get(const GetOptions(source: Source.server));
 
       if (!userDoc.exists) {
-        debugPrint('⚠️ User document does not exist: $userId');
         return;
       }
 
@@ -79,18 +75,14 @@ class UserDataPrefetchService {
       // as they will use a different caching strategy
       
     } catch (e) {
-      debugPrint('⚠️ Error prefetching user document: $e');
     }
   }
 
   /// Clears all cached data (useful for logout)
   Future<void> clearCache() async {
     try {
-      debugPrint('🧹 Clearing Firestore cache...');
       await _firestore.clearPersistence();
-      debugPrint('✅ Firestore cache cleared');
     } catch (e) {
-      debugPrint('⚠️ Error clearing cache: $e');
     }
   }
 
@@ -98,7 +90,6 @@ class UserDataPrefetchService {
   /// Useful when opening a DM conversation
   Future<void> prefetchDmThread(String threadId) async {
     try {
-      debugPrint('📦 Prefetching specific DM thread: $threadId');
       
       // Prefetch thread metadata
       await _firestore
@@ -109,9 +100,7 @@ class UserDataPrefetchService {
       // Prefetch messages
       await _prefetchDmMessages(threadId);
       
-      debugPrint('✅ DM thread $threadId prefetched');
     } catch (e) {
-      debugPrint('⚠️ Error prefetching DM thread $threadId: $e');
     }
   }
 }

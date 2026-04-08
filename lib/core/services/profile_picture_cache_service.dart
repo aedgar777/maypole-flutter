@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Service that caches user profile pictures to avoid redundant Firestore reads
@@ -14,7 +13,6 @@ class ProfilePictureCacheService {
   /// Returns empty string if user not found or has no profile picture
   Future<String> getProfilePictureUrl(String userId) async {
     if (userId.isEmpty) {
-      debugPrint('⚠️ getProfilePictureUrl called with empty userId');
       return '';
     }
     
@@ -33,19 +31,14 @@ class ProfilePictureCacheService {
     //   
     //   if (userDoc.exists) {
     //     final data = userDoc.data();
-    //     debugPrint('📦 User document data from cache: ${data?.keys.toList()}');
     //     final profilePictureUrl = data?['profilePictureUrl'] as String? ?? '';
-    //     debugPrint('📦 profilePictureUrl field value: "${profilePictureUrl}"');
-    //     debugPrint('📦 Loaded from Firestore cache for $userId: ${profilePictureUrl.isEmpty ? "EMPTY" : profilePictureUrl.substring(0, 50)}...');
     //     if (profilePictureUrl.isNotEmpty) {
     //       _batchCache[userId] = profilePictureUrl;
     //       return profilePictureUrl;
     //     }
     //   } else {
-    //     debugPrint('⚠️ User document does not exist in cache for $userId');
     //   }
     // } catch (e) {
-    //   debugPrint('⚠️ Cache miss for user $userId, fetching from server: $e');
     // }
     
     // Cache miss or empty profile picture, fetch from server
@@ -60,12 +53,12 @@ class ProfilePictureCacheService {
         final profilePictureUrl = data?['profilePictureUrl'] as String? ?? '';
         _batchCache[userId] = profilePictureUrl;
         return profilePictureUrl;
-      } else {
-        }
-    } catch (e) {
-      debugPrint('❌ Error fetching profile picture for user $userId: $e');
+      }
+    } catch (_) {
+      // Fail closed for profile picture lookup and use empty URL fallback.
+      return '';
     }
-    
+
     return '';
   }
   
@@ -103,22 +96,24 @@ class ProfilePictureCacheService {
         final batchUserIds = uncachedUserIds.skip(i).take(batchSize).toList();
         
         // Try cache first
+        QuerySnapshot<Map<String, dynamic>>? cacheSnapshot;
         try {
-          final cacheSnapshot = await _firestore
+          cacheSnapshot = await _firestore
               .collection('users')
               .where(FieldPath.documentId, whereIn: batchUserIds)
               .get(const GetOptions(source: Source.cache));
-          
-          if (cacheSnapshot.docs.isNotEmpty) {
-            for (final doc in cacheSnapshot.docs) {
-              final data = doc.data();
-              final profilePictureUrl = data['profilePictureUrl'] as String? ?? '';
-              results[doc.id] = profilePictureUrl;
-              _batchCache[doc.id] = profilePictureUrl;
-            }
+        } catch (_) {
+          // Ignore cache read errors and continue with server fetch.
+          cacheSnapshot = null;
+        }
+
+        if (cacheSnapshot != null && cacheSnapshot.docs.isNotEmpty) {
+          for (final doc in cacheSnapshot.docs) {
+            final data = doc.data();
+            final profilePictureUrl = data['profilePictureUrl'] as String? ?? '';
+            results[doc.id] = profilePictureUrl;
+            _batchCache[doc.id] = profilePictureUrl;
           }
-        } catch (e) {
-          debugPrint('⚠️ Cache miss for batch, fetching from server');
         }
         
         // Fetch any remaining from server
@@ -148,7 +143,6 @@ class ProfilePictureCacheService {
       
       return results;
     } catch (e) {
-      debugPrint('❌ Error in batch fetch: $e');
       // Return whatever we got
       return results;
     }
@@ -162,7 +156,6 @@ class ProfilePictureCacheService {
     // Run in background, don't await
     batchGetProfilePictureUrls(userIds).then((_) {
     }).catchError((e) {
-      debugPrint('⚠️ Prefetch failed: $e');
     });
   }
   
@@ -170,7 +163,6 @@ class ProfilePictureCacheService {
   /// Useful when user logs out or switches accounts
   void clearCache() {
     _batchCache.clear();
-    debugPrint('🗑️ Profile picture cache cleared');
   }
 }
 

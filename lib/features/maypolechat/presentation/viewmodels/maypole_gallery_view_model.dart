@@ -30,7 +30,6 @@ class MaypoleGalleryViewModel extends AsyncNotifier<List<MaypoleImage>> {
     if (cachedImages != null && cachedImages.isNotEmpty) {
       _allLoadedImages = cachedImages;
       _hasMoreImages = cachedImages.length >= 50;
-      debugPrint('📦 Loaded ${cachedImages.length} cached images for gallery');
     }
 
     // Initialize stream for real-time updates
@@ -47,13 +46,11 @@ class MaypoleGalleryViewModel extends AsyncNotifier<List<MaypoleImage>> {
     // Set up the stream listener
     _imagesSubscription = _imageService.getImages(_maypoleId).listen(
       (images) {
-        debugPrint('📸 Gallery stream received ${images.length} images');
         _allLoadedImages = images;
         _hasMoreImages = images.length >= 50; // If we got 50, there might be more
         state = AsyncValue.data(images);
       },
       onError: (error, stackTrace) {
-        debugPrint('❌ Gallery stream error: $error');
         state = AsyncValue.error(error, stackTrace);
       },
     );
@@ -69,19 +66,16 @@ class MaypoleGalleryViewModel extends AsyncNotifier<List<MaypoleImage>> {
     _isLoadingMore = true;
     try {
       final lastImage = currentImages.last;
-      debugPrint('📸 Loading more images after: ${lastImage.uploadedAt}');
 
       final newImages = await _imageService.getMoreImages(_maypoleId, lastImage);
 
       if (newImages.isEmpty) {
         _hasMoreImages = false;
-        debugPrint('📸 No more images to load');
       } else {
         // Merge new images with existing ones
         final allImages = [...currentImages, ...newImages];
         _allLoadedImages = allImages;
         state = AsyncValue.data(allImages);
-        debugPrint('📸 Loaded ${newImages.length} more images (total: ${allImages.length})');
         
         // If we got fewer than 50, we've probably reached the end
         if (newImages.length < 50) {
@@ -89,7 +83,6 @@ class MaypoleGalleryViewModel extends AsyncNotifier<List<MaypoleImage>> {
         }
       }
     } catch (e, st) {
-      debugPrint('❌ Error loading more images: $e');
       // Don't update state on error, just log it
     } finally {
       _isLoadingMore = false;

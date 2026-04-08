@@ -42,10 +42,6 @@ class AuthService {
           
           // Wait a moment to allow registration to complete
           // If the user was just created, the Firestore document should appear within 2-3 seconds
-          debugPrint('⚠️ Firebase Auth user exists but Firestore document missing for ${firebaseUser.uid}');
-          debugPrint('   Display name: ${firebaseUser.displayName}');
-          debugPrint('   Email: ${firebaseUser.email}');
-          debugPrint('⏳ Waiting 3 seconds for Firestore document to be created (may be registration in progress)...');
           
           await Future.delayed(const Duration(seconds: 3));
           
@@ -56,7 +52,6 @@ class AuthService {
               .get();
           
           if (recheckSnapshot.exists) {
-            debugPrint('✅ Firestore document appeared - registration completed successfully');
             final userData = recheckSnapshot.data() as Map<String, dynamic>;
             final user = DomainUser.fromMap(userData);
             _session.currentUser = user;
@@ -64,8 +59,6 @@ class AuthService {
           }
           
           // Document still doesn't exist after waiting - sign out the user
-          debugPrint('❌ Firestore document still missing after 3 seconds');
-          debugPrint('🔄 Signing out user due to missing Firestore document');
           await signOut();
           
           _session.currentUser = null;
@@ -78,9 +71,6 @@ class AuthService {
   Future<bool> isUsernameAvailable(String username) async {
     try {
       final normalizedUsername = username.toLowerCase();
-      debugPrint('=== USERNAME CHECK START ===');
-      debugPrint('Original username: $username');
-      debugPrint('Normalized username: $normalizedUsername');
 
       // Check the usernames collection instead of querying users
       // Use GetOptions to force fetch from server and avoid cache issues
@@ -89,30 +79,22 @@ class AuthService {
           .doc(normalizedUsername)
           .get(const GetOptions(source: Source.server));
 
-      debugPrint('Username document exists: ${result.exists}');
       
       // If username document exists, check if it's orphaned
       if (result.exists) {
         final data = result.data() as Map<String, dynamic>?;
         final ownerId = data?['owner'] as String?;
         
-        debugPrint('Username document data: $data');
-        debugPrint('Owner ID from document: $ownerId');
         
         if (ownerId != null) {
           // Check if the owner user still exists
-          debugPrint('Checking if owner user exists...');
           final userDoc = await _firestore
               .collection('users')
               .doc(ownerId)
               .get(const GetOptions(source: Source.server));
           
-          debugPrint('Owner user exists: ${userDoc.exists}');
           
           if (!userDoc.exists) {
-            debugPrint('🧹 ORPHANED USERNAME DETECTED!');
-            debugPrint('Owner $ownerId does not exist in users collection');
-            debugPrint('Deleting orphaned username document...');
             
             // Clean up orphaned username
             await _firestore
@@ -120,17 +102,11 @@ class AuthService {
                 .doc(normalizedUsername)
                 .delete();
             
-            debugPrint('✅ Orphaned username cleaned up successfully');
-            debugPrint('=== USERNAME CHECK END - AVAILABLE (after cleanup) ===');
             return true; // Username is now available
           } else {
-            debugPrint('❌ Username is legitimately taken by existing user $ownerId');
-            debugPrint('=== USERNAME CHECK END - NOT AVAILABLE ===');
             return false;
           }
         } else {
-          debugPrint('⚠️ Username document has no owner field - malformed!');
-          debugPrint('Deleting malformed username document...');
           
           // Clean up malformed username document
           await _firestore
@@ -138,23 +114,14 @@ class AuthService {
               .doc(normalizedUsername)
               .delete();
           
-          debugPrint('✅ Malformed username document cleaned up');
-          debugPrint('=== USERNAME CHECK END - AVAILABLE (after cleanup) ===');
           return true;
         }
       }
       
-      debugPrint('✅ Username document does not exist - available');
-      debugPrint('=== USERNAME CHECK END - AVAILABLE ===');
       return true; // Username is available if document doesn't exist
     } catch (e) {
-      debugPrint('❌ USERNAME CHECK FAILED WITH ERROR: $e');
-      debugPrint('Error type: ${e.runtimeType}');
       if (e is FirebaseException) {
-        debugPrint('Firebase error code: ${e.code}');
-        debugPrint('Firebase error message: ${e.message}');
       }
-      debugPrint('=== USERNAME CHECK END - ERROR ===');
       // Re-throw the error so it's clear there's a problem
       // Don't silently return false as that makes it seem like username is taken
       rethrow;
@@ -184,7 +151,6 @@ class AuthService {
       // Set display name on Firebase Auth user profile
       // This enables the %DISPLAY_NAME% variable in email templates
       await result.user!.updateDisplayName(username);
-      debugPrint('✓ Set display name to: $username');
 
       // Reload the user to ensure authentication token is fresh
       // This prevents "Caller does not have permission" errors in Firestore
@@ -196,7 +162,6 @@ class AuthService {
       
       // Get fresh ID token to ensure Firestore has latest auth state
       await freshUser.getIdToken(true);
-      debugPrint('✓ Refreshed authentication token');
 
       // Create domain user
       final DomainUser user = DomainUser(
@@ -224,16 +189,10 @@ class AuthService {
       });
 
       // Send email verification immediately after registration
-      debugPrint('📧 Attempting to send verification email...');
       try {
         await sendEmailVerification();
-        debugPrint('✅ Verification email sent successfully');
       } catch (e) {
-        debugPrint('❌ Failed to send verification email: $e');
-        debugPrint('   Error type: ${e.runtimeType}');
         if (e is FirebaseAuthException) {
-          debugPrint('   Firebase error code: ${e.code}');
-          debugPrint('   Firebase error message: ${e.message}');
         }
         // Don't fail registration if email sending fails
       }
@@ -241,14 +200,11 @@ class AuthService {
       // Setup FCM for new user
       try {
         await _fcmService.setupForUser(freshUser.uid);
-        debugPrint('✓ FCM initialized for new user');
       } catch (e) {
-        debugPrint('⚠️ FCM setup failed (non-critical): $e');
       }
 
       // Prefetch user data in background (new users won't have much data yet)
       _prefetchService.prefetchUserData(freshUser.uid).catchError((e) {
-        debugPrint('⚠️ Prefetch failed (non-critical): $e');
       });
 
       return freshUser.uid;
@@ -276,15 +232,12 @@ class AuthService {
         // Setup FCM for returning user
         try {
           await _fcmService.setupForUser(result.user!.uid);
-          debugPrint('✓ FCM initialized for returning user');
         } catch (e) {
-          debugPrint('⚠️ FCM setup failed (non-critical): $e');
         }
 
         // Prefetch user data in background to warm up cache
         // This runs asynchronously and won't block the login flow
         _prefetchService.prefetchUserData(result.user!.uid).catchError((e) {
-          debugPrint('⚠️ Prefetch failed (non-critical): $e');
         });
       }
 
@@ -314,9 +267,7 @@ class AuthService {
       if (userId != null) {
         try {
           await _fcmService.cleanupForUser(userId);
-          debugPrint('✓ FCM cleaned up for user');
         } catch (e) {
-          debugPrint('⚠️ FCM cleanup failed (non-critical): $e');
         }
       }
       
@@ -327,9 +278,7 @@ class AuthService {
       // This ensures next user login starts with fresh data
       try {
         await _prefetchService.clearCache();
-        debugPrint('✓ Cache cleared on logout');
       } catch (e) {
-        debugPrint('⚠️ Cache clear failed (non-critical): $e');
       }
     } catch (e) {
       rethrow;
@@ -346,7 +295,6 @@ class AuthService {
       // Update session
       _session.currentUser = user;
     } catch (e) {
-      debugPrint('Error updating user data: $e');
       rethrow;
     }
   }
@@ -374,14 +322,11 @@ class AuthService {
         'deletionRequested': true,
         'deletionRequestedAt': FieldValue.serverTimestamp(),
       });
-      debugPrint('✓ Marked account for deletion');
 
       // Cleanup FCM tokens
       try {
         await _fcmService.cleanupForUser(uid);
-        debugPrint('✓ FCM cleaned up');
       } catch (e) {
-        debugPrint('⚠️ FCM cleanup failed (non-critical): $e');
       }
 
       // Delete notifications subcollection
@@ -397,9 +342,7 @@ class AuthService {
           batch.delete(doc.reference);
         }
         await batch.commit();
-        debugPrint('✓ Deleted ${notificationsSnapshot.docs.length} notifications');
       } catch (e) {
-        debugPrint('⚠️ Error deleting notifications: $e');
       }
 
       // Delete username reservation
@@ -408,17 +351,13 @@ class AuthService {
             .collection('usernames')
             .doc(username.toLowerCase())
             .delete();
-        debugPrint('✓ Deleted username reservation for $username');
       } catch (e) {
-        debugPrint('⚠️ Error deleting username: $e');
       }
 
       // Delete user document
       try {
         await _firestore.collection('users').doc(uid).delete();
-        debugPrint('✓ Deleted user document');
       } catch (e) {
-        debugPrint('⚠️ Error deleting user document: $e');
       }
 
       // Finally, delete Firebase Auth account
@@ -426,12 +365,10 @@ class AuthService {
       // will remain and the cloud function can complete the deletion
       try {
         await user.delete();
-        debugPrint('✓ Deleted Firebase Auth account');
       } on FirebaseAuthException catch (e) {
         if (e.code == 'requires-recent-login') {
           // The Firestore data is already marked for deletion
           // The cloud function will complete the auth deletion
-          debugPrint('❌ Re-authentication required for auth deletion');
           
           // Sign out the user since their data is marked for deletion
           await signOut();
@@ -447,7 +384,6 @@ class AuthService {
       // Clear session
       _session.currentUser = null;
       
-      debugPrint('✅ Account deletion completed successfully');
     } on FirebaseAuthException catch (e) {
       // Rethrow auth exceptions
       rethrow;
@@ -489,7 +425,6 @@ class AuthService {
       );
       
       await user.sendEmailVerification(actionCodeSettings);
-      debugPrint('✓ Verification email sent to ${user.email} with redirect to https://$projectId.web.app/email-verified');
     } on FirebaseAuthException {
       rethrow;
     } catch (e) {
@@ -509,10 +444,8 @@ class AuthService {
       if (reloadedUser != null && reloadedUser.emailVerified) {
         // Update Firestore with verification status
         await _updateEmailVerificationStatus(true);
-        debugPrint('✓ Email verification status updated in Firestore');
       }
     } catch (e) {
-      debugPrint('⚠️ Error checking email verification status: $e');
     }
   }
 
@@ -540,7 +473,6 @@ class AuthService {
         );
       }
     } catch (e) {
-      debugPrint('Error updating email verification status: $e');
       rethrow;
     }
   }

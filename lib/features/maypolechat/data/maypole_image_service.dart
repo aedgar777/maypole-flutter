@@ -49,7 +49,6 @@ class MaypoleImageService {
     await _checkRateLimit(maypoleId, userId);
 
     try {
-      debugPrint('Starting maypole image upload for maypole: $maypoleId');
 
       // Get file extension from path or mimeType
       String extension;
@@ -116,7 +115,6 @@ class MaypoleImageService {
       // Get download URL
       final downloadUrl = await snapshot.ref.getDownloadURL();
 
-      debugPrint('Image uploaded successfully. URL: $downloadUrl');
 
       // Create MaypoleImage object
       final imageId = _firestore
@@ -215,11 +213,9 @@ class MaypoleImageService {
       // Commit all changes atomically
       await batch.commit();
 
-      debugPrint('Image metadata and notification saved to Firestore');
 
       return maypoleImage;
     } catch (e) {
-      debugPrint('Failed to upload maypole image: $e');
       rethrow;
     }
   }
@@ -229,7 +225,6 @@ class MaypoleImageService {
     // TODO: Rate limiting temporarily disabled - index mismatch issue
     // The composite index for sorting doesn't work for the rate limit query
     // We'll need to either: create a separate index, or count client-side
-    debugPrint('⚠️ Rate limiting temporarily disabled - index configuration issue');
     return;
     
     /* Original code - needs specific index
@@ -258,7 +253,6 @@ class MaypoleImageService {
   /// 
   /// Returns a stream of MaypoleImage objects
   Stream<List<MaypoleImage>> getImages(String maypoleId, {int? limit}) {
-    debugPrint('📸 Setting up images stream for maypole: $maypoleId');
     
     return _firestore
         .collection('maypoles')
@@ -268,7 +262,6 @@ class MaypoleImageService {
         .limit(limit ?? _imageLimit)
         .snapshots()
         .map((snapshot) {
-      debugPrint('📸 Stream snapshot received: ${snapshot.docs.length} images');
       return snapshot.docs
           .map((doc) => MaypoleImage.fromMap(doc.data(), documentId: doc.id))
           .toList();
@@ -343,16 +336,12 @@ class MaypoleImageService {
         try {
           final ref = _storage.refFromURL(storageUrl);
           await ref.delete();
-          debugPrint('Deleted image from storage: $storageUrl');
         } catch (e) {
-          debugPrint('Failed to delete image from storage (may not exist): $e');
           // Don't throw - Firestore deletion succeeded, which is most important
         }
       }
 
-      debugPrint('Image deleted successfully');
     } catch (e) {
-      debugPrint('Failed to delete image: $e');
       rethrow;
     }
   }
@@ -369,16 +358,13 @@ class MaypoleImageService {
           .get(const GetOptions(source: Source.cache));
 
       if (cacheSnapshot.docs.isEmpty) {
-        debugPrint('📦 No cached images found for maypole: $maypoleId');
         return null;
       }
 
-      debugPrint('📦 Retrieved ${cacheSnapshot.docs.length} cached images for maypole: $maypoleId');
       return cacheSnapshot.docs
           .map((doc) => MaypoleImage.fromMap(doc.data(), documentId: doc.id))
           .toList();
     } catch (e) {
-      debugPrint('⚠️ Cache miss for maypole images $maypoleId: $e');
       return null;
     }
   }

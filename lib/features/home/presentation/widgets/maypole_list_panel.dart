@@ -135,7 +135,6 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
           }
         });
       }
-    } else {
     }
   }
   
@@ -213,7 +212,6 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   _performScroll(threadIndex!);
                 });
-              } else {
               }
             }
           });
@@ -488,8 +486,6 @@ class _MaypoleListPanelState extends ConsumerState<MaypoleListPanel> with Single
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) {
-        debugPrint('❌ DM List Error: $error');
-        debugPrint('Stack trace: $stack');
         
         // Check if this is a Firestore index error
         final errorMsg = error.toString();

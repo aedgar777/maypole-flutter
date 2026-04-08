@@ -22,19 +22,16 @@ class FCMService {
         sound: true,
       );
 
-      debugPrint('FCM permission granted: ${settings.authorizationStatus}');
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional) {
         // Get FCM token
         final token = await _messaging.getToken();
-        debugPrint('FCM Token: $token');
         return token;
       }
 
       return null;
     } catch (e) {
-      debugPrint('Error initializing FCM: $e');
       return null;
     }
   }
@@ -47,9 +44,7 @@ class FCMService {
         'fcmTokens': FieldValue.arrayUnion([token]),
         'lastFcmTokenUpdate': FieldValue.serverTimestamp(),
       });
-      debugPrint('✓ Saved FCM token for user: $userId');
     } catch (e) {
-      debugPrint('❌ Error saving FCM token: $e');
       rethrow;
     }
   }
@@ -61,9 +56,7 @@ class FCMService {
       await _firestore.collection('users').doc(userId).update({
         'fcmTokens': FieldValue.arrayRemove([token]),
       });
-      debugPrint('✓ Removed FCM token for user: $userId');
     } catch (e) {
-      debugPrint('❌ Error removing FCM token: $e');
       rethrow;
     }
   }
@@ -88,7 +81,6 @@ class FCMService {
         });
       }
     } catch (e) {
-      debugPrint('Error setting up FCM for user: $e');
     }
   }
 
@@ -101,7 +93,6 @@ class FCMService {
         await removeFCMToken(userId, token);
       }
     } catch (e) {
-      debugPrint('Error cleaning up FCM for user: $e');
     }
   }
 
@@ -129,9 +120,7 @@ class FCMService {
       await _firestore.collection('DMThreads').doc(threadId).update({
         'unreadBy.$userId': false,
       });
-      debugPrint('✓ Marked DM thread $threadId as read from notification for user $userId');
     } catch (e) {
-      debugPrint('❌ Error marking DM thread as read from notification: $e');
     }
   }
 }

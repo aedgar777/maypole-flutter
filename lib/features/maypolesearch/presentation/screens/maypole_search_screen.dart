@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
@@ -10,114 +9,14 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/services/location_provider.dart';
-import 'package:maypole/core/utils/place_geofence_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:maypole/core/ads/widgets/web_ad_widget.dart';
-import '../widgets/web_place_picker_map.dart';
 import 'package:maypole/core/ads/ad_config.dart';
 import '../../data/models/autocomplete_response.dart';
 import '../../data/services/maypole_search_service_provider.dart';
 import '../../maypole_search_providers.dart';
-
-// Dark map style using app theme colors
-const String _darkMapStyle = '''
-[
-  {
-    "elementType": "geometry",
-    "stylers": [{"color": "#1A1A2E"}]
-  },
-  {
-    "elementType": "labels.text.fill",
-    "stylers": [{"color": "#8a8a8a"}]
-  },
-  {
-    "elementType": "labels.text.stroke",
-    "stylers": [{"color": "#1A1A2E"}]
-  },
-  {
-    "featureType": "administrative",
-    "elementType": "geometry",
-    "stylers": [{"color": "#2D2D44"}]
-  },
-  {
-    "featureType": "poi",
-    "elementType": "geometry",
-    "stylers": [{"color": "#2D2D44"}]
-  },
-  {
-    "featureType": "poi",
-    "elementType": "labels.text.fill",
-    "stylers": [{"color": "#6CB4E8"}]
-  },
-  {
-    "featureType": "poi.park",
-    "elementType": "geometry",
-    "stylers": [{"color": "#263c3f"}]
-  },
-  {
-    "featureType": "poi.park",
-    "elementType": "labels.text.fill",
-    "stylers": [{"color": "#6b9a76"}]
-  },
-  {
-    "featureType": "road",
-    "elementType": "geometry",
-    "stylers": [{"color": "#2D2D44"}]
-  },
-  {
-    "featureType": "road",
-    "elementType": "geometry.stroke",
-    "stylers": [{"color": "#212a37"}]
-  },
-  {
-    "featureType": "road",
-    "elementType": "labels.text.fill",
-    "stylers": [{"color": "#9ca5b3"}]
-  },
-  {
-    "featureType": "road.highway",
-    "elementType": "geometry",
-    "stylers": [{"color": "#746855"}]
-  },
-  {
-    "featureType": "road.highway",
-    "elementType": "geometry.stroke",
-    "stylers": [{"color": "#1f2835"}]
-  },
-  {
-    "featureType": "road.highway",
-    "elementType": "labels.text.fill",
-    "stylers": [{"color": "#6CB4E8"}]
-  },
-  {
-    "featureType": "transit",
-    "elementType": "geometry",
-    "stylers": [{"color": "#2f3948"}]
-  },
-  {
-    "featureType": "transit.station",
-    "elementType": "labels.text.fill",
-    "stylers": [{"color": "#6CB4E8"}]
-  },
-  {
-    "featureType": "water",
-    "elementType": "geometry",
-    "stylers": [{"color": "#17263c"}]
-  },
-  {
-    "featureType": "water",
-    "elementType": "labels.text.fill",
-    "stylers": [{"color": "#515c6d"}]
-  },
-  {
-    "featureType": "water",
-    "elementType": "labels.text.stroke",
-    "stylers": [{"color": "#17263c"}]
-  }
-]
-''';
 
 class MaypoleSearchScreen extends ConsumerStatefulWidget {
   final ValueChanged<PlacePrediction>? onPlaceSelected;
@@ -135,23 +34,9 @@ class MaypoleSearchScreen extends ConsumerStatefulWidget {
   ConsumerState<MaypoleSearchScreen> createState() => _MaypoleSearchScreenState();
 }
 
-class _ResolvedTapPlace {
-  final Map<String, dynamic> placeDetails;
-  final LatLng location;
-
-  const _ResolvedTapPlace({
-    required this.placeDetails,
-    required this.location,
-  });
-}
-
 class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
-  static const Duration _mapWarmCacheTtl = Duration(hours: 1);
-  static const double _tapSnapDistanceThresholdMeters = 120;
-  static const double _sampleOffsetDegrees = 0.00035; // ~39m lat offset
-  static const double _webPreferredUserZoom = 17.5;
-  static const double _tapSelectionMinZoom = 16.0;
-  static const double _autoZoomOnTapTarget = 17.5;
+  static const Duration _mapWarmCacheTtl = Duration(hours: 6);
+  static const double _selectionSheetOffset = 280;
   static DateTime? _mapWarmCacheExpiry;
   static LatLng? _cachedCameraTarget;
   static double? _cachedCameraZoom;
@@ -159,17 +44,9 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
   GoogleMapController? _mapController;
-  Future<void> Function(LatLng target, double zoom)? _webAnimateCamera;
-  Future<void> Function()? _webClearSelection;
   final FocusNode _searchFocusNode = FocusNode();
-  Map<String, dynamic>? _selectedPlace;
-  LatLng? _selectedLocation;
   bool _isMapLoaded = false;
   CameraPosition? _latestCameraPosition;
-  
-  // Context menu state
-  Map<String, dynamic>? _contextMenuPlace;
-  LatLng? _contextMenuLocation;
 
   bool get _hasWarmMapCache {
     final expiry = _mapWarmCacheExpiry;
@@ -227,329 +104,227 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
   }
 
   void _onFocusChanged() {
-    // When search bar gains focus, close any open bottom sheet / map selection
-    if (_searchFocusNode.hasFocus && _contextMenuPlace != null) {
-      setState(() {
-        _contextMenuPlace = null;
-        _contextMenuLocation = null;
-      });
-      if (kIsWeb && _webClearSelection != null) {
-        _webClearSelection!();
-      }
+    if (_searchFocusNode.hasFocus && ref.read(selectedPlaceProvider) != null) {
+      ref.read(maypoleSearchViewModelProvider.notifier).clearSelectedPlace();
     }
-    // Trigger rebuild when focus changes to update background
     setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     final searchState = ref.watch(maypoleSearchViewModelProvider);
+    final selectedPlace = ref.watch(selectedPlaceProvider);
     final l10n = AppLocalizations.of(context)!;
     final currentPosition = ref.watch(currentPositionProvider);
     final hasLocationPermission = ref.watch(hasLocationPermissionProvider);
 
     return Scaffold(
-      backgroundColor: darkPurple, // Dark purple background while map loads
-      // No app bar - search bar makes it redundant
+      backgroundColor: darkPurple,
       appBar: null,
       body: Stack(
         children: [
-          // Google Map in the background - full screen
-          if (kIsWeb)
-            WebPlacePickerMap(
-              initialCameraPosition: _buildInitialCameraPosition(currentPosition),
-              mapStyle: _darkMapStyle,
-              onCameraMove: (position) {
-                _latestCameraPosition = position;
-              },
-              onMapLoaded: () {
+          GoogleMap(
+            onMapCreated: (controller) async {
+              _mapController = controller;
+              final shouldUseWarmCache = _hasWarmMapCache;
+
+              if (shouldUseWarmCache) {
                 if (mounted && !_isMapLoaded) {
                   setState(() {
                     _isMapLoaded = true;
                   });
                 }
-                _refreshMapWarmCacheFromCamera();
-              },
-              onControllerReady: (animateCamera, clearSelection) {
-                _webAnimateCamera = animateCamera;
-                _webClearSelection = clearSelection;
-              },
-              onPlaceSelected: (selection) async {
-                final placeId = selection['placeId'] as String?;
-                final lat = selection['latitude'] as double?;
-                final lon = selection['longitude'] as double?;
-                if (placeId == null || placeId.isEmpty || lat == null || lon == null) {
-                  return;
+                return;
+              }
+
+              Position? position;
+
+              final currentPosFromProvider = currentPosition.hasValue ? currentPosition.value : null;
+
+              if (currentPosFromProvider != null) {
+                position = currentPosFromProvider;
+              } else {
+                final locationService = ref.read(locationServiceProvider);
+                final permission = await locationService.checkPermission();
+
+                if (permission == LocationPermission.denied) {
+                  await locationService.requestPermission();
                 }
 
-                final searchService = ref.read(maypoleSearchServiceProvider);
-                final details = await searchService.getPlaceDetails(placeId);
-                if (!mounted || details == null) return;
+                position = await locationService.getCurrentPosition();
+              }
 
-                setState(() {
-                  _selectedPlace = details;
-                  _selectedLocation = LatLng(lat, lon);
-                  _contextMenuPlace = details;
-                  _contextMenuLocation = LatLng(lat, lon);
-                });
-              },
-            )
-          else
-            GoogleMap(
-              onMapCreated: (controller) async {
-                _mapController = controller;
-                final shouldUseWarmCache = _hasWarmMapCache;
-                debugPrint('🗺️ [DEBUG] Map created');
-                debugPrint('🗺️ [DEBUG] Platform: ${kIsWeb ? "Web" : defaultTargetPlatform == TargetPlatform.iOS ? "iOS" : defaultTargetPlatform == TargetPlatform.android ? "Android" : "Unknown"}');
-
-                // Apply dark map style
-                try {
-                  await controller.setMapStyle(_darkMapStyle);
-                  debugPrint('✅ [DEBUG] Map style applied successfully');
-                } catch (e) {
-                  debugPrint('⚠️ [DEBUG] Error applying map style: $e');
-                }
-
-                if (shouldUseWarmCache) {
-                  debugPrint('⚡ [DEBUG] Using warm map cache (within 1 hour TTL)');
-                  if (mounted && !_isMapLoaded) {
-                    setState(() {
-                      _isMapLoaded = true;
-                    });
-                  }
-                  return;
-                }
-
-                Position? position;
-
-                // Check if we already have position data from provider
-                debugPrint('🗺️ [DEBUG] currentPosition AsyncValue state:');
-                debugPrint('   - isLoading: ${currentPosition.isLoading}');
-                debugPrint('   - hasValue: ${currentPosition.hasValue}');
-                debugPrint('   - isRefreshing: ${currentPosition.isRefreshing}');
-                debugPrint('   - value: ${currentPosition.value}');
-                debugPrint('   - hasError: ${currentPosition.hasError}');
-
-                final currentPosFromProvider = currentPosition.hasValue ? currentPosition.value : null;
-                debugPrint('🗺️ [DEBUG] currentPos from provider: ${currentPosFromProvider != null ? "Position(" + currentPosFromProvider.latitude.toString() + ", " + currentPosFromProvider.longitude.toString() + ")" : "null"}');
-
-                // Always try to get position - if provider has it, use it; otherwise fetch it
-                if (currentPosFromProvider != null) {
-                  debugPrint('✅ [DEBUG] Using position from provider: ${currentPosFromProvider.latitude}, ${currentPosFromProvider.longitude}');
-                  position = currentPosFromProvider;
-                } else {
-                  debugPrint('📍 [DEBUG] No position from provider, attempting to fetch...');
-
-                  debugPrint('📱 [DEBUG] MOBILE branch: Using permission flow');
-                  // On mobile, check and request permission first
-                  final locationService = ref.read(locationServiceProvider);
-                  debugPrint('📱 [DEBUG] About to check permission...');
-                  final permission = await locationService.checkPermission();
-                  debugPrint('🔐 [DEBUG] Current permission status: $permission');
-
-                  if (permission == LocationPermission.denied) {
-                    debugPrint('📤 [DEBUG] Permission denied, requesting...');
-                    final requestedPermission = await locationService.requestPermission();
-                    debugPrint('📤 [DEBUG] Requested permission status: $requestedPermission');
-                  }
-
-                  debugPrint('📱 [DEBUG] About to call getCurrentPosition...');
-                  position = await locationService.getCurrentPosition();
-                  debugPrint('📍 [DEBUG] MOBILE: Position fetch result: ${position?.latitude}, ${position?.longitude}');
-                }
-
-                debugPrint('📍 [DEBUG] Final position variable: ${position != null ? 'Position(${position.latitude}, ${position.longitude})' : 'null'}');
-                debugPrint('📍 [DEBUG]mounted check: $mounted');
-
-                // Always move camera to position if we have it
-                // The initialCameraPosition might not have been set correctly because the provider wasn't ready when widget built
-                if (position != null && mounted) {
-                  debugPrint('✅ [DEBUG] About to animate camera to user location...');
-                  debugPrint('✅ [DEBUG] Target: ${position.latitude}, ${position.longitude}');
-                  await controller.animateCamera(
-                    CameraUpdate.newCameraPosition(
-                      CameraPosition(
-                        target: LatLng(position.latitude, position.longitude),
-                        zoom: 14.0,
-                      ),
+              if (position != null && mounted) {
+                await controller.animateCamera(
+                  CameraUpdate.newCameraPosition(
+                    CameraPosition(
+                      target: LatLng(position.latitude, position.longitude),
+                      zoom: 14.0,
                     ),
-                  );
-                  debugPrint('✅ [DEBUG] Camera animation completed');
-                } else {
-                  debugPrint('⚠️ [DEBUG] Could not get user location, using default position');
-                  debugPrint('⚠️ [DEBUG] position is ${position == null ? "NULL" : "NOT NULL"}');
-                  debugPrint('⚠️ [DEBUG]mounted is ${mounted ? "TRUE" : "FALSE"}');
-                }
+                  ),
+                );
+              }
 
-                // Mark map as loaded after a short delay to ensure tiles are rendered
-                await Future.delayed(const Duration(milliseconds: 500));
-                if (mounted) {
-                  setState(() {
-                    _isMapLoaded = true;
-                  });
-                  debugPrint('✅ [DEBUG] Map marked as loaded');
-                }
-              },
-              onCameraMove: (position) {
-                _latestCameraPosition = position;
-              },
-              onCameraIdle: _refreshMapWarmCacheFromCamera,
-              initialCameraPosition: _buildInitialCameraPosition(currentPosition),
-              myLocationEnabled: true,
-              myLocationButtonEnabled: false, // Disable default button - we'll add custom one
-              mapType: MapType.normal,
-              onTap: _onMapTapped,
-              zoomControlsEnabled: false,
-              // Note: Google Maps POI info windows will still appear
-              // This is a limitation of the google_maps_flutter package
-            ),
+              await Future.delayed(const Duration(milliseconds: 500));
+              if (mounted) {
+                setState(() {
+                  _isMapLoaded = true;
+                });
+              }
+            },
+            onCameraMove: (position) {
+              _latestCameraPosition = position;
+            },
+            onCameraIdle: () {
+              _refreshMapWarmCacheFromCamera();
+            },
+            initialCameraPosition: _buildInitialCameraPosition(currentPosition),
+            style: darkGoogleMapStyle,
+            myLocationEnabled: true,
+            myLocationButtonEnabled: false,
+            mapType: MapType.normal,
+            onTap: _onMapTapped,
+            zoomControlsEnabled: false,
+          ),
 
-          // Overlay with search bar and results
           Column(
             children: [
-              // Add safe area padding on mobile to push search bar below status bar (half distance)
-              // This container gets tinted when search is active
               if (!AppConfig.isWideScreen)
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   height: MediaQuery.of(context).padding.top + (kToolbarHeight / 2),
                   color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
-                      ? darkPurple.withOpacity(0.9) // 90% opacity when focused/has text
-                      : Colors.transparent, // Transparent when unfocused and empty
+                      ? darkPurple.withValues(alpha: 0.9)
+                      : Colors.transparent,
                 ),
-              // Mobile search bar (no web ads)
               if (!kIsWeb && !AppConfig.isWideScreen)
                 GestureDetector(
-                  // Absorb taps to prevent them reaching the map - opaque ensures ALL hits are absorbed
                   behavior: HitTestBehavior.opaque,
                   onTap: () {},
                   child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: double.infinity,
-                  color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
-                      ? darkPurple.withValues(alpha: 0.9)
-                      : Colors.transparent,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(8.0, 0, 8.0, 8.0),
-                    child: TextField(
-                      controller: _searchController,
-                      focusNode: _searchFocusNode,
-                      decoration: InputDecoration(
-                        hintText: l10n.searchForMaypole,
-                        hintStyle: TextStyle(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.3),
-                        ),
-                        filled: true,
-                        fillColor: lightPurple,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(18),
-                          borderSide: BorderSide.none,
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(18),
-                          borderSide: BorderSide.none,
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(18),
-                          borderSide: BorderSide(
-                            color: skyBlue,
-                            width: 2.0,
+                    duration: const Duration(milliseconds: 200),
+                    width: double.infinity,
+                    color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
+                        ? darkPurple.withValues(alpha: 0.9)
+                        : Colors.transparent,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(8.0, 0, 8.0, 8.0),
+                      child: TextField(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        decoration: InputDecoration(
+                          hintText: l10n.searchForMaypole,
+                          hintStyle: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.3),
                           ),
+                          filled: true,
+                          fillColor: lightPurple,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(18),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(18),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(18),
+                            borderSide: BorderSide(
+                              color: skyBlue,
+                              width: 2.0,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          suffixIcon: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
+                              ? GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              _searchController.clear();
+                              _searchFocusNode.unfocus();
+                              ref.read(maypoleSearchViewModelProvider.notifier).searchMaypoles('');
+                            },
+                            child: const Icon(Icons.clear),
+                          )
+                              : null,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        suffixIcon: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
-                            ? GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap: () {
-                                  _searchController.clear();
-                                  _searchFocusNode.unfocus();
-                                  ref.read(maypoleSearchViewModelProvider.notifier).searchMaypoles('');
-                                },
-                                child: const Icon(Icons.clear),
-                              )
-                            : null,
                       ),
                     ),
                   ),
                 ),
-              ),
 
-              // Web ad banner + search bar in the same container that dims together
               if (kIsWeb && AdConfig.webAdsEnabled)
                 GestureDetector(
-                  // Absorb taps to prevent them reaching the map - opaque ensures ALL hits are absorbed
                   behavior: HitTestBehavior.opaque,
                   onTap: () {},
                   child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: double.infinity,
-                  color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
-                      ? darkPurple.withValues(alpha: 0.9)
-                      : Colors.transparent,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Ad with gradient background (light at bottom, dark at top)
-                      Container(
-                        width: double.infinity,
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.black87,
-                            ],
+                    duration: const Duration(milliseconds: 200),
+                    width: double.infinity,
+                    color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
+                        ? darkPurple.withValues(alpha: 0.9)
+                        : Colors.transparent,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black87,
+                              ],
+                            ),
+                          ),
+                          child: WebHorizontalBannerAd(
+                            adSlot: AdConfig.adsterraLeaderboardSlot,
+                            adKey: AdConfig.adsterraLeaderboardKey,
                           ),
                         ),
-                        child: WebHorizontalBannerAd(
-                          adSlot: AdConfig.adsterraLeaderboardSlot,
-                          adKey: AdConfig.adsterraLeaderboardKey,
-                        ),
-                      ),
-                      const SizedBox(height: 8), // Padding between ad and search bar
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(8.0, 0, 8.0, 8.0),
-                        child: TextField(
-                          controller: _searchController,
-                          focusNode: _searchFocusNode,
-                          decoration: InputDecoration(
-                            hintText: l10n.searchForMaypole,
-                            hintStyle: TextStyle(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.3),
-                            ),
-                            filled: true,
-                            fillColor: lightPurple,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(18),
-                              borderSide: BorderSide.none,
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(18),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(18),
-                              borderSide: BorderSide(
-                                color: skyBlue,
-                                width: 2.0,
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(8.0, 0, 8.0, 8.0),
+                          child: TextField(
+                            controller: _searchController,
+                            focusNode: _searchFocusNode,
+                            decoration: InputDecoration(
+                              hintText: l10n.searchForMaypole,
+                              hintStyle: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.3),
                               ),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            suffixIcon: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
-                            ? GestureDetector(
+                              filled: true,
+                              fillColor: lightPurple,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(18),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(18),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(18),
+                                borderSide: BorderSide(
+                                  color: skyBlue,
+                                  width: 2.0,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              suffixIcon: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
+                                  ? GestureDetector(
                                 behavior: HitTestBehavior.opaque,
                                 onTap: () {
                                   _searchController.clear();
@@ -558,16 +333,15 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                                 },
                                 child: const Icon(Icons.clear),
                               )
-                            : null,
+                                  : null,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
-              // Animated search results list with semi-transparent background
               Expanded(
                 child: AnimatedOpacity(
                   opacity: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty) ? 1.0 : 0.0,
@@ -602,7 +376,6 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
             ],
           ),
 
-          // Loading overlay to cover white flash while map loads
           if (!_isMapLoaded)
             Container(
               color: darkPurple,
@@ -612,18 +385,34 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                 ),
               ),
             ),
-          
-          // Non-modal bottom sheet overlay
-          if (_contextMenuPlace != null && _contextMenuLocation != null)
-            _buildBottomSheet(_contextMenuPlace!, _contextMenuLocation!),
-          
-          // Back button for iOS (upper left - iOS standard)
+
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: AnimatedSlide(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              offset: selectedPlace != null ? Offset.zero : const Offset(0, 1),
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: selectedPlace != null ? 1.0 : 0.0,
+                child: IgnorePointer(
+                  ignoring: selectedPlace == null,
+                  child: selectedPlace != null
+                      ? _buildBottomSheet(selectedPlace.placeDetails, selectedPlace.location)
+                      : const SizedBox.shrink(),
+                ),
+              ),
+            ),
+          ),
+
           if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
             Positioned(
               top: MediaQuery.of(context).padding.top + (kToolbarHeight / 2) + 8,
               left: 8,
               child: Material(
-                color: darkPurple.withOpacity(0.9),
+                color: darkPurple.withValues(alpha: 0.9),
                 borderRadius: BorderRadius.circular(20),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(20),
@@ -645,15 +434,14 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                 ),
               ),
             ),
-          
-          // Custom "My Location" button (bottom left) - placed LAST to appear on top
+
           Positioned(
-            bottom: _contextMenuPlace != null ? 280 : 16, // Move up well above bottom sheet when showing
-            left: 40,
+            bottom: selectedPlace != null ? _selectionSheetOffset : 24,
+            right: 24,
             child: Material(
-              color: (hasLocationPermission.value == true) 
-                  ? skyBlue // Blue background when permission granted
-                  : Colors.grey[600], // Gray when no permission
+              color: (hasLocationPermission.value == true)
+                  ? skyBlue
+                  : Colors.grey[600],
               borderRadius: BorderRadius.circular(4),
               elevation: 4,
               child: InkWell(
@@ -663,7 +451,7 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
                   padding: const EdgeInsets.all(12),
                   child: const Icon(
                     Icons.my_location,
-                    color: Colors.white, // White icon
+                    color: Colors.white,
                     size: 24,
                   ),
                 ),
@@ -683,7 +471,6 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
         return ListTile(
           title: Text(prediction.place),
           onTap: () async {
-            // Fetch place details to get coordinates
             await _fetchPlaceDetailsAndReturn(prediction);
           },
         );
@@ -693,7 +480,6 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
 
   Future<void> _fetchPlaceDetailsAndReturn(PlacePrediction prediction) async {
     try {
-      // Show loading indicator
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -702,40 +488,24 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
         ),
       );
 
-      // Fetch place details including coordinates
       final searchService = ref.read(maypoleSearchServiceProvider);
       final placeDetails = await searchService.getPlaceDetails(prediction.placeId);
 
       if (!mounted) return;
 
-      // Close loading dialog
       Navigator.pop(context);
 
       if (placeDetails != null) {
-        debugPrint('🗺️ Place Details: $placeDetails');
-
-        // Extract coordinates and place type from place details
-        // Google Places API v1 structure: { "location": { "latitude": X, "longitude": Y }, "primaryType": "...", "types": [...] }
         final location = placeDetails['location'] as Map<String, dynamic>?;
         final latitude = location?['latitude'] as double?;
         final longitude = location?['longitude'] as double?;
-        
-        // Get place type - use primaryType if available, otherwise find best match from types array
-        debugPrint('🔍 EXTRACTING PLACE TYPE:');
-        debugPrint('   Raw primaryType field: ${placeDetails['primaryType']}');
-        debugPrint('   primaryType exists: ${placeDetails.containsKey('primaryType')}');
-        
+
         String? placeType = placeDetails['primaryType'] as String?;
-        debugPrint('   Extracted primaryType: $placeType');
-        
+
         if (placeType == null || placeType.isEmpty) {
-          debugPrint('   ⚠️ primaryType is null/empty, checking types array...');
           final types = placeDetails['types'] as List<dynamic>?;
-          debugPrint('   Raw types: $types');
-          
+
           if (types != null && types.isNotEmpty) {
-            debugPrint('   Found ${types.length} types, checking priority order...');
-            // Priority order for determining range (most specific to least specific)
             const priorityOrder = [
               'sublocality_level_1',
               'sublocality',
@@ -746,39 +516,22 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
               'political',
               'country',
             ];
-            
+
             for (final priority in priorityOrder) {
               if (types.contains(priority)) {
                 placeType = priority;
-                debugPrint('   ✅ FOUND MATCH: $placeType (from types array)');
                 break;
               }
             }
-            
-            if (placeType == null) {
-              debugPrint('   ❌ No priority type found in types array');
-            }
-          } else {
-            debugPrint('   ❌ types array is null or empty');
           }
-        } else {
-          debugPrint('   ✅ Using primaryType: $placeType');
         }
 
-        debugPrint('📍 FINAL RESULTS:');
-        debugPrint('   Coordinates: lat=$latitude, lon=$longitude');
-        debugPrint('   Place type: $placeType');
-        debugPrint('   Will get range: ${placeType != null ? PlaceGeofenceUtils.getRadiusDescription(placeType) : "1 km (default)"}');
-
-        // Return prediction with coordinates and place type
         final updatedPrediction = prediction.copyWith(
           latitude: latitude,
           longitude: longitude,
           placeType: placeType,
         );
-        
-        debugPrint('✅ Returning prediction with coordinates and type: ${updatedPrediction.latitude}, ${updatedPrediction.longitude}, ${updatedPrediction.placeType}');
-        
+
         if (mounted) {
           if (widget.embedded && widget.onPlaceSelected != null) {
             widget.onPlaceSelected!(updatedPrediction);
@@ -787,8 +540,6 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
           }
         }
       } else {
-        debugPrint('⚠️ No place details returned, using prediction without coordinates');
-        // If we couldn't get details, return prediction without coordinates
         if (mounted) {
           if (widget.embedded && widget.onPlaceSelected != null) {
             widget.onPlaceSelected!(prediction);
@@ -798,15 +549,11 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
         }
       }
     } catch (e) {
-      debugPrint('💥 Error fetching place details: $e');
       if (!mounted) return;
-      
-      // Close loading dialog if open
+
       Navigator.pop(context);
-      
-      // Show error but still return the prediction without coordinates
       ErrorDialog.show(context, e);
-      
+
       if (mounted) {
         context.pop(prediction);
       }
@@ -824,18 +571,16 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
 
   Future<void> _handleLocationButtonTap(bool hasPermission) async {
     if (!hasPermission) {
-      // Show permission dialog
       _showLocationPermissionDialog();
       return;
     }
-    
-    // Center on location
+
     await _centerOnUserLocation();
   }
 
   void _showLocationPermissionDialog() {
     final l10n = AppLocalizations.of(context)!;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -851,17 +596,15 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
               Navigator.of(context).pop();
               final locationService = ref.read(locationServiceProvider);
               final permission = await locationService.requestPermission();
-              
-              if (permission == LocationPermission.denied || 
+
+              if (permission == LocationPermission.denied ||
                   permission == LocationPermission.deniedForever) {
                 if (mounted) {
-                  // Open settings if permission is permanently denied
                   if (permission == LocationPermission.deniedForever) {
                     await locationService.openAppSettings();
                   }
                 }
               } else {
-                // Permission granted, refresh and center
                 if (mounted) {
                   ref.invalidate(hasLocationPermissionProvider);
                   ref.invalidate(currentPositionProvider);
@@ -878,22 +621,14 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
 
   Future<void> _centerOnUserLocation() async {
     try {
-      // Force refresh the position
       final locationService = ref.read(locationServiceProvider);
       final position = await locationService.getCurrentPosition();
 
       if (position == null) {
-        debugPrint('⚠️ Could not get user location');
         return;
       }
 
       final target = LatLng(position.latitude, position.longitude);
-
-      if (kIsWeb && _webAnimateCamera != null) {
-        await _webAnimateCamera!(target, _webPreferredUserZoom);
-        debugPrint('✅ Centered on user location (web): ${position.latitude}, ${position.longitude}');
-        return;
-      }
 
       if (_mapController != null) {
         await _mapController!.animateCamera(
@@ -904,178 +639,86 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
             ),
           ),
         );
-        debugPrint('✅ Centered on user location: ${position.latitude}, ${position.longitude}');
-      } else {
-        debugPrint('⚠️ Could not center map: no controller available');
       }
     } catch (e) {
-      debugPrint('💥 Error centering on location: $e');
+      if (mounted) {
+        ErrorDialog.show(context, e);
+      }
     }
   }
 
   Future<void> _onMapTapped(LatLng position) async {
-    // Don't handle map taps if search is focused or has text
     if (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty) {
       return;
     }
 
-    debugPrint('🗺️ Map tapped at: ${position.latitude}, ${position.longitude}');
-
-    final currentZoom = _latestCameraPosition?.zoom ?? _cachedCameraZoom ?? 14.0;
-    if (currentZoom < _tapSelectionMinZoom) {
-      debugPrint('🔎 Tap while zoomed out ($currentZoom). Auto-zooming before selection.');
-      if (_mapController != null) {
-        await _mapController!.animateCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(
-              target: position,
-              zoom: _autoZoomOnTapTarget,
-            ),
-          ),
-        );
-      } else if (_webAnimateCamera != null) {
-        await _webAnimateCamera!(position, _autoZoomOnTapTarget);
-      }
+    final mapController = _mapController;
+    if (mapController == null) {
       return;
     }
 
-    try {
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+    final tapPoint = await mapController.getScreenCoordinate(position);
 
-      // Try center + nearby samples and snap to nearest place to the tap
-      final resolved = await _resolveBestPlaceNearTap(position);
+    final probeOffsets = <ScreenCoordinate>[
+      tapPoint,
+      ScreenCoordinate(x: tapPoint.x + 24, y: tapPoint.y),
+      ScreenCoordinate(x: tapPoint.x - 24, y: tapPoint.y),
+      ScreenCoordinate(x: tapPoint.x, y: tapPoint.y + 24),
+      ScreenCoordinate(x: tapPoint.x, y: tapPoint.y - 24),
+    ];
 
-      if (!mounted) return;
-
-      // Close loading dialog
-      Navigator.pop(context);
-
-      if (resolved != null) {
-        debugPrint('✅ Tap resolved to place id=${resolved.placeDetails['id']} at ${resolved.location.latitude}, ${resolved.location.longitude}');
-        setState(() {
-          _selectedPlace = resolved.placeDetails;
-          _selectedLocation = resolved.location;
-          _contextMenuPlace = resolved.placeDetails;
-          _contextMenuLocation = resolved.location;
-        });
-      } else {
-        debugPrint('ℹ️ Tap ignored (no nearby Google place matched tap intent).');
-      }
-    } catch (e) {
-      debugPrint('💥 Error resolving tap to place: $e');
-      if (!mounted) return;
-
-      // Close loading dialog
-      Navigator.pop(context);
-      ErrorDialog.show(context, e);
-    }
-  }
-
-  Future<_ResolvedTapPlace?> _resolveBestPlaceNearTap(LatLng tapPosition) async {
     final searchService = ref.read(maypoleSearchServiceProvider);
-    final currentZoom = _latestCameraPosition?.zoom ?? _cachedCameraZoom ?? 14.0;
 
-    final radiusMeters = currentZoom >= 18.0
-        ? 40.0
-        : currentZoom >= 17.0
-            ? 60.0
-            : 90.0;
-
-    final samplePoints = kIsWeb
-        ? <LatLng>[tapPosition]
-        : <LatLng>[
-            tapPosition,
-            LatLng(tapPosition.latitude + _sampleOffsetDegrees, tapPosition.longitude),
-            LatLng(tapPosition.latitude - _sampleOffsetDegrees, tapPosition.longitude),
-            LatLng(tapPosition.latitude, tapPosition.longitude + _sampleOffsetDegrees),
-            LatLng(tapPosition.latitude, tapPosition.longitude - _sampleOffsetDegrees),
-          ];
-
-    _ResolvedTapPlace? bestMatch;
-    var bestDistance = double.infinity;
-
-    for (final sample in samplePoints) {
-      final placeDetails = await searchService.reverseGeocode(
-        sample.latitude,
-        sample.longitude,
-        radiusMeters: radiusMeters,
-        maxResultCount: kIsWeb ? 1 : 5,
+    for (final probe in probeOffsets) {
+      final probeLatLng = await mapController.getLatLng(probe);
+      final details = await searchService.reverseGeocode(
+        probeLatLng.latitude,
+        probeLatLng.longitude,
       );
-      final placeId = placeDetails?['id'] as String?;
-      final location = placeDetails?['location'] as Map<String, dynamic>?;
-      final lat = location?['latitude'] as double?;
-      final lon = location?['longitude'] as double?;
 
-      if (placeDetails == null || placeId == null || placeId.isEmpty || lat == null || lon == null) {
+      if (!mounted || details == null) {
         continue;
       }
 
-      final placeLocation = LatLng(lat, lon);
-      final apiDistance = (placeDetails['_distanceMeters'] as num?)?.toDouble();
-      final distance = apiDistance ??
-          Geolocator.distanceBetween(
-            tapPosition.latitude,
-            tapPosition.longitude,
-            placeLocation.latitude,
-            placeLocation.longitude,
-          );
+      final hasPlaceId = (details['id'] as String?)?.isNotEmpty == true;
+      final hasDisplayName =
+          (details['displayName']?['text'] as String?)?.trim().isNotEmpty == true;
 
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestMatch = _ResolvedTapPlace(
-          placeDetails: placeDetails,
-          location: placeLocation,
+      if (hasPlaceId && hasDisplayName) {
+        ref.read(maypoleSearchViewModelProvider.notifier).setSelectedPlace(
+          placeDetails: details,
+          location: probeLatLng,
         );
+        return;
       }
     }
 
-    if (bestMatch == null || bestDistance > _tapSnapDistanceThresholdMeters) {
-      return null;
-    }
-
-    return bestMatch;
+    ref.read(maypoleSearchViewModelProvider.notifier).clearSelectedPlace();
   }
 
   Widget _buildBottomSheet(Map<String, dynamic> placeDetails, LatLng position) {
     final l10n = AppLocalizations.of(context)!;
     final isGeneric = placeDetails['isGeneric'] == true;
-    
+
     final displayName = isGeneric
         ? 'Location (${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)})'
         : (placeDetails['displayName']?['text'] as String? ?? 'Unknown Place');
-    
+
     final formattedAddress = isGeneric
         ? 'Selected location on map'
         : (placeDetails['formattedAddress'] as String? ?? '');
-    
+
     final placeId = isGeneric
         ? 'loc_${position.latitude}_${position.longitude}'
         : (placeDetails['id'] as String? ?? '');
-    
-    // Get place type - use primaryType if available, otherwise find best match from types array
+
     String? placeType;
     if (!isGeneric) {
-      debugPrint('🔍 EXTRACTING PLACE TYPE (reverse geocode):');
-      debugPrint('   Raw primaryType field: ${placeDetails['primaryType']}');
-      
       placeType = placeDetails['primaryType'] as String?;
-      debugPrint('   Extracted primaryType: $placeType');
-      
+
       if (placeType == null || placeType.isEmpty) {
-        debugPrint('   ⚠️ primaryType is null/empty, checking types array...');
         final types = placeDetails['types'] as List<dynamic>?;
-        debugPrint('   Raw types: $types');
-        
         if (types != null && types.isNotEmpty) {
-          debugPrint('   Found ${types.length} types, checking priority order...');
-          // Priority order for determining range
           const priorityOrder = [
             'sublocality_level_1',
             'sublocality',
@@ -1086,135 +729,111 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
             'political',
             'country',
           ];
-          
+
           for (final priority in priorityOrder) {
             if (types.contains(priority)) {
               placeType = priority;
-              debugPrint('   ✅ FOUND MATCH: $placeType (from types array)');
               break;
             }
           }
-          
-          if (placeType == null) {
-            debugPrint('   ❌ No priority type found in types array');
-          }
-        } else {
-          debugPrint('   ❌ types array is null or empty');
         }
-      } else {
-        debugPrint('   ✅ Using primaryType: $placeType');
       }
-      
-      debugPrint('📍 FINAL place type: $placeType (range: ${placeType != null ? PlaceGeofenceUtils.getRadiusDescription(placeType) : "1 km (default)"})');
     }
 
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
-      child: GestureDetector(
-        // Absorb taps to prevent map interaction
-        onTap: () {},
-        child: Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, -2),
+    return GestureDetector(
+      onTap: () {},
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              displayName,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
               ),
-            ],
-          ),
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+            ),
+            const SizedBox(height: 8),
+            if (formattedAddress.isNotEmpty)
               Text(
-                displayName,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              if (formattedAddress.isNotEmpty)
-                Text(
-                  formattedAddress,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.7),
-                      ),
+                formattedAddress,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
-              const SizedBox(height: 12),
-              // View on Google Maps link
-              InkWell(
-                onTap: () async {
-                  final url = Uri.parse(
-                    'https://www.google.com/maps/search/?api=1&query=${position.latitude},${position.longitude}'
-                  );
-                  if (await canLaunchUrl(url)) {
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                  }
-                },
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.open_in_new,
-                      size: 16,
+              ),
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: () async {
+                final url = Uri.parse(
+                  'https://www.google.com/maps/search/?api=1&query=${position.latitude},${position.longitude}',
+                );
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                }
+              },
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.open_in_new,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'View on Google Maps',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'View on Google Maps',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            decoration: TextDecoration.underline,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _contextMenuPlace = null;
-                      _contextMenuLocation = null;
-                    });
-                    _navigateToChat(
-                      placeId: placeId,
-                      placeName: displayName,
-                      address: formattedAddress,
-                      latitude: position.latitude,
-                      longitude: position.longitude,
-                      placeType: placeType,
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      decoration: TextDecoration.underline,
                     ),
                   ),
-                  child: Text(
-                    l10n.chatHere,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  ref.read(maypoleSearchViewModelProvider.notifier).clearSelectedPlace();
+                  _navigateToChat(
+                    placeId: placeId,
+                    placeName: displayName,
+                    address: formattedAddress,
+                    latitude: position.latitude,
+                    longitude: position.longitude,
+                    placeType: placeType,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  l10n.chatHere,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1228,10 +847,8 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
     required double longitude,
     String? placeType,
   }) {
-    // Create a PlacePrediction and return it to the caller (home screen)
-    // This allows the home screen to handle navigation consistently
     final prediction = PlacePrediction(
-      place: placeName, // Use placeName as the display text (full text)
+      place: placeName,
       placeId: placeId,
       placeName: placeName,
       address: address,

@@ -26,7 +26,7 @@ void main() {
     placeLongitude: restaurantLon,
     placeType: restaurantType,
   );
-  print('User in restaurant range: $isInRestaurantRange'); // true
+ // true
   
   // Example 2: Check if user is in range of a city
   
@@ -46,43 +46,43 @@ void main() {
     placeLongitude: cityCenterLon,
     placeType: cityType,
   );
-  print('User in city range: $isInCityRange'); // true (15km radius for cities)
+ // true (15km radius for cities)
   
   // Example 3: Get the radius for different place types
   
   final restaurantRadius = PlaceGeofenceUtils.getRadiusForPlaceType('restaurant');
-  print('Restaurant geofence radius: $restaurantRadius meters'); // 500m
+ // 500m
   
   final cityRadius = PlaceGeofenceUtils.getRadiusForPlaceType('locality');
-  print('City geofence radius: $cityRadius meters'); // 15000m (15km)
+ // 15000m (15km)
   
   final stateRadius = PlaceGeofenceUtils.getRadiusForPlaceType('administrative_area_level_1');
-  print('State geofence radius: $stateRadius meters'); // 200000m (200km)
+ // 200000m (200km)
   
   final countryRadius = PlaceGeofenceUtils.getRadiusForPlaceType('country');
-  print('Country geofence radius: $countryRadius meters'); // 500000m (500km)
+ // 500000m (500km)
   
   // Example 4: Get human-readable radius descriptions
   
   final restaurantDesc = PlaceGeofenceUtils.getRadiusDescription('restaurant');
-  print('Restaurant range: $restaurantDesc'); // "500 m"
+ // "500 m"
   
   final cityDesc = PlaceGeofenceUtils.getRadiusDescription('locality');
-  print('City range: $cityDesc'); // "15 km"
+ // "15 km"
   
   final stateDesc = PlaceGeofenceUtils.getRadiusDescription('administrative_area_level_1');
-  print('State range: $stateDesc'); // "200 km"
+ // "200 km"
   
   // Example 5: Get place categories
   
   final restaurantCategory = PlaceGeofenceUtils.getPlaceCategory('restaurant');
-  print('Restaurant category: $restaurantCategory'); // "establishment"
+ // "establishment"
   
   final cityCategory = PlaceGeofenceUtils.getPlaceCategory('locality');
-  print('City category: $cityCategory'); // "city"
+ // "city"
   
   final neighborhoodCategory = PlaceGeofenceUtils.getPlaceCategory('neighborhood');
-  print('Neighborhood category: $neighborhoodCategory'); // "neighborhood"
+ // "neighborhood"
   
   // Example 6: Calculate distance between two points
   
@@ -97,7 +97,7 @@ void main() {
     point2Lat,
     point2Lon,
   );
-  print('Distance SF to San Jose: ${(distance / 1000).toStringAsFixed(1)} km'); // ~68 km
+ // ~68 km
   
   // Example 7: Real-world usage in a chat app
   
@@ -119,7 +119,6 @@ void main() {
     
     if (isInRange) {
       final rangeDesc = PlaceGeofenceUtils.getRadiusDescription(placeType);
-      print('✅ You can chat in $placeName (within $rangeDesc range)');
     } else {
       final rangeDesc = PlaceGeofenceUtils.getRadiusDescription(placeType);
       final distance = PlaceGeofenceUtils.calculateDistance(
@@ -128,9 +127,6 @@ void main() {
         placeLat,
         placeLon,
       );
-      print('❌ You are too far from $placeName');
-      print('   Distance: ${(distance / 1000).toStringAsFixed(1)} km');
-      print('   Required range: $rangeDesc');
     }
   }
   

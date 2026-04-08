@@ -34,7 +34,6 @@ class AutocompleteResponse {
               if (e is Map<String, dynamic>) {
                 return PlacePrediction.fromMap(e);
               }
-              debugPrint('⚠️ Unexpected suggestion format: $e');
               return null;
             })
             .where((p) => p != null)
@@ -51,12 +50,9 @@ class AutocompleteResponse {
       if (decoded is Map<String, dynamic>) {
         return AutocompleteResponse.fromMap(decoded);
       } else {
-        debugPrint('❌ Expected Map but got ${decoded.runtimeType}: $decoded');
         throw Exception('Invalid response format: expected JSON object');
       }
     } catch (e) {
-      debugPrint('💥 Error parsing AutocompleteResponse: $e');
-      debugPrint('💥 Source: ${source.substring(0, source.length > 200 ? 200 : source.length)}...');
       rethrow;
     }
   }

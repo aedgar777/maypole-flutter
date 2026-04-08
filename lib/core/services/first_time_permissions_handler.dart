@@ -31,7 +31,6 @@ class FirstTimePermissionsHandler {
         await _notificationService.hasAskedForPermission();
 
     if (!hasAskedNotification) {
-      debugPrint('First time - requesting notification permission...');
       notificationGranted =
           await _notificationService.requestNotificationPermission();
 
@@ -48,7 +47,6 @@ class FirstTimePermissionsHandler {
     final locationPermission = await _locationService.checkPermission();
 
     if (locationPermission == LocationPermission.denied) {
-      debugPrint('First time - requesting location permission...');
       final permission = await _locationService.requestPermission();
       locationGranted = permission == LocationPermission.always ||
           permission == LocationPermission.whileInUse;

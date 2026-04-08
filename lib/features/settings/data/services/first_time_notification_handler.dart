@@ -20,7 +20,6 @@ class FirstTimeNotificationHandler {
       return await _notificationService.checkNotificationPermission();
     }
 
-    debugPrint('First time - requesting notification permission...');
 
     // Request the system permission directly (no custom dialog)
     final granted = await _notificationService.requestNotificationPermission();

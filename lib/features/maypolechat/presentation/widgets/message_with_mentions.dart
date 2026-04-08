@@ -285,7 +285,6 @@ class MessageWithMentions extends StatelessWidget {
     // If senderId is present, navigate directly
     if (senderId.isNotEmpty) {
       final path = '/user-profile/$senderId';
-      debugPrint('Navigating to: $path with senderId');
       try {
         GoRouter.of(context).push(
           path,
@@ -295,13 +294,11 @@ class MessageWithMentions extends StatelessWidget {
           },
         );
       } catch (e) {
-        debugPrint('Navigation error: $e');
       }
       return;
     }
 
     // Fallback: Look up user by username for old messages
-    debugPrint('senderId is empty, looking up user by username: $senderName');
     try {
       // Show loading indicator
       showDialog(

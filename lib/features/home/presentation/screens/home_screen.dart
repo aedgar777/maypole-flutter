@@ -181,7 +181,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final remoteConfig = ref.read(remoteConfigServiceProvider);
       await remoteConfig.initialize();
     } catch (e) {
-      debugPrint('⚠️ Warning: Could not initialize Remote Config: $e');
       // Continue anyway - will use default values
     }
   }
@@ -194,7 +193,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       await adService.initialize();
       ref.read(adInitializedProvider.notifier).setInitialized(true);
     } catch (e) {
-      debugPrint('⚠️ Warning: Could not initialize AdMob: $e');
       // Continue anyway - app will work without ads
     }
   }
@@ -211,7 +209,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final preloader = ref.read(dmMessagePreloaderProvider);
       await preloader.preloadAllDmThreads(user.firebaseID);
     } catch (e) {
-      debugPrint('⚠️ Error initializing DM preloader: $e');
     }
   }
 
@@ -256,10 +253,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final prefetchService = ref.read(userDataPrefetchServiceProvider);
       // Run in background without blocking UI
       prefetchService.prefetchUserData(user.firebaseID).catchError((e) {
-        debugPrint('⚠️ Background prefetch failed (non-critical): $e');
       });
     } catch (e) {
-      debugPrint('⚠️ Error starting prefetch: $e');
     }
   }
 
@@ -270,10 +265,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final authService = ref.read(authServiceProvider);
       // Run in background to check and update verification status
       authService.checkEmailVerificationStatus().catchError((e) {
-        debugPrint('⚠️ Email verification check failed (non-critical): $e');
       });
     } catch (e) {
-      debugPrint('⚠️ Error checking email verification: $e');
     }
   }
 
@@ -573,7 +566,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         );
       }
     } catch (e) {
-      debugPrint('Error sharing conversation: $e');
       if (context.mounted) {
         AppToast.showError(context, 'Failed to share conversation');
       }
@@ -608,7 +600,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 placeType: result.placeType,
               );
             } catch (e) {
-              debugPrint('⚠️ Error adding maypole to user list: $e');
               // Continue anyway - will be added when they send a message
             }
           }
@@ -628,7 +619,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       } else {
         // On mobile, navigate to the chat screen
         if (context.mounted) {
-          debugPrint('📱 Navigating to chat with placeType: ${result.placeType}');
           context.push('/chat/${result.placeId}', extra: {
             'name': result.placeName,
             'address': result.address,

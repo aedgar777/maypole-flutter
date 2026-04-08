@@ -48,13 +48,11 @@ class LocationService {
     try {
       final hasPermission = await hasLocationPermission();
       if (!hasPermission) {
-        debugPrint('❌ No location permission');
         return null;
       }
 
       final serviceEnabled = await isLocationServiceEnabled();
       if (!serviceEnabled) {
-        debugPrint('❌ Location service not enabled');
         return null;
       }
 
@@ -65,7 +63,6 @@ class LocationService {
       _lastKnownPosition = position;
       return position;
     } catch (e) {
-      debugPrint('💥 Error getting position: $e');
       // Return last known position if available
       return _lastKnownPosition;
     }

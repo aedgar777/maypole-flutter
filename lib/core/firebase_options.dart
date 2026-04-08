@@ -288,9 +288,6 @@ class DefaultFirebaseOptions {
 
     if (kIsWeb && kDebugMode) {
       // Debug logging for web to help diagnose configuration issues
-      print('🔧 Firebase Config Debug:');
-      print('  Environment: $environment');
-      print('  Platform: Web');
     }
 
     if (environment == 'production' || environment == 'prod') {
@@ -367,11 +364,6 @@ class DefaultFirebaseOptions {
     final measurementId = _getFirebaseDevWebMeasurementId();
 
     if (kIsWeb && kDebugMode) {
-      print('  API Key: ${apiKey.isEmpty ? "❌ MISSING" : "✅ Present (${apiKey
-          .substring(0, 10)}...)"}');
-      print('  App ID: ${appId.isEmpty ? "❌ MISSING" : "✅ Present"}');
-      print('  Project ID: ${projectId.isEmpty ? "❌ MISSING" : projectId}');
-      print('  Auth Domain: ${authDomain.isEmpty ? "❌ MISSING" : authDomain}');
     }
 
     return FirebaseOptions(
@@ -422,11 +414,6 @@ class DefaultFirebaseOptions {
     final measurementId = _getFirebaseProdWebMeasurementId();
 
     if (kIsWeb && kDebugMode) {
-      print('  API Key: ${apiKey.isEmpty ? "❌ MISSING" : "✅ Present (${apiKey
-          .substring(0, 10)}...)"}');
-      print('  App ID: ${appId.isEmpty ? "❌ MISSING" : "✅ Present"}');
-      print('  Project ID: ${projectId.isEmpty ? "❌ MISSING" : projectId}');
-      print('  Auth Domain: ${authDomain.isEmpty ? "❌ MISSING" : authDomain}');
     }
 
     return FirebaseOptions(

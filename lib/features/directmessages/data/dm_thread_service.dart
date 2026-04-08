@@ -89,7 +89,6 @@ class DMThreadService {
     // Try to get existing thread
     final existingThread = await getDMThreadById(threadId);
     if (existingThread != null) {
-      debugPrint('✓ Found existing DM thread: $threadId');
       return existingThread;
     }
 
@@ -120,7 +119,6 @@ class DMThreadService {
         .doc(threadId)
         .set(newThread.toMap());
 
-    debugPrint('✓ Created DM thread: $threadId with participants: [$currentUserId, $partnerId]');
 
     return newThread;
   }
@@ -137,7 +135,6 @@ class DMThreadService {
       // Log cache vs server source for monitoring
       if (snapshot.metadata.isFromCache) {
       } else {
-        debugPrint('🌐 DM messages loaded from server for thread: $threadId');
       }
       
       return snapshot.docs
@@ -178,11 +175,9 @@ class DMThreadService {
             .toList();
       }
     } catch (e) {
-      debugPrint('⚠️ Cache miss for DM thread $threadId: $e');
     }
 
     // Cache miss or error - fetch from server
-    debugPrint('🌐 Fetching DM messages from server for thread: $threadId');
     final serverSnapshot = await _firestore
         .collection('DMThreads')
         .doc(threadId)
@@ -220,7 +215,6 @@ class DMThreadService {
     if (!threadDoc.exists) {
       // Thread doesn't exist - this is an ephemeral thread being persisted
       if (ephemeralThread != null) {
-        debugPrint('💾 Persisting ephemeral thread to Firestore: $threadId');
         // Save the ephemeral thread to Firestore first
         await _firestore
             .collection('DMThreads')
@@ -259,7 +253,6 @@ class DMThreadService {
       'unreadBy.$senderId': false,    // Mark as read for sender
     });
 
-    debugPrint('✓ Sent DM message to thread: $threadId');
 
     // Send notification to recipient
     await _sendDmNotification(
@@ -279,10 +272,6 @@ class DMThreadService {
         .orderBy('lastMessageTime', descending: true)
         .snapshots(includeMetadataChanges: true)
         .handleError((error) {
-      debugPrint('❌ Error in DM threads stream: $error');
-      debugPrint('⚠️ This might be a missing Firestore index!');
-      debugPrint('⚠️ Check the error message for a link to create the index');
-      debugPrint('⚠️ Or run: firebase deploy --only firestore:indexes');
       // Re-throw to propagate to UI
       throw error;
     })
@@ -305,7 +294,6 @@ class DMThreadService {
           
           // Check if this is an old-format thread (missing participants field)
           if (!data.containsKey('participants') || data['participants'] == null) {
-            debugPrint('⚠️ Skipping old-format DM thread ${doc.id} - needs migration');
             return null;
           }
           
@@ -340,7 +328,6 @@ class DMThreadService {
             hasUnread: dmThread.hasUnreadMessagesFor(userId),
           );
         } catch (e) {
-          debugPrint('Error processing DM thread ${doc.id}: $e');
           return null;
         }
       }).whereType<DMThreadMetaData>().toList();
@@ -353,9 +340,7 @@ class DMThreadService {
       await _firestore.collection('DMThreads').doc(threadId).update({
         'unreadBy.$userId': false,
       });
-      debugPrint('✓ Marked DM thread $threadId as read for user $userId');
     } catch (e) {
-      debugPrint('❌ Error marking DM thread as read: $e');
       rethrow;
     }
   }
@@ -367,7 +352,6 @@ class DMThreadService {
       final threadDoc = await _firestore.collection('DMThreads').doc(threadId).get();
 
       if (!threadDoc.exists) {
-        debugPrint('Thread $threadId does not exist');
         return;
       }
 
@@ -382,10 +366,8 @@ class DMThreadService {
           'hiddenFor': hiddenFor,
         });
 
-        debugPrint('✓ Hidden DM thread $threadId for user $userId');
       }
     } catch (e) {
-      debugPrint('❌ Error hiding DM thread for user: $e');
       rethrow;
     }
   }
@@ -409,10 +391,8 @@ class DMThreadService {
           'hiddenFor': hiddenFor,
         });
 
-        debugPrint('✓ Unhid DM thread $threadId for user $userId');
       }
     } catch (e) {
-      debugPrint('❌ Error unhiding DM thread for user: $e');
       rethrow;
     }
   }
@@ -441,7 +421,6 @@ class DMThreadService {
         'read': false,
       });
     } catch (e) {
-      debugPrint('Error sending DM notification: $e');
       // Don't throw - we don't want to fail message sending if notifications fail
     }
   }
@@ -465,7 +444,6 @@ class DMThreadService {
       final messageDoc = await messageRef.get();
 
       if (!messageDoc.exists) {
-        debugPrint('Message $messageId does not exist');
         return;
       }
 
@@ -490,10 +468,8 @@ class DMThreadService {
           'imageUrls': [], // Clear the images
         });
 
-        debugPrint('✓ Deleted DM message $messageId for user $userId (cleared content)');
       }
     } catch (e) {
-      debugPrint('❌ Error deleting DM message: $e');
       rethrow;
     }
   }

@@ -31,7 +31,6 @@ class MaypoleChatViewModel extends AsyncNotifier<List<MaypoleMessage>> {
     final cachedMessages = await _threadService.getCachedMessages(_threadId);
     
     if (cachedMessages != null && cachedMessages.isNotEmpty) {
-      debugPrint('📦 Returning ${cachedMessages.length} cached messages immediately');
       
       // Set up stream and validation in background (don't await)
       _validateAndSetupStream(cachedMessages);
@@ -40,7 +39,6 @@ class MaypoleChatViewModel extends AsyncNotifier<List<MaypoleMessage>> {
       return cachedMessages;
     } else {
       // No cache - set up stream and return empty (will load from server)
-      debugPrint('📭 No cache - initializing from server');
       _init();
       return [];
     }
@@ -58,13 +56,11 @@ class MaypoleChatViewModel extends AsyncNotifier<List<MaypoleMessage>> {
       switch (validationResult) {
         case CacheValidationResult.cacheValid:
           // Cache is current, just set up stream for future updates
-          debugPrint('✅ Cache validated - setting up stream for real-time updates');
           _initStream();
           break;
           
         case CacheValidationResult.cacheStale:
           // Cache is stale - need to fetch fresh messages
-          debugPrint('🔄 Cache stale - fetching fresh messages');
           
           // Fetch fresh messages from server
           final freshMessages = await _threadService.getFreshMessages(_threadId);
@@ -81,7 +77,6 @@ class MaypoleChatViewModel extends AsyncNotifier<List<MaypoleMessage>> {
           break;
       }
     } catch (e) {
-      debugPrint('⚠️ Error validating cache: $e');
       _initStream();
     }
   }
@@ -170,7 +165,6 @@ class MaypoleChatViewModel extends AsyncNotifier<List<MaypoleMessage>> {
       state = AsyncValue.data([...currentMessages, ...newMessages]);
     } catch (e) {
       // Maybe show a snackbar or some other error indication
-      debugPrint('Error loading more messages: $e');
     } finally {
       _isLoadingMore = false;
     }

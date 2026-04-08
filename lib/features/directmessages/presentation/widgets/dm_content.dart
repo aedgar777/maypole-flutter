@@ -65,7 +65,6 @@ class _DmContentState extends ConsumerState<DmContent> {
     if (!widget.thread.hasMessages) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(dmViewModelProvider(widget.thread.id).notifier).setEphemeralThread(widget.thread);
-        debugPrint('💾 Set ephemeral thread in DmContent initState: ${widget.thread.id}');
       });
     }
 
@@ -93,7 +92,6 @@ class _DmContentState extends ConsumerState<DmContent> {
       );
     } catch (e) {
       // Silently fail - not critical
-      debugPrint('Error marking thread as read: $e');
     }
   }
 
