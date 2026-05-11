@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 
 /// Service for managing Firebase Cloud Messaging (FCM) tokens and push notifications
 class FCMService {

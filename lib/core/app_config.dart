@@ -4,7 +4,7 @@ import 'utils/platform_info.dart';
 
 /// A class to access environment-specific variables.
 ///
-/// This class reads the `ENVIRONMENT` variable from the .env file
+/// This class reads the `ENVIRONMENT` variable from the ..env file
 /// and provides the correct keys based on whether the app is in
 /// 'prod' or 'dev' mode.
 class AppConfig {
@@ -276,7 +276,7 @@ class AppConfig {
       // Continue to fallback
     }
     
-    // Hardcoded fallbacks for web builds (where .env is not available)
+    // Hardcoded fallbacks for web builds (where ..env is not available)
     if (kIsWeb) {
       // These are the default Cloud Run URLs based on function names
       if (isProduction) {

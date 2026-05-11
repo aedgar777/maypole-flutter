@@ -3,6 +3,7 @@
 /// This file demonstrates how to use the PlaceGeofenceUtils class for
 /// determining geofence ranges based on place types and checking if a
 /// user is within range of a place.
+library;
 
 import 'place_geofence_utils.dart';
 

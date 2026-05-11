@@ -188,8 +188,6 @@ class _MaypoleGalleryScreenState extends ConsumerState<MaypoleGalleryScreen> {
 class _AdaptiveNetworkImage extends StatelessWidget {
   final String imageUrl;
   final BoxFit fit;
-  final double? width;
-  final double? height;
   final Widget placeholder;
   final Widget errorWidget;
   final int? memCacheWidth;
@@ -200,8 +198,6 @@ class _AdaptiveNetworkImage extends StatelessWidget {
     required this.fit,
     required this.placeholder,
     required this.errorWidget,
-    this.width,
-    this.height,
     this.memCacheWidth,
     this.memCacheHeight,
   });
@@ -213,8 +209,6 @@ class _AdaptiveNetworkImage extends StatelessWidget {
       return Image.network(
         imageUrl,
         fit: fit,
-        width: width,
-        height: height,
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
           return placeholder;
@@ -229,8 +223,6 @@ class _AdaptiveNetworkImage extends StatelessWidget {
     return CachedNetworkImage(
       imageUrl: imageUrl,
       fit: fit,
-      width: width,
-      height: height,
       cacheManager: MaypoleImageCacheManager.instance,
       memCacheWidth: memCacheWidth,
       memCacheHeight: memCacheHeight,

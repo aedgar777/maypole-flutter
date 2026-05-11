@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/utils/screen_utils.dart';
 import 'package:maypole/core/services/location_provider.dart';
-import 'package:maypole/core/services/location_service.dart';
 import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/features/settings/presentation/viewmodels/notification_settings_viewmodel.dart';
 import 'package:maypole/features/settings/presentation/widgets/location_features_dialog.dart';

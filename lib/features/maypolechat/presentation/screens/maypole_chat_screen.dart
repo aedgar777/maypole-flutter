@@ -109,7 +109,7 @@ class MaypoleChatScreen extends ConsumerWidget {
   Future<void> _handleAddPressed(BuildContext context) async {
     final Object? result = await context.push('/search');
     if (result != null && result is PlacePrediction && context.mounted) {
-      final prediction = result as PlacePrediction;
+      final prediction = result;
       context.go('/chat/${prediction.placeId}', extra: {
         'name': prediction.placeName,
         'address': prediction.address,

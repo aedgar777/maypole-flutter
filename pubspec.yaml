@@ -68,6 +68,8 @@ dependencies:
 
   http: any
   riverpod: any
+  flutter_web_plugins:
+    sdk: flutter
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,6 +25,7 @@ import 'package:maypole/core/ads/ad_config.dart';
 import 'package:maypole/core/ads/ad_providers.dart';
 import 'package:maypole/core/services/permissions_provider.dart';
 import 'package:maypole/core/utils/screen_utils.dart';
+import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../../../identity/auth_providers.dart';
 import '../../../directmessages/presentation/dm_providers.dart';
 import '../../../maypolechat/presentation/maypole_chat_providers.dart';
@@ -300,6 +301,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildAdaptiveLayout(BuildContext context, DomainUser user) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final l10n = AppLocalizations.of(context)!;
         final isWideScreen = ScreenUtils.isWideScreen(constraints);
 
         // Handle transition from wide to narrow screen with a selected thread
@@ -396,6 +398,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       curve: Curves.ease,
                       child: FloatingActionButton(
                         heroTag: 'home_fab',
+                        tooltip: l10n.searchPlaces,
                         onPressed: shouldShowAddFab ? () => _handleAddPressed(context) : null,
                         child: const Icon(Icons.add),
                       ),

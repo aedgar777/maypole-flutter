@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 
 /// Service to prefetch and cache user data on login/app start
 /// This dramatically reduces visible loading times by warming up the Firestore cache

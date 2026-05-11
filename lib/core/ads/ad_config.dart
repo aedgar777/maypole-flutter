@@ -65,7 +65,7 @@ class AdConfig {
     // Check environment from build configuration
     const dartDefineEnv = String.fromEnvironment('ENVIRONMENT', defaultValue: '');
     
-    // Check environment from .env file
+    // Check environment from ..env file
     String dotenvEnv = 'dev';
     try {
       dotenvEnv = dotenv.env['ENVIRONMENT'] ?? 'dev';
@@ -127,7 +127,7 @@ class AdConfig {
     // Check environment from build configuration
     const dartDefineEnv = String.fromEnvironment('ENVIRONMENT', defaultValue: '');
     
-    // Check environment from .env file
+    // Check environment from ..env file
     String dotenvEnv = 'dev';
     try {
       dotenvEnv = dotenv.env['ENVIRONMENT'] ?? 'dev';

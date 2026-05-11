@@ -22,7 +22,7 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Create dummy .env file for tests
+      - name: Create dummy ..env file for tests
         run: |
           cat > .env << EOF
           # Test Environment (Dummy values for testing)
@@ -149,7 +149,7 @@ jobs:
           rm -rf android/.gradle
           rm -rf android/app/build
 
-      - name: Create .env file from secrets
+      - name: Create ..env file from secrets
         run: |
           cat > .env << EOF
           ENVIRONMENT=dev
@@ -259,7 +259,7 @@ jobs:
           bundler-cache: true
           working-directory: ios
 
-      - name: Create .env file from secrets
+      - name: Create ..env file from secrets
         run: |
           cat > .env << EOF
           ENVIRONMENT=dev
@@ -363,7 +363,7 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Create .env file from secrets
+      - name: Create ..env file from secrets
         run: |
           cat > .env << EOF
           ENVIRONMENT=dev

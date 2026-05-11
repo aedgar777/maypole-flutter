@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Environment Validation Script for Maypole Flutter App
-# Usage: ./scripts/validate-env.sh [dev|prod]
+# Usage: ./scripts/validate-.env.sh [dev|prod]
 
 set -e
 
@@ -11,7 +11,7 @@ ENV_FILE="$PROJECT_ROOT/.env.local"
 
 echo "🔍 Validating $ENVIRONMENT environment configuration..."
 
-# Check if .env.local exists
+# Check if ..env.local exists
 if [ ! -f "$ENV_FILE" ]; then
     echo "❌ .env.local not found!"
     echo "📋 Please run: cp .env.local.example .env.local"

@@ -32,6 +32,7 @@ Future<void> main() async {
     try {
       await dotenv.load(fileName: ".env");
     } catch (e) {
+      debugPrint('Error loading .env: $e');
       try {
         await dotenv.load(fileName: ".env.local");
       } catch (_) {

@@ -90,7 +90,8 @@ class _WebPlacePickerMapState extends State<WebPlacePickerMap> {
         final styleOptions = js_util.newObject();
         js_util.setProperty(styleOptions, 'styles', style);
         js_util.callMethod(_map, 'setOptions', [styleOptions]);
-      } catch (e) {
+      } on Exception {
+        // ignore: map style JSON parse failures silently
       }
     }
 

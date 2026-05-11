@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 
 /// Holds information about a staged image for upload
 /// Works on both mobile and web

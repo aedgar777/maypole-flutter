@@ -39,7 +39,7 @@ print("Firebase Admin initialized", flush=True)
 
 # Define secrets using the new Secret Manager approach
 # These are set via: firebase functions:secrets:set SECRET_NAME
-# For local development, you can use .env files with firebase functions:config:export
+# For local development, you can use ..env files with firebase functions:config:export
 
 # Google Places API Key - used for Places Autocomplete
 goog_places_api_key = SecretParam("GOOGLE_PLACES_API_KEY")

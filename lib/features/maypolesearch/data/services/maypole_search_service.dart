@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
@@ -8,7 +8,7 @@ import '../models/autocomplete_request.dart';
 import '../models/autocomplete_response.dart';
 
 class MaypoleSearchService {
-  final String _apiKey = AppConfig.googlePlacesApiKey;
+  String get _apiKey => AppConfig.googlePlacesApiKey;
 
   // Use Cloud Function for web (required due to CORS), direct API for mobile
   String get _baseUrl {
@@ -56,15 +56,19 @@ class MaypoleSearchService {
         
         return data;
       } else {
+        debugPrint('MaypoleSearchService: getPlaceDetails failed with status: ${response.statusCode}');
+        debugPrint('MaypoleSearchService: Response body: ${response.body}');
         return null;
       }
     } catch (e) {
+      debugPrint('Reverse geocode error: $e');
       return null;
     }
   }
 
-  /// Reverse geocode coordinates to get nearest place details.
-  /// Returns the best match place and its distance from the tap point in meters.
+  /// Search for the nearest place around coordinates.
+  /// Prefer `searchNearbyPlaces` plus map viewport/screen filtering for map taps,
+  /// because this may return places that are near the coordinate but not visible.
   Future<Map<String, dynamic>?> reverseGeocode(
     double latitude,
     double longitude, {
@@ -97,6 +101,26 @@ class MaypoleSearchService {
         'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types',
       };
       body = json.encode({
+        'includedTypes': [
+          'restaurant',
+          'cafe',
+          'bar',
+          'store',
+          'park',
+          'tourist_attraction',
+          'museum',
+          'lodging',
+          'art_gallery',
+          'gas_station',
+          'pharmacy',
+          'bakery',
+          'bank',
+          'movie_theater',
+          'gym',
+          'library',
+          'stadium',
+          'zoo',
+        ],
         'locationRestriction': {
           'circle': {
             'center': {
@@ -112,18 +136,22 @@ class MaypoleSearchService {
     }
 
     try {
-
+      final keyToLog = _apiKey.length > 5 ? '${_apiKey.substring(0, 5)}...' : (_apiKey.isEmpty ? 'EMPTY' : 'SHORT');
+      debugPrint('MaypoleSearchService: reverseGeocode called at ($latitude, $longitude)');
+      debugPrint('MaypoleSearchService: Environment: ${AppConfig.isProduction ? "PROD" : "DEV"}');
+      debugPrint('MaypoleSearchService: Using API Key: $keyToLog');
+      
       final response = await http.post(
         Uri.parse(url),
         headers: headers,
         body: body,
       );
 
-
       if (response.statusCode == 200) {
-        
         final Map<String, dynamic> data = json.decode(response.body);
         final places = data['places'] as List<dynamic>?;
+
+        debugPrint('MaypoleSearchService: Found ${places?.length ?? 0} places');
 
         if (places == null || places.isEmpty) {
           return null;
@@ -156,14 +184,19 @@ class MaypoleSearchService {
           return null;
         }
 
+        debugPrint('MaypoleSearchService: Best match: ${bestPlace['displayName']?['text']} at ${bestDistance.toStringAsFixed(1)}m');
+
         return {
           ...bestPlace,
           '_distanceMeters': bestDistance,
         };
       } else {
+        debugPrint('MaypoleSearchService: Error ${response.statusCode}');
+        debugPrint('MaypoleSearchService: Body: ${response.body}');
         return null;
       }
     } catch (e) {
+      debugPrint('MaypoleSearchService: Exception: $e');
       return null;
     }
   }
@@ -199,6 +232,26 @@ class MaypoleSearchService {
             'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types',
       };
       body = json.encode({
+        'includedTypes': [
+          'restaurant',
+          'cafe',
+          'bar',
+          'store',
+          'park',
+          'tourist_attraction',
+          'museum',
+          'lodging',
+          'art_gallery',
+          'gas_station',
+          'pharmacy',
+          'bakery',
+          'bank',
+          'movie_theater',
+          'gym',
+          'library',
+          'stadium',
+          'zoo',
+        ],
         'locationRestriction': {
           'circle': {
             'center': {

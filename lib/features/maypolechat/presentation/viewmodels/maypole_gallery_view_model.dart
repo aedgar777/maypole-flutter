@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/features/maypolechat/data/maypole_image_service.dart';
 import 'package:maypole/features/maypolechat/domain/maypole_image.dart';
@@ -82,7 +81,7 @@ class MaypoleGalleryViewModel extends AsyncNotifier<List<MaypoleImage>> {
           _hasMoreImages = false;
         }
       }
-    } catch (e, st) {
+    } catch (e) {
       // Don't update state on error, just log it
     } finally {
       _isLoadingMore = false;
