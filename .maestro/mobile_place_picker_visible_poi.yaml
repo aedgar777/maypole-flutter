@@ -1,0 +1,59 @@
+appId: app.maypole.maypole
+name: Mobile place picker only selects visible POIs
+---
+# Purpose:
+# - Reproduce the mobile bug where tapping a blank-looking area of Google Maps
+#   can still select an off-screen/non-visible place.
+# - Run on a real device/emulator with a signed-in Maypole account, or provide
+#   MAESTRO_EMAIL and MAESTRO_PASSWORD to log in when the login screen appears.
+#
+# Recommended usage:
+#   maestro test .maestro/mobile_place_picker_visible_poi.yaml \
+#     -e MAESTRO_EMAIL='you@example.com' \
+#     -e MAESTRO_PASSWORD='your-password'
+#
+# Use single quotes for credentials in Fish/Bash/Zsh, especially when the
+# password contains characters such as `$` that shells expand in double quotes.
+#
+# If your target blank spot differs by device, adjust the point below.
+
+- launchApp:
+    clearState: false
+
+# Login only when the app starts unauthenticated.
+- runFlow:
+    when:
+      visible: Email
+    commands:
+      - tapOn: Email
+      - inputText: ${MAESTRO_EMAIL}
+      - tapOn: Password
+      - inputText: ${MAESTRO_PASSWORD}
+      - hideKeyboard
+      - tapOn: Sign In
+      - extendedWaitUntil:
+          notVisible: Sign In
+          timeout: 20000
+
+# Open the mobile place picker from Home.
+- extendedWaitUntil:
+    visible: Search Places
+    timeout: 20000
+- tapOn: Search Places
+
+# Wait for the picker to settle and capture the map before the test tap.
+- extendedWaitUntil:
+    visible: Search for a maypole
+    timeout: 20000
+- waitForAnimationToEnd
+- takeScreenshot: place-picker-before-blank-tap
+
+# Tap an area that should not correspond to a visible POI label/icon.
+# Adjust this if the screenshot shows a visible POI at this point on your device.
+- tapOn:
+    point: "50%,62%"
+- waitForAnimationToEnd
+- takeScreenshot: place-picker-after-blank-tap
+
+# Web-equivalent behavior: blank/non-POI taps must not show the selected-place sheet.
+- assertNotVisible: Chat Here

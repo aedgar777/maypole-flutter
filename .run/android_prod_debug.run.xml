@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="android prod debug" type="FlutterRunConfigurationType" factoryName="Flutter">
+    <option name="filePath" value="$PROJECT_DIR$/lib/main.dart" />
+    <option name="additionalArgs" value="--flavor prod --debug --dart-define=ENVIRONMENT=prod" />
+    <method v="2" />
+  </configuration>
+</component>
