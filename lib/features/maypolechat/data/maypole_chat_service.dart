@@ -147,8 +147,6 @@ class MaypoleChatService {
       return CacheValidationResult.cacheValid;
     } else if (timeDiff > 0) {
       // Server has newer messages
-      final newMessageCount = timeDiff ~/ 60; // Rough estimate
-      
       // Check if cached messages would still be in the "top 100" window
       // If hundreds of new messages exist, cached messages might be beyond the limit
       return CacheValidationResult.cacheStale;
@@ -205,12 +203,15 @@ class MaypoleChatService {
 
     final batch = _firestore.batch();
 
-    // "Upsert" the maypole document: create if it doesn't exist, update if it does
+    // "Upsert" the maypole document: create if it doesn't exist, update if it does.
+    // Do not overwrite an existing address with an empty fallback value.
     final Map<String, dynamic> maypoleData = {
       'id': threadId,
       'name': maypoleName,
-      'address': address,
     };
+    if (address.trim().isNotEmpty) {
+      maypoleData['address'] = address;
+    }
     
     // Add coordinates if provided
     if (latitude != null) {
@@ -255,11 +256,11 @@ class MaypoleChatService {
       final updatedThread = MaypoleMetaData(
         id: threadId,
         name: maypoleName,
-        address: address,
-        latitude: latitude,
-        longitude: longitude,
+        address: address.trim().isNotEmpty ? address : oldThread.address,
+        latitude: latitude ?? oldThread.latitude,
+        longitude: longitude ?? oldThread.longitude,
         lastTypedAt: now,
-        placeType: placeType,
+        placeType: placeType ?? oldThread.placeType,
       );
       
       batch.update(userRef, {

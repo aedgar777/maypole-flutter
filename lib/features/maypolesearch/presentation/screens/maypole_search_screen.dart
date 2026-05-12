@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
@@ -38,15 +38,15 @@ class MaypoleSearchScreen extends ConsumerStatefulWidget {
 class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
   static const Duration _mapWarmCacheTtl = Duration(hours: 6);
   static const double _selectionSheetOffset = 280;
-  static const double _mobilePoiTapHitSlopPixels = 44;
   static DateTime? _mapWarmCacheExpiry;
   static LatLng? _cachedCameraTarget;
   static double? _cachedCameraZoom;
 
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   Timer? _debounce;
   GoogleMapController? _mapController;
-  final FocusNode _searchFocusNode = FocusNode();
+  MethodChannel? _poiTapChannel;
   bool _isMapLoaded = false;
   CameraPosition? _latestCameraPosition;
 
@@ -100,6 +100,7 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
     _searchFocusNode.removeListener(_onFocusChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _poiTapChannel?.setMethodCallHandler(null);
     _debounce?.cancel();
     _mapController?.dispose();
     super.dispose();
@@ -109,6 +110,11 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
     if (_searchFocusNode.hasFocus && ref.read(selectedPlaceProvider) != null) {
       ref.read(maypoleSearchViewModelProvider.notifier).clearSelectedPlace();
     }
+
+    if (!_searchFocusNode.hasFocus && _searchController.text.trim().isEmpty) {
+      ref.read(maypoleSearchViewModelProvider.notifier).searchMaypoles('');
+    }
+
     setState(() {});
   }
 
@@ -128,6 +134,7 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
           GoogleMap(
             onMapCreated: (controller) async {
               _mapController = controller;
+              _connectNativePoiTapChannel(controller);
               final shouldUseWarmCache = _hasWarmMapCache;
 
               if (shouldUseWarmCache) {
@@ -650,108 +657,64 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
     }
   }
 
-  Future<void> _onMapTapped(LatLng position) async {
+  void _onMapTapped(LatLng position) {
     debugPrint('MaypoleSearchScreen: _onMapTapped at ${position.latitude}, ${position.longitude}');
     if (_searchFocusNode.hasFocus || _searchController.text.trim().isNotEmpty) {
       debugPrint('MaypoleSearchScreen: Tapped ignored (focus: ${_searchFocusNode.hasFocus}, text: "${_searchController.text}")');
       return;
     }
 
-    final controller = _mapController;
-    if (controller == null) {
-      debugPrint('MaypoleSearchScreen: Tapped ignored because map controller is not ready.');
-      return;
-    }
-
-    final details = await _findVisiblePoiAtTap(position, controller);
-
-    debugPrint('MaypoleSearchScreen: visible POI lookup returned: ${details != null ? 'data' : 'null'}');
-
-    if (!mounted) return;
-
-    if (details != null) {
-      final location = details['location'] as Map<String, dynamic>?;
-      final lat = location?['latitude'] as double? ?? position.latitude;
-      final lng = location?['longitude'] as double? ?? position.longitude;
-
-      ref.read(maypoleSearchViewModelProvider.notifier).setSelectedPlace(
-            placeDetails: details,
-            location: LatLng(lat, lng),
-          );
-      return;
-    }
-
-    debugPrint('MaypoleSearchScreen: No visible POI found at tap. Clearing selected place.');
+    // Plain map taps are not POI taps. On Android, real Google-rendered POI
+    // taps arrive through the native OnPoiClickListener bridge below.
     ref.read(maypoleSearchViewModelProvider.notifier).clearSelectedPlace();
   }
 
-  Future<Map<String, dynamic>?> _findVisiblePoiAtTap(
-    LatLng tapPosition,
-    GoogleMapController controller,
-  ) async {
-    try {
-      final searchService = ref.read(maypoleSearchServiceProvider);
-      final candidates = await searchService.searchNearbyPlaces(
-        tapPosition.latitude,
-        tapPosition.longitude,
-        radiusMeters: 75,
-        maxResultCount: 10,
-      );
+  void _connectNativePoiTapChannel(GoogleMapController controller) {
+    _poiTapChannel?.setMethodCallHandler(null);
+    final channel = MethodChannel('app.maypole/google_maps_poi_${controller.mapId}');
+    channel.setMethodCallHandler((call) async {
+      if (call.method != 'poi#onTap' || !mounted) return;
+      final arguments = (call.arguments as Map<Object?, Object?>).cast<String, Object?>();
+      await _handleNativePoiTap(arguments);
+    });
+    _poiTapChannel = channel;
+  }
 
-      if (candidates.isEmpty) {
-        return null;
-      }
+  Future<void> _handleNativePoiTap(Map<String, Object?> poi) async {
+    if (_searchFocusNode.hasFocus || _searchController.text.trim().isNotEmpty) return;
 
-      final visibleRegion = await controller.getVisibleRegion();
-      final tapScreenCoordinate = await controller.getScreenCoordinate(tapPosition);
-
-      Map<String, dynamic>? bestCandidate;
-      var bestScreenDistance = double.infinity;
-
-      for (final candidate in candidates) {
-        final placeId = candidate['id'] as String?;
-        final displayName = candidate['displayName']?['text'] as String?;
-        final location = candidate['location'] as Map<String, dynamic>?;
-        final placeLat = location?['latitude'] as double?;
-        final placeLng = location?['longitude'] as double?;
-
-        if (placeId == null || placeId.isEmpty || displayName == null || displayName.trim().isEmpty) {
-          continue;
-        }
-
-        if (placeLat == null || placeLng == null) {
-          continue;
-        }
-
-        final placePosition = LatLng(placeLat, placeLng);
-        if (!visibleRegion.contains(placePosition)) {
-          continue;
-        }
-
-        final placeScreenCoordinate = await controller.getScreenCoordinate(placePosition);
-        final screenDistance = math.sqrt(
-          math.pow(placeScreenCoordinate.x - tapScreenCoordinate.x, 2) +
-              math.pow(placeScreenCoordinate.y - tapScreenCoordinate.y, 2),
-        );
-
-        if (screenDistance <= _mobilePoiTapHitSlopPixels && screenDistance < bestScreenDistance) {
-          bestCandidate = candidate;
-          bestScreenDistance = screenDistance;
-        }
-      }
-
-      if (bestCandidate != null) {
-        debugPrint(
-          'MaypoleSearchScreen: Best visible POI: ${bestCandidate['displayName']?['text']} '
-          'at ${bestScreenDistance.toStringAsFixed(1)}px from tap',
-        );
-      }
-
-      return bestCandidate;
-    } catch (e) {
-      debugPrint('MaypoleSearchScreen: Visible POI lookup failed: $e');
-      return null;
+    final placeId = poi['placeId'] as String?;
+    final name = poi['name'] as String?;
+    final location = (poi['location'] as Map<Object?, Object?>?)?.cast<String, Object?>();
+    final lat = location?['latitude'] as double?;
+    final lng = location?['longitude'] as double?;
+    if (placeId == null || placeId.isEmpty || name == null || name.trim().isEmpty || lat == null || lng == null) {
+      return;
     }
+
+    final fallbackDetails = {
+      'id': placeId,
+      'displayName': {'text': name},
+      'location': {'latitude': lat, 'longitude': lng},
+      'isNativePoi': true,
+    };
+
+    final fetchedDetails = await ref.read(maypoleSearchServiceProvider).getPlaceDetails(placeId);
+    if (!mounted || _searchFocusNode.hasFocus || _searchController.text.trim().isNotEmpty) return;
+
+    final placeDetails = {
+      ...fallbackDetails,
+      if (fetchedDetails != null) ...fetchedDetails,
+      'isNativePoi': true,
+    };
+    final detailsLocation = placeDetails['location'] as Map<String, dynamic>?;
+    final selectedLat = detailsLocation?['latitude'] as double? ?? lat;
+    final selectedLng = detailsLocation?['longitude'] as double? ?? lng;
+
+    ref.read(maypoleSearchViewModelProvider.notifier).setSelectedPlace(
+          placeDetails: placeDetails,
+          location: LatLng(selectedLat, selectedLng),
+        );
   }
 
   void _onMapLongPressed(LatLng position) {
@@ -849,8 +812,20 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
             const SizedBox(height: 12),
             InkWell(
               onTap: () async {
-                final url = Uri.parse(
-                  'https://www.google.com/maps/search/?api=1&query=${position.latitude},${position.longitude}',
+                final query = isGeneric
+                    ? '${position.latitude},${position.longitude}'
+                    : [displayName, formattedAddress]
+                        .where((part) => part.trim().isNotEmpty)
+                        .join(', ');
+                final queryParameters = {
+                  'api': '1',
+                  'query': query,
+                  if (!isGeneric && placeId.isNotEmpty) 'query_place_id': placeId,
+                };
+                final url = Uri.https(
+                  'www.google.com',
+                  '/maps/search/',
+                  queryParameters,
                 );
                 if (await canLaunchUrl(url)) {
                   await launchUrl(url, mode: LaunchMode.externalApplication);

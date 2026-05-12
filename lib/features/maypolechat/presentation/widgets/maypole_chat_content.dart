@@ -437,7 +437,11 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: ScreenUtils.shouldShowAppBarBackButton(),
-        title: Text(widget.maypoleName),
+        title: Text(
+          widget.maypoleName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
