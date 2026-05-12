@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:maypole/core/services/profile_picture_cache_service.dart';
 import 'package:maypole/core/widgets/cached_profile_avatar.dart';
 
@@ -29,11 +28,8 @@ class LazyProfileAvatar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    debugPrint('LazyProfileAvatar: userId=$userId, initialUrl=${initialProfilePictureUrl ?? "null"}');
-    
     // If we have a profile picture URL already, use it
     if (initialProfilePictureUrl != null && initialProfilePictureUrl!.isNotEmpty) {
-      debugPrint('LazyProfileAvatar: Using initial URL for $userId');
       return CachedProfileAvatar(
         imageUrl: initialProfilePictureUrl,
         radius: radius,
@@ -45,7 +41,6 @@ class LazyProfileAvatar extends ConsumerWidget {
 
     // Otherwise, fetch it from Firestore
     if (userId.isEmpty) {
-      debugPrint('LazyProfileAvatar: Empty userId, showing fallback');
       return CachedProfileAvatar(
         imageUrl: null,
         radius: radius,
@@ -55,14 +50,11 @@ class LazyProfileAvatar extends ConsumerWidget {
       );
     }
 
-    debugPrint('LazyProfileAvatar: Fetching from Firestore for $userId');
-    
     // Watch the profile picture provider
     final profilePictureAsync = ref.watch(profilePictureUrlProvider(userId));
 
     return profilePictureAsync.when(
       data: (profilePictureUrl) {
-        debugPrint('LazyProfileAvatar: Fetched URL for $userId: ${profilePictureUrl.isNotEmpty ? profilePictureUrl : "empty"}');
         return CachedProfileAvatar(
           imageUrl: profilePictureUrl.isNotEmpty ? profilePictureUrl : null,
           radius: radius,

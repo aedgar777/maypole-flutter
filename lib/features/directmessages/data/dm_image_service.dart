@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:image_picker/image_picker.dart';
@@ -26,7 +25,6 @@ class DmImageService {
     String? mimeType,
   }) async {
     try {
-      debugPrint('Starting DM image upload for thread: $threadId');
 
       // Get file extension from path or mimeType
       String extension;
@@ -91,11 +89,9 @@ class DmImageService {
       // Get download URL
       final downloadUrl = await snapshot.ref.getDownloadURL();
 
-      debugPrint('DM image uploaded successfully. URL: $downloadUrl');
 
       return downloadUrl;
     } catch (e) {
-      debugPrint('Failed to upload DM image: $e');
       rethrow;
     }
   }
@@ -136,9 +132,7 @@ class DmImageService {
           try {
             final ref = _storage.refFromURL(uploadedUrl);
             await ref.delete();
-            debugPrint('Cleaned up uploaded image after failure: $uploadedUrl');
           } catch (deleteError) {
-            debugPrint('Failed to clean up image: $deleteError');
           }
         }
         rethrow;
@@ -156,9 +150,7 @@ class DmImageService {
       try {
         final ref = _storage.refFromURL(imageUrl);
         await ref.delete();
-        debugPrint('Deleted DM image from storage: $imageUrl');
       } catch (e) {
-        debugPrint('Failed to delete DM image from storage: $e');
         // Don't throw - continue deleting other images
       }
     }

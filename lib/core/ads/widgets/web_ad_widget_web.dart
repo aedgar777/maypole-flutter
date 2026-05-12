@@ -120,7 +120,6 @@ class _WebAdWidgetState extends State<WebAdWidget> {
       );
       _isRegistered = true;
     } catch (e) {
-      debugPrint('❌ Error registering web ad widget: \$e');
     }
   }
 

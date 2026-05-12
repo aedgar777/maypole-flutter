@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:maypole/features/identity/domain/domain_user.dart';
 
 /// Service for searching users in the system
@@ -60,7 +59,6 @@ class UserSearchService {
 
       return matchingUsers;
     } catch (e) {
-      debugPrint('Error searching users in maypole: $e');
       return [];
     }
   }
@@ -87,7 +85,6 @@ class UserSearchService {
           .where((user) => user.username.toLowerCase().startsWith(queryLower))
           .toList();
     } catch (e) {
-      debugPrint('Error searching users: $e');
       return [];
     }
   }
@@ -101,7 +98,6 @@ class UserSearchService {
       }
       return null;
     } catch (e) {
-      debugPrint('Error getting user by ID: $e');
       return null;
     }
   }
@@ -120,7 +116,6 @@ class UserSearchService {
       }
       return null;
     } catch (e) {
-      debugPrint('Error getting user by username: $e');
       return null;
     }
   }

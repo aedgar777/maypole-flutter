@@ -28,7 +28,6 @@ class PlatformAdaptiveAd extends StatelessWidget {
     if (kIsWeb) {
       // Show Adsterra ad on web
       if (webAdSlot == null) {
-        debugPrint('⚠️ Web ad slot not provided for PlatformAdaptiveAd');
         return const SizedBox.shrink();
       }
       

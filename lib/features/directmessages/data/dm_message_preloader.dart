@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/features/directmessages/domain/direct_message.dart';
 import 'package:maypole/features/directmessages/data/dm_thread_service.dart';
@@ -21,15 +20,11 @@ class DmMessagePreloader {
   /// Start preloading messages for all DM threads
   Future<void> preloadAllDmThreads(String userId) async {
     try {
-      debugPrint('🚀 Starting DM preloader for user: $userId');
-      
       // Get all DM threads for this user
       final dmThreadsStream = _dmThreadService.getUserDmThreads(userId);
       
       // Listen to thread list changes
       dmThreadsStream.listen((threadMetadataList) {
-        debugPrint('📋 Found ${threadMetadataList.length} DM threads to preload');
-        
         // Start listening to messages for each thread
         for (final threadMetadata in threadMetadataList) {
           _subscribeToThread(threadMetadata.id);
@@ -45,7 +40,6 @@ class DmMessagePreloader {
         }
       });
     } catch (e) {
-      debugPrint('❌ Error starting DM preloader: $e');
     }
   }
   
@@ -56,8 +50,6 @@ class DmMessagePreloader {
       return;
     }
     
-    debugPrint('📥 Subscribing to DM thread: $threadId');
-    
     // First, try to load from cache synchronously
     _loadFromCache(threadId);
     
@@ -65,10 +57,8 @@ class DmMessagePreloader {
     final subscription = _dmThreadService.getDmMessages(threadId).listen(
       (messages) {
         _messageCache[threadId] = messages;
-        debugPrint('💬 Cached ${messages.length} messages for DM thread: $threadId');
       },
       onError: (error) {
-        debugPrint('❌ Error loading messages for thread $threadId: $error');
       },
     );
     
@@ -81,16 +71,13 @@ class DmMessagePreloader {
       final cachedMessages = await _dmThreadService.getCachedDmMessages(threadId);
       if (cachedMessages.isNotEmpty) {
         _messageCache[threadId] = cachedMessages;
-        debugPrint('📦 Pre-loaded ${cachedMessages.length} cached messages for thread: $threadId');
       }
     } catch (e) {
-      debugPrint('⚠️ Could not load cached messages for thread $threadId: $e');
     }
   }
   
   /// Unsubscribe from a thread
   void _unsubscribeFromThread(String threadId) {
-    debugPrint('📤 Unsubscribing from DM thread: $threadId');
     _subscriptions[threadId]?.cancel();
     _subscriptions.remove(threadId);
     _messageCache.remove(threadId);
@@ -109,7 +96,6 @@ class DmMessagePreloader {
   
   /// Clean up all subscriptions
   void dispose() {
-    debugPrint('🧹 Disposing DM preloader - cleaning up ${_subscriptions.length} subscriptions');
     for (final subscription in _subscriptions.values) {
       subscription.cancel();
     }

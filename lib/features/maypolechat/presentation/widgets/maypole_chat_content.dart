@@ -9,9 +9,8 @@ import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/services/location_provider.dart';
-import 'package:maypole/core/services/location_service.dart';
-import 'package:maypole/core/utils/date_time_utils.dart';
 import 'package:maypole/core/utils/place_geofence_utils.dart';
+import 'package:maypole/core/utils/screen_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/core/widgets/report_content_dialog.dart';
@@ -19,7 +18,6 @@ import 'package:maypole/core/services/hive_moderation_provider.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/domain/maypole_message.dart';
 import 'package:maypole/features/maypolechat/domain/user_mention.dart';
-import 'package:maypole/features/maypolechat/presentation/screens/maypole_gallery_screen.dart';
 import 'package:maypole/features/maypolechat/presentation/viewmodels/mention_controller.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/mention_text_field.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/message_with_mentions.dart';
@@ -29,6 +27,7 @@ import 'package:maypole/l10n/generated/app_localizations.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:maypole/core/ads/widgets/web_ad_widget.dart';
 import 'package:maypole/core/ads/ad_config.dart';
+import 'package:maypole/core/widgets/animated_message_item.dart';
 import '../maypole_chat_providers.dart';
 
 /// The content of a maypole chat screen without the Scaffold wrapper.
@@ -80,15 +79,9 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     _scrollController.addListener(_onScroll);
     _updateCurrentPosition();
 
-    debugPrint('🏠 MaypoleChatContent initialized:');
-    debugPrint('   Place: ${widget.maypoleName}');
-    debugPrint('   Coordinates: lat=${widget.latitude}, lon=${widget.longitude}');
-    debugPrint('   Place Type: ${widget.placeType}');
     if (widget.placeType != null) {
       final radius = PlaceGeofenceUtils.getRadiusForPlaceType(widget.placeType);
-      debugPrint('   Expected range: ${radius}m (${PlaceGeofenceUtils.getRadiusDescription(widget.placeType)})');
     } else {
-      debugPrint('   ⚠️ Place Type is NULL - will use default 1km range');
     }
 
     // Auto-focus if requested
@@ -102,7 +95,6 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
   Future<void> _updateCurrentPosition() async {
     final locationService = ref.read(locationServiceProvider);
     final position = await locationService.getCurrentPosition();
-    debugPrint('📍 Current position: lat=${position?.latitude}, lon=${position?.longitude}');
     if (mounted) {
       setState(() {
         _currentPosition = position;
@@ -113,29 +105,22 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
   /// Check if user is within proximity (100m) of the place
   /// This uses a fixed threshold for the "Show When at Location" feature
   bool get _isWithinProximity {
-    debugPrint('🔍 Checking proximity (100m threshold):');
-    debugPrint('   Place coords: lat=${widget.latitude}, lon=${widget.longitude}');
-    debugPrint('   Current position: lat=${_currentPosition?.latitude}, lon=${_currentPosition?.longitude}');
     
     // Check if user has enabled "Show When at Location" feature
     final locationState = ref.watch(locationSettingsViewModelProvider);
     final showWhenAtLocationEnabled = locationState.preferences.showWhenAtLocation;
     
-    debugPrint('   Show when at location enabled: $showWhenAtLocationEnabled');
     
     // If feature is not enabled, don't check proximity
     if (!showWhenAtLocationEnabled) {
-      debugPrint('   ⚠️ Show when at location disabled - not checking proximity');
       return false;
     }
     
     if (widget.latitude == null || widget.longitude == null) {
-      debugPrint('   ⚠️ No place coordinates - cannot check proximity');
       return false;
     }
     
     if (_currentPosition == null) {
-      debugPrint('   ❌ No current position - cannot check proximity');
       return false;
     }
     
@@ -146,7 +131,6 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       position: _currentPosition,
     );
     
-    debugPrint('   Result: ${isNearby == true ? "✅ Within proximity" : "❌ Not within proximity"}');
     return isNearby ?? false;
   }
 
@@ -154,19 +138,12 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
   /// Uses dynamic geofencing: countries (500km), states (200km), cities (15km), 
   /// neighborhoods (5km), establishments (500m), buildings (200m)
   bool get _isWithinPlaceRange {
-    debugPrint('🔍 Checking place range (type-based geofencing):');
-    debugPrint('   Place: ${widget.maypoleName}');
-    debugPrint('   Place type: ${widget.placeType}');
-    debugPrint('   Place coords: lat=${widget.latitude}, lon=${widget.longitude}');
-    debugPrint('   Current position: lat=${_currentPosition?.latitude}, lon=${_currentPosition?.longitude}');
     
     if (widget.latitude == null || widget.longitude == null) {
-      debugPrint('   ⚠️ No place coordinates - cannot check range');
       return false;
     }
     
     if (_currentPosition == null) {
-      debugPrint('   ❌ No current position - cannot check range');
       return false;
     }
     
@@ -185,27 +162,54 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
         placeLatitude: widget.latitude!,
         placeLongitude: widget.longitude!,
       );
-      debugPrint('   Distance: ${distance?.toStringAsFixed(0)}m / ${radius.toStringAsFixed(0)}m');
     }
     
-    debugPrint('   Result: ${isInRange == true ? "✅ Within range" : "❌ Not within range"}');
     return isInRange ?? false;
   }
   
   /// Check if image upload button should be enabled
-  /// TEMPORARILY DISABLED: All proximity requirements bypassed for testing
-  /// Original requirements: "Show When at Location" enabled + within geofence range
-  bool get _canUploadImage {
-    // TEMPORARY: Bypass all proximity checks for image uploads
-    return true;
-  }
+  /// Requires: "Show When at Location" enabled + within 100m proximity
+  bool get _canUploadImage => _isWithinProximity;
   
   /// Show explanatory dialog when image upload is disabled
-  /// TEMPORARILY DISABLED: This dialog will not be shown since proximity checks are bypassed
   Future<void> _showImageUploadDisabledDialog() async {
-    // TEMPORARY: All proximity checks bypassed - this dialog won't be triggered
-    // Kept for reference when re-enabling proximity requirements
-    return;
+    final locationState = ref.read(locationSettingsViewModelProvider);
+    final isLocationEnabled = locationState.preferences.showWhenAtLocation;
+    
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.location_off, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Location Required'),
+          ],
+        ),
+        content: Text(
+          isLocationEnabled
+              ? 'You need to be within 100 meters of this location to upload images. '
+                  'Enable location permissions and get closer to post photos!'
+              : 'Enable "Show When at Location" in settings to upload images. '
+                  'This helps keep photos authentic to the place.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Got it'),
+          ),
+          if (!isLocationEnabled)
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                // Open preferences screen
+                Navigator.pushNamed(context, '/preferences');
+              },
+              child: const Text('Open Settings'),
+            ),
+        ],
+      ),
+    );
   }
   
   /// Check if a message was sent from within the place's geofence range
@@ -368,7 +372,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                     _animatedMessageIds.add(messageKey);
                   }
                   
-                  return _AnimatedMessageItem(
+                  return AnimatedMessageItem(
                     key: ValueKey(messageKey),
                     isNew: isNew,
                     child: message.isImageUpload
@@ -432,7 +436,12 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.maypoleName),
+        automaticallyImplyLeading: ScreenUtils.shouldShowAppBarBackButton(),
+        title: Text(
+          widget.maypoleName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
@@ -442,14 +451,8 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
           IconButton(
             icon: const Icon(Icons.photo_library),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => MaypoleGalleryScreen(
-                    threadId: widget.threadId,
-                    maypoleName: widget.maypoleName,
-                  ),
-                ),
+              context.push(
+                '/chat/${widget.threadId}/gallery?name=${Uri.encodeComponent(widget.maypoleName)}',
               );
             },
             tooltip: 'View gallery',
@@ -596,9 +599,10 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
               child: MentionTextField(
                 controller: _messageController,
                 threadId: widget.threadId,
+                currentUserId: sender.firebaseID,
                 focusNode: _messageFocusNode,
                 maxLength: 1000,
-                onSubmitted: kIsWeb || AppConfig.isWideScreen ? sendMessage : null,
+                onSubmitted: ScreenUtils.isWideScreenFromContext(context) ? sendMessage : null,
               ),
             ),
           ),
@@ -616,30 +620,37 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     if (_isUploadingImage) return;
 
     try {
-      // Show dialog to choose between camera and gallery
-      final source = await showDialog<ImageSource>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Select Image Source'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Gallery'),
-                onTap: () => Navigator.pop(context, ImageSource.gallery),
-              ),
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('Camera'),
-                onTap: () => Navigator.pop(context, ImageSource.camera),
-              ),
-            ],
+      // On web/desktop, skip the dialog and go straight to gallery
+      // On mobile, show the camera/gallery choice dialog
+      final ImageSource source;
+      if (ScreenUtils.isWideScreenFromContext(context)) {
+        source = ImageSource.gallery;
+      } else {
+        // Show dialog to choose between camera and gallery
+        final selectedSource = await showDialog<ImageSource>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Select Image Source'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.photo_library),
+                  title: const Text('Gallery'),
+                  onTap: () => Navigator.pop(context, ImageSource.gallery),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.camera_alt),
+                  title: const Text('Camera'),
+                  onTap: () => Navigator.pop(context, ImageSource.camera),
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-
-      if (source == null) return;
+        );
+        if (selectedSource == null) return;
+        source = selectedSource;
+      }
 
       // Pick image
       final XFile? image = await _picker.pickImage(
@@ -655,13 +666,19 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
         _isUploadingImage = true;
       });
 
-      // Upload image
+      // Upload image with mimeType for web support
       await ref.read(maypoleImageServiceProvider).uploadImage(
         maypoleId: widget.threadId,
         maypoleName: widget.maypoleName,
         userId: sender.firebaseID,
         username: sender.username,
         filePath: image.path,
+        mimeType: image.mimeType,
+        address: widget.address,
+        latitude: widget.latitude,
+        longitude: widget.longitude,
+        placeType: widget.placeType,
+        userMaypoleThreads: sender.maypoleChatThreads,
       );
 
       if (mounted) {
@@ -773,7 +790,6 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
         subject: 'Join the conversation on Maypole',
       );
     } catch (e) {
-      debugPrint('Error sharing conversation: $e');
       if (mounted) {
         AppToast.showError(
           context,
@@ -781,78 +797,5 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
         );
       }
     }
-  }
-}
-
-/// A stateful widget that animates a message item sliding in from the bottom
-/// with a fade-in effect when it's new
-class _AnimatedMessageItem extends StatefulWidget {
-  final Widget child;
-  final bool isNew;
-
-  const _AnimatedMessageItem({
-    super.key,
-    required this.child,
-    required this.isNew,
-  });
-
-  @override
-  State<_AnimatedMessageItem> createState() => _AnimatedMessageItemState();
-}
-
-class _AnimatedMessageItemState extends State<_AnimatedMessageItem>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _slideAnimation;
-  late Animation<double> _fadeAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 400),
-      vsync: this,
-    );
-
-    _slideAnimation = Tween<double>(
-      begin: widget.isNew ? 30.0 : 0.0,
-      end: 0.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    ));
-
-    _fadeAnimation = Tween<double>(
-      begin: widget.isNew ? 0.0 : 1.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    ));
-
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, _slideAnimation.value),
-          child: Opacity(
-            opacity: _fadeAnimation.value,
-            child: child,
-          ),
-        );
-      },
-      child: widget.child,
-    );
   }
 }

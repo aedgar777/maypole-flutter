@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -13,37 +12,30 @@ class AdService {
   /// Initialize the Mobile Ads SDK (mobile only)
   Future<void> initialize() async {
     if (!AdConfig.adsEnabled) {
-      debugPrint('📵 Ads are disabled');
       return;
     }
 
     // Only initialize AdMob on mobile platforms (Android/iOS)
     if (kIsWeb) {
-      debugPrint('🌐 Skipping AdMob initialization on web (not supported)');
       return;
     }
 
     if (_isInitialized) {
-      debugPrint('⚠️ AdMob already initialized');
       return;
     }
 
     try {
-      debugPrint('🚀 Initializing AdMob SDK on ${Platform.operatingSystem}...');
       await MobileAds.instance.initialize();
       _isInitialized = true;
-      debugPrint('✅ AdMob SDK initialized successfully');
 
       // Optional: Set request configuration for testing
       if (AdConfig.useTestAds) {
-        debugPrint('🧪 Using test ads');
         // You can add test device IDs here if needed
         // final testDeviceIds = ['YOUR_TEST_DEVICE_ID'];
         // final configuration = RequestConfiguration(testDeviceIds: testDeviceIds);
         // MobileAds.instance.updateRequestConfiguration(configuration);
       }
     } catch (e) {
-      debugPrint('❌ Error initializing AdMob: $e');
       rethrow;
     }
   }
@@ -69,7 +61,6 @@ class AdService {
     if (!isReady) return null;
 
     try {
-      debugPrint('📱 Loading interstitial ad...');
       InterstitialAd? ad;
       
       await InterstitialAd.load(
@@ -77,18 +68,15 @@ class AdService {
         request: const AdRequest(),
         adLoadCallback: InterstitialAdLoadCallback(
           onAdLoaded: (InterstitialAd loadedAd) {
-            debugPrint('✅ Interstitial ad loaded');
             ad = loadedAd;
           },
           onAdFailedToLoad: (LoadAdError error) {
-            debugPrint('❌ Interstitial ad failed to load: $error');
           },
         ),
       );
       
       return ad;
     } catch (e) {
-      debugPrint('❌ Error loading interstitial ad: $e');
       return null;
     }
   }
@@ -103,7 +91,6 @@ class AdService {
     String domain = 'https://maypole.app',
   }) async {
     try {
-      debugPrint('🔍 Verifying ads.txt configuration...');
       
       final functionUrl = 'https://us-central1-maypole-flutter-ce6c3.cloudfunctions.net/verifyAdsTxt';
       final uri = Uri.parse(functionUrl).replace(queryParameters: {'domain': domain});
@@ -117,18 +104,11 @@ class AdService {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         final result = AdsTxtVerificationResult.fromJson(json);
         
-        if (result.accessible) {
-          debugPrint('✅ ads.txt verified successfully');
-        } else {
-          debugPrint('⚠️ ads.txt verification failed: ${result.error ?? "Unknown error"}');
-        }
-        
         return result;
       } else {
         throw Exception('Verification request failed with status ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('❌ Error verifying ads.txt: $e');
       return AdsTxtVerificationResult(
         accessible: false,
         error: e.toString(),

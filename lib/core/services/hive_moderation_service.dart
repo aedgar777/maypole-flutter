@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Service for reporting content to Hive.ai for moderation
@@ -36,7 +35,6 @@ class HiveModerationService {
     Map<String, dynamic>? additionalContext,
   }) async {
     try {
-      debugPrint('🔍 Reporting text content to Hive.ai V3: $contentId');
       
       // Hive.ai V3 API format for text moderation
       final requestBody = {
@@ -47,8 +45,6 @@ class HiveModerationService {
         ],
       };
       
-      debugPrint('📤 Request URL: $_baseUrl$_textApiEndpoint');
-      debugPrint('📤 Request body: ${jsonEncode(requestBody)}');
       
       final response = await http.post(
         Uri.parse('$_baseUrl$_textApiEndpoint'),
@@ -59,15 +55,11 @@ class HiveModerationService {
         body: jsonEncode(requestBody),
       );
 
-      debugPrint('📥 Response status: ${response.statusCode}');
-      debugPrint('📥 Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        debugPrint('✅ Successfully reported text content to Hive.ai: $contentId');
         
         // Parse response to check moderation results
         final responseData = jsonDecode(response.body);
-        debugPrint('📊 Moderation results: $responseData');
         
         // Store the report in Firestore for review
         await _storeReportInFirestore(
@@ -81,11 +73,9 @@ class HiveModerationService {
         
         return true;
       } else {
-        debugPrint('❌ Failed to report to Hive.ai: ${response.statusCode} - ${response.body}');
         return false;
       }
     } catch (e) {
-      debugPrint('❌ Error reporting to Hive.ai: $e');
       return false;
     }
   }
@@ -103,7 +93,6 @@ class HiveModerationService {
     Map<String, dynamic>? additionalContext,
   }) async {
     try {
-      debugPrint('🔍 Reporting image content to Hive.ai V3: $contentId');
       
       // Hive.ai V3 API format for image moderation
       final requestBody = {
@@ -114,8 +103,6 @@ class HiveModerationService {
         ],
       };
       
-      debugPrint('📤 Request URL: $_baseUrl$_imageApiEndpoint');
-      debugPrint('📤 Request body: ${jsonEncode(requestBody)}');
       
       final response = await http.post(
         Uri.parse('$_baseUrl$_imageApiEndpoint'),
@@ -126,15 +113,11 @@ class HiveModerationService {
         body: jsonEncode(requestBody),
       );
 
-      debugPrint('📥 Response status: ${response.statusCode}');
-      debugPrint('📥 Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        debugPrint('✅ Successfully reported image to Hive.ai: $contentId');
         
         // Parse response to check moderation results
         final responseData = jsonDecode(response.body);
-        debugPrint('📊 Moderation results: $responseData');
         
         // Store the report in Firestore for review
         await _storeReportInFirestore(
@@ -148,11 +131,9 @@ class HiveModerationService {
         
         return true;
       } else {
-        debugPrint('❌ Failed to report to Hive.ai: ${response.statusCode} - ${response.body}');
         return false;
       }
     } catch (e) {
-      debugPrint('❌ Error reporting to Hive.ai: $e');
       return false;
     }
   }
@@ -196,7 +177,6 @@ class HiveModerationService {
 
       return true;
     } catch (e) {
-      debugPrint('❌ Error reporting message with images to Hive.ai: $e');
       return false;
     }
   }
@@ -228,9 +208,7 @@ class HiveModerationService {
         'context': additionalContext ?? {},
       });
       
-      debugPrint('💾 Stored report in Firestore for content: $contentId');
     } catch (e) {
-      debugPrint('❌ Error storing report in Firestore: $e');
       // Don't throw - we don't want to fail the report if storage fails
     }
   }
@@ -261,7 +239,6 @@ class HiveModerationService {
         }
       }
     } catch (e) {
-      debugPrint('⚠️ Error extracting high-risk scores: $e');
     }
     
     return highRiskScores;

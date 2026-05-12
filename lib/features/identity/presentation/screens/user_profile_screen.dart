@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:maypole/core/app_config.dart';
-import 'package:maypole/core/widgets/cached_profile_avatar.dart';
+import 'package:maypole/core/utils/screen_utils.dart';
 import 'package:maypole/core/widgets/lazy_profile_avatar.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/core/widgets/app_toast.dart';
@@ -92,19 +91,58 @@ class UserProfileScreen extends ConsumerWidget {
       final currentUser = await ref.read(authStateProvider.future);
       if (currentUser == null) return;
 
-      // Get or create a DM thread with this user
-      final thread = await ref
-          .read(dmThreadServiceProvider)
-          .getOrCreateDMThread(
-        currentUserId: currentUser.firebaseID,
-        currentUsername: currentUser.username,
-        currentUserProfpic: currentUser.profilePictureUrl,
-        partnerId: firebaseId,
-        partnerName: username,
-        partnerProfpic: profilePictureUrl,
-      );
+      final dmService = ref.read(dmThreadServiceProvider);
 
-      if (context.mounted) {
+      // Check if thread already exists in Firestore
+      final threadId = dmService.generateThreadId(
+        currentUser.firebaseID,
+        firebaseId,
+      );
+      final existingThread = await dmService.getDMThreadById(threadId);
+
+      late final dynamic thread;
+
+      if (existingThread != null) {
+        // Use existing thread
+        thread = existingThread;
+
+        // If this thread was locally deleted (hidden), unhide it so it reappears in DM list
+        if (thread.hiddenFor.contains(currentUser.firebaseID)) {
+          await dmService.unhideDMThreadForUser(
+            thread.id,
+            currentUser.firebaseID,
+          );
+        }
+      } else {
+        // Create ephemeral thread (not saved to Firestore yet)
+        thread = dmService.createEphemeralThread(
+          threadId: threadId,
+          currentUserId: currentUser.firebaseID,
+          currentUsername: currentUser.username,
+          currentUserProfpic: currentUser.profilePictureUrl,
+          partnerId: firebaseId,
+          partnerName: username,
+          partnerProfpic: profilePictureUrl,
+        );
+
+        // Add to ephemeral threads provider so it appears in the list
+        ref.read(ephemeralDmThreadsProvider.notifier).addThread(thread);
+      }
+
+      if (!context.mounted) return;
+
+
+      // On web/wide screens, navigate to home with DM tab selected
+      // and the thread highlighted in the list
+      if (ScreenUtils.isWideScreenFromContext(context)) {
+        // Navigate to home with DM tab (index 1) and thread pre-selected
+        context.go('/home', extra: {
+          'initialTab': 1, // DM tab
+          'selectedDmThreadId': thread.id,
+          'selectedDmThread': thread,
+        });
+      } else {
+        // On mobile, navigate directly to DM screen
         context.push('/dm/${thread.id}', extra: thread);
       }
     } catch (e) {
@@ -118,11 +156,12 @@ class UserProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final authState = ref.watch(authStateProvider);
+    final isWideScreen = ScreenUtils.isWideScreenFromContext(context);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(username),
-        automaticallyImplyLeading: !AppConfig.isWideScreen,
+        automaticallyImplyLeading: !isWideScreen && ScreenUtils.shouldShowAppBarBackButton(),
       ),
       body: authState.when(
         data: (currentUser) {

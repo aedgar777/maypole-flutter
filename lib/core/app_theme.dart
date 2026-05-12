@@ -8,6 +8,104 @@ const Color darkError = Color(0xFFCF6679);
 const Color lightPurple = Color(0xFF2D2D44); // Lighter purple for message input backgrounds
 const Color brightTeal = Color(0xFF00D9C0); // Bright teal for mentions and special text
 
+// Google Maps dark style shared across map screens.
+const String darkGoogleMapStyle = '''
+[
+  {
+    "elementType": "geometry",
+    "stylers": [{"color": "#1A1A2E"}]
+  },
+  {
+    "elementType": "labels.text.fill",
+    "stylers": [{"color": "#8a8a8a"}]
+  },
+  {
+    "elementType": "labels.text.stroke",
+    "stylers": [{"color": "#1A1A2E"}]
+  },
+  {
+    "featureType": "administrative",
+    "elementType": "geometry",
+    "stylers": [{"color": "#2D2D44"}]
+  },
+  {
+    "featureType": "poi",
+    "elementType": "geometry",
+    "stylers": [{"color": "#2D2D44"}]
+  },
+  {
+    "featureType": "poi",
+    "elementType": "labels.text.fill",
+    "stylers": [{"color": "#6CB4E8"}]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "geometry",
+    "stylers": [{"color": "#263c3f"}]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "labels.text.fill",
+    "stylers": [{"color": "#6b9a76"}]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry",
+    "stylers": [{"color": "#2D2D44"}]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry.stroke",
+    "stylers": [{"color": "#212a37"}]
+  },
+  {
+    "featureType": "road",
+    "elementType": "labels.text.fill",
+    "stylers": [{"color": "#9ca5b3"}]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "geometry",
+    "stylers": [{"color": "#746855"}]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "geometry.stroke",
+    "stylers": [{"color": "#1f2835"}]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "labels.text.fill",
+    "stylers": [{"color": "#6CB4E8"}]
+  },
+  {
+    "featureType": "transit",
+    "elementType": "geometry",
+    "stylers": [{"color": "#2f3948"}]
+  },
+  {
+    "featureType": "transit.station",
+    "elementType": "labels.text.fill",
+    "stylers": [{"color": "#6CB4E8"}]
+  },
+  {
+    "featureType": "water",
+    "elementType": "geometry",
+    "stylers": [{"color": "#17263c"}]
+  },
+  {
+    "featureType": "water",
+    "elementType": "labels.text.fill",
+    "stylers": [{"color": "#515c6d"}]
+  },
+  {
+    "featureType": "water",
+    "elementType": "labels.text.stroke",
+    "stylers": [{"color": "#17263c"}]
+  }
+]
+''';
+
 final darkTheme = ThemeData(
   brightness: Brightness.dark,
   primaryColor: skyBlue,

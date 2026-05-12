@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Load environment variables from .env
+# Load environment variables from ..env
 set -a
 source .env
 set +a
@@ -20,11 +20,5 @@ flutter build web \
   --dart-define=CLOUD_FUNCTIONS_URL="${CLOUD_FUNCTIONS_PROD_URL}"
 
 echo "✅ Web build complete!"
-echo ""
-
-# Copy ads.txt file for AdSense
-echo "📱 Copying ads.txt for AdSense..."
-cp web/ads.txt build/web/ads.txt
-echo "✅ ads.txt copied!"
 echo ""
 echo "Deploy with: firebase deploy --only hosting"

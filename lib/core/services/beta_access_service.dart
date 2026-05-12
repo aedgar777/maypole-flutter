@@ -67,7 +67,6 @@ class BetaAccessService {
         );
       }
     } catch (e) {
-      debugPrint('Error checking beta access: $e');
       return BetaAccessResult(
         hasAccess: false,
         reason: 'Error checking beta access: $e',

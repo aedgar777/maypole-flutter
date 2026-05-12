@@ -102,7 +102,7 @@ jobs:
           rm -rf android/.gradle
           rm -rf android/app/build
 
-      - name: Create .env file from secrets
+      - name: Create ..env file from secrets
         run: |
           cat > .env << EOF
           ENVIRONMENT=production
@@ -225,7 +225,7 @@ jobs:
           bundler-cache: true
           working-directory: ios
 
-      - name: Create .env file from secrets
+      - name: Create ..env file from secrets
         run: |
           cat > .env << EOF
           ENVIRONMENT=production
@@ -329,7 +329,7 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Create .env file from secrets
+      - name: Create ..env file from secrets
         run: |
           cat > .env << EOF
           ENVIRONMENT=production

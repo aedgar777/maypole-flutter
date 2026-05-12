@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/app_theme.dart';
-import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/features/maypolechat/domain/user_mention.dart';
 import 'package:maypole/features/maypolechat/presentation/viewmodels/mention_controller.dart';
@@ -15,6 +14,7 @@ class MentionTextField extends ConsumerStatefulWidget {
   final VoidCallback? onSubmitted;
   final FocusNode? focusNode;
   final int? maxLength;
+  final String? currentUserId;
 
   const MentionTextField({
     super.key,
@@ -23,6 +23,7 @@ class MentionTextField extends ConsumerStatefulWidget {
     this.onSubmitted,
     this.focusNode,
     this.maxLength,
+    this.currentUserId,
   });
 
   @override
@@ -143,6 +144,7 @@ class _MentionTextFieldState extends ConsumerState<MentionTextField> {
                         UserSearchParams(
                           threadId: widget.threadId,
                           query: query,
+                          excludeUserId: widget.currentUserId,
                         ),
                       ),
                     );

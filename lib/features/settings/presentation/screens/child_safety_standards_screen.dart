@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_config.dart';
+import 'package:maypole/core/utils/screen_utils.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 
 class ChildSafetyStandardsScreen extends StatelessWidget {
@@ -13,7 +14,8 @@ class ChildSafetyStandardsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Child Safety Standards'),
-        leading: AppConfig.isWideScreen ? null : IconButton(
+        leading: !AppConfig.isWideScreen && ScreenUtils.shouldShowAppBarBackButton()
+            ? IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             if (context.canPop()) {
@@ -24,8 +26,9 @@ class ChildSafetyStandardsScreen extends StatelessWidget {
               context.go('/settings');
             }
           },
-        ),
-        automaticallyImplyLeading: !AppConfig.isWideScreen,
+        )
+            : null,
+        automaticallyImplyLeading: !AppConfig.isWideScreen && ScreenUtils.shouldShowAppBarBackButton()
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),

@@ -13,13 +13,10 @@ class RemoteConfigService {
   /// Initialize Remote Config with default values
   Future<void> initialize() async {
     if (_initialized) {
-      debugPrint('⚠️ Remote Config already initialized');
       return;
     }
 
     try {
-      debugPrint('🔧 Initializing Firebase Remote Config...');
-      
       _remoteConfig = FirebaseRemoteConfig.instance;
 
       // Set config settings
@@ -43,10 +40,7 @@ class RemoteConfigService {
       await _remoteConfig!.fetchAndActivate();
       
       _initialized = true;
-      debugPrint('✅ Remote Config initialized successfully');
-      debugPrint('📊 ads_enabled: ${_remoteConfig!.getBool('ads_enabled')}');
     } catch (e) {
-      debugPrint('❌ Error initializing Remote Config: $e');
       // Don't rethrow - app should work even if Remote Config fails
       _initialized = false;
     }
@@ -55,7 +49,6 @@ class RemoteConfigService {
   /// Get whether ads are enabled (feature flag)
   bool get adsEnabled {
     if (!_initialized || _remoteConfig == null) {
-      debugPrint('⚠️ Remote Config not initialized, using default: true');
       return true; // Default to enabled if Remote Config fails
     }
     return _remoteConfig!.getBool('ads_enabled');
@@ -88,17 +81,12 @@ class RemoteConfigService {
   /// Manually fetch latest config (useful for testing)
   Future<void> fetchConfig() async {
     if (!_initialized || _remoteConfig == null) {
-      debugPrint('⚠️ Remote Config not initialized');
       return;
     }
 
     try {
-      debugPrint('🔄 Fetching Remote Config...');
       await _remoteConfig!.fetchAndActivate();
-      debugPrint('✅ Remote Config fetched');
-      debugPrint('📊 ads_enabled: ${_remoteConfig!.getBool('ads_enabled')}');
     } catch (e) {
-      debugPrint('❌ Error fetching Remote Config: $e');
     }
   }
 }

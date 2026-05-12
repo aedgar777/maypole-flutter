@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 /// Custom toast/snackbar utility that provides native-looking feedback
