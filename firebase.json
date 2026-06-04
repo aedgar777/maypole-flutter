@@ -83,7 +83,7 @@
     ],
     "rewrites": [
       {
-        "source": "**!(ads.txt|app-ads.txt|robots.txt|sitemap.xml)",
+        "source": "**",
         "destination": "/index.html"
       }
     ]

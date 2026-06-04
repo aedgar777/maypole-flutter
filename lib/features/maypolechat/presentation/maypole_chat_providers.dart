@@ -6,15 +6,22 @@ import 'package:maypole/features/maypolechat/presentation/viewmodels/maypole_gal
 
 import '../data/maypole_chat_service.dart';
 import '../data/maypole_image_service.dart';
+import '../data/maypole_resolver_service.dart';
 
 final maypoleChatThreadServiceProvider = Provider<MaypoleChatService>((ref) {
   return MaypoleChatService();
 });
 
-final maypoleChatViewModelProvider = AsyncNotifierProvider
-    .family<MaypoleChatViewModel, List<MaypoleMessage>, String>(
-      (threadId) => MaypoleChatViewModel(threadId),
-    );
+final maypoleResolverServiceProvider = Provider<MaypoleResolverService>((ref) {
+  return MaypoleResolverService();
+});
+
+final maypoleChatViewModelProvider =
+    AsyncNotifierProvider.family<
+      MaypoleChatViewModel,
+      List<MaypoleMessage>,
+      String
+    >((threadId) => MaypoleChatViewModel(threadId));
 
 /// Provider for the maypole image service
 final maypoleImageServiceProvider = Provider<MaypoleImageService>((ref) {
@@ -22,10 +29,11 @@ final maypoleImageServiceProvider = Provider<MaypoleImageService>((ref) {
 });
 
 /// Provider for streaming images from a maypole (deprecated - use gallery view model instead)
-final maypoleImagesProvider = StreamProvider.autoDispose.family<List<MaypoleImage>, String>((ref, maypoleId) {
-  final service = ref.watch(maypoleImageServiceProvider);
-  return service.getImages(maypoleId);
-});
+final maypoleImagesProvider = StreamProvider.autoDispose
+    .family<List<MaypoleImage>, String>((ref, maypoleId) {
+      final service = ref.watch(maypoleImageServiceProvider);
+      return service.getImages(maypoleId);
+    });
 
 /// Provider for the maypole gallery view model with pagination support
 final maypoleGalleryViewModelProvider = AsyncNotifierProvider.autoDispose

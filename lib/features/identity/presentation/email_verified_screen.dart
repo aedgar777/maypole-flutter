@@ -2,18 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/features/identity/auth_providers.dart';
-import 'package:maypole/l10n/generated/app_localizations.dart';
 
 class EmailVerifiedScreen extends ConsumerStatefulWidget {
-  const EmailVerifiedScreen({super.key});
+  final String? returnTo;
+
+  const EmailVerifiedScreen({super.key, this.returnTo});
 
   @override
-  ConsumerState<EmailVerifiedScreen> createState() => _EmailVerifiedScreenState();
+  ConsumerState<EmailVerifiedScreen> createState() =>
+      _EmailVerifiedScreenState();
 }
 
 class _EmailVerifiedScreenState extends ConsumerState<EmailVerifiedScreen> {
   bool _isChecking = true;
   bool _verificationSuccess = false;
+
+  String get _postAuthRoute {
+    final returnTo = widget.returnTo;
+    if (returnTo == null || returnTo.isEmpty) {
+      return '/home';
+    }
+
+    final uri = Uri.tryParse(returnTo);
+    if (uri == null || uri.hasScheme || uri.hasAuthority) {
+      return '/home';
+    }
+
+    return returnTo.startsWith('/') ? returnTo : '/$returnTo';
+  }
 
   @override
   void initState() {
@@ -25,7 +41,7 @@ class _EmailVerifiedScreenState extends ConsumerState<EmailVerifiedScreen> {
     try {
       // Check and update the verification status
       await ref.read(authServiceProvider).checkEmailVerificationStatus();
-      
+
       if (mounted) {
         setState(() {
           _verificationSuccess = true;
@@ -44,8 +60,6 @@ class _EmailVerifiedScreenState extends ConsumerState<EmailVerifiedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
     if (_isChecking) {
       return Scaffold(
         body: Center(
@@ -78,8 +92,8 @@ class _EmailVerifiedScreenState extends ConsumerState<EmailVerifiedScreen> {
             const SizedBox(height: 32),
             // Success/Info Icon
             Icon(
-              _verificationSuccess 
-                  ? Icons.check_circle_outline 
+              _verificationSuccess
+                  ? Icons.check_circle_outline
                   : Icons.info_outline,
               size: 80,
               color: _verificationSuccess ? Colors.green : Colors.orange,
@@ -89,12 +103,10 @@ class _EmailVerifiedScreenState extends ConsumerState<EmailVerifiedScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32.0),
               child: Text(
-                _verificationSuccess 
-                    ? 'Email Verified!' 
-                    : 'Email Verification',
+                _verificationSuccess ? 'Email Verified!' : 'Email Verification',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -113,9 +125,18 @@ class _EmailVerifiedScreenState extends ConsumerState<EmailVerifiedScreen> {
             const SizedBox(height: 48),
             // Action Button
             ElevatedButton(
-              onPressed: () => context.go('/home'),
+              onPressed: () => context.go(
+                _verificationSuccess
+                    ? _postAuthRoute
+                    : Uri(
+                        path: '/login',
+                        queryParameters: widget.returnTo == null
+                            ? null
+                            : {'returnTo': widget.returnTo},
+                      ).toString(),
+              ),
               child: Text(
-                _verificationSuccess ? 'Go to Home' : 'Sign In',
+                _verificationSuccess ? 'Continue' : 'Sign In',
                 style: const TextStyle(fontSize: 18),
               ),
             ),

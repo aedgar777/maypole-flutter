@@ -15,6 +15,7 @@ import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/features/directmessages/domain/dm_thread.dart';
 import 'package:maypole/features/directmessages/presentation/widgets/dm_content.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
+import 'package:maypole/features/maypolechat/domain/maypole.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/maypole_chat_content.dart';
 import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
 import 'package:maypole/features/maypolesearch/presentation/screens/maypole_search_screen.dart';
@@ -38,6 +39,10 @@ class _SelectedThreadState {
   final String? address;
   final double? latitude;
   final double? longitude;
+  final String? placeType;
+  final String? googlePlaceId;
+  final String? locationSlug;
+  final String? placeSlug;
   final DMThread? dmThread;
   final bool isMaypoleThread;
 
@@ -47,6 +52,10 @@ class _SelectedThreadState {
     this.address,
     this.latitude,
     this.longitude,
+    this.placeType,
+    this.googlePlaceId,
+    this.locationSlug,
+    this.placeSlug,
     this.dmThread,
     this.isMaypoleThread = true,
   });
@@ -57,6 +66,10 @@ class _SelectedThreadState {
     String? address,
     double? latitude,
     double? longitude,
+    String? placeType,
+    String? googlePlaceId,
+    String? locationSlug,
+    String? placeSlug,
     DMThread? dmThread,
     bool? isMaypoleThread,
   }) {
@@ -66,6 +79,10 @@ class _SelectedThreadState {
       address: address ?? this.address,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      placeType: placeType ?? this.placeType,
+      googlePlaceId: googlePlaceId ?? this.googlePlaceId,
+      locationSlug: locationSlug ?? this.locationSlug,
+      placeSlug: placeSlug ?? this.placeSlug,
       dmThread: dmThread ?? this.dmThread,
       isMaypoleThread: isMaypoleThread ?? this.isMaypoleThread,
     );
@@ -203,14 +220,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<void> _initializeDmPreloader() async {
     final authState = ref.read(authStateProvider);
     final user = authState.value;
-    
+
     if (user == null) return;
 
     try {
       final preloader = ref.read(dmMessagePreloaderProvider);
       await preloader.preloadAllDmThreads(user.firebaseID);
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<void> _requestPermissionsIfNeeded() async {
@@ -247,16 +263,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final authState = ref.read(authStateProvider);
     final user = authState.value;
-    
+
     if (user == null) return;
 
     try {
       final prefetchService = ref.read(userDataPrefetchServiceProvider);
       // Run in background without blocking UI
-      prefetchService.prefetchUserData(user.firebaseID).catchError((e) {
-      });
-    } catch (e) {
-    }
+      prefetchService.prefetchUserData(user.firebaseID).catchError((e) {});
+    } catch (e) {}
   }
 
   /// Check email verification status when the app starts
@@ -265,10 +279,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     try {
       final authService = ref.read(authServiceProvider);
       // Run in background to check and update verification status
-      authService.checkEmailVerificationStatus().catchError((e) {
-      });
-    } catch (e) {
-    }
+      authService.checkEmailVerificationStatus().catchError((e) {});
+    } catch (e) {}
   }
 
   @override
@@ -318,14 +330,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               } else if (!_selectedThread.isMaypoleThread &&
                   _selectedThread.dmThread != null) {
                 // Navigate to DM screen
-                context.go('/dm/${_selectedThread.threadId}',
-                    extra: _selectedThread.dmThread);
+                context.go(
+                  '/dm/${_selectedThread.threadId}',
+                  extra: _selectedThread.dmThread,
+                );
               }
             }
           });
         }
 
-        final shouldShowAddFab = _currentTabIndex == 0 && !_isSearchOverlayVisible;
+        final shouldShowAddFab =
+            _currentTabIndex == 0 && !_isSearchOverlayVisible;
 
         return PopScope(
           canPop: !_isSearchOverlayVisible,
@@ -345,19 +360,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     isMaypoleThread: _selectedThread.isMaypoleThread,
                     onSettingsPressed: () => context.push('/settings'),
                     onAddPressed: () => _handleAddPressed(context),
-                    onMaypoleThreadSelected: (threadId, maypoleName, address, latitude, longitude) =>
-                        _handleMaypoleThreadSelected(
+                    onMaypoleThreadSelected:
+                        (
+                          threadId,
+                          maypoleName,
+                          address,
+                          latitude,
+                          longitude,
+                          placeType,
+                          googlePlaceId,
+                          locationSlug,
+                          placeSlug,
+                        ) => _handleMaypoleThreadSelected(
                           context,
                           threadId,
                           maypoleName,
                           address,
                           latitude,
                           longitude,
+                          placeType,
+                          googlePlaceId,
+                          locationSlug,
+                          placeSlug,
                           isWideScreen,
                         ),
-                    onDmThreadSelected: (threadId) =>
-                        _handleDmThreadSelected(context, threadId, isWideScreen),
-                    onTabChanged: (tabIndex) => _handleTabChanged(tabIndex, isWideScreen),
+                    onDmThreadSelected: (threadId) => _handleDmThreadSelected(
+                      context,
+                      threadId,
+                      isWideScreen,
+                    ),
+                    onTabChanged: (tabIndex) =>
+                        _handleTabChanged(tabIndex, isWideScreen),
                     onThreadDeleted: () {
                       // Clear selection when current thread is deleted
                       setState(() {
@@ -399,7 +432,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       child: FloatingActionButton(
                         heroTag: 'home_fab',
                         tooltip: l10n.searchPlaces,
-                        onPressed: shouldShowAddFab ? () => _handleAddPressed(context) : null,
+                        onPressed: shouldShowAddFab
+                            ? () => _handleAddPressed(context)
+                            : null,
                         child: const Icon(Icons.add),
                       ),
                     ),
@@ -419,7 +454,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         _selectedThread = const _SelectedThreadState();
       }
     });
-    
+
     // Reset the flag after handling
     if (_isProgrammaticTabChange) {
       _isProgrammaticTabChange = false;
@@ -440,9 +475,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         address: _selectedThread.address,
         latitude: _selectedThread.latitude,
         longitude: _selectedThread.longitude,
+        placeType: _selectedThread.placeType,
+        googlePlaceId: _selectedThread.googlePlaceId,
+        locationSlug: _selectedThread.locationSlug,
+        placeSlug: _selectedThread.placeSlug,
         showAppBar: false,
         autoFocus: true,
-        showWebAd: false, // Hide ad since we'll show it with share buttons in the header
+        showWebAd:
+            false, // Hide ad since we'll show it with share buttons in the header
       );
 
       // On web/wide screen, add share and gallery icons in the gradient header above the ad
@@ -457,10 +497,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black87,
-                    ],
+                    colors: [Colors.transparent, Colors.black87],
                   ),
                 ),
                 child: Stack(
@@ -480,12 +517,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.share, color: Colors.white70),
+                            icon: const Icon(
+                              Icons.share,
+                              color: Colors.white70,
+                            ),
                             onPressed: () => _shareMaypoleConversation(context),
                             tooltip: 'Share conversation',
                           ),
                           IconButton(
-                            icon: const Icon(Icons.photo_library, color: Colors.white70),
+                            icon: const Icon(
+                              Icons.photo_library,
+                              color: Colors.white70,
+                            ),
                             onPressed: () {
                               context.push(
                                 '/chat/${_selectedThread.threadId}/gallery?name=${Uri.encodeComponent(_selectedThread.maypoleName!)}',
@@ -502,7 +545,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             // If no ad, just show share/gallery buttons in a simple header
             if (kIsWeb && !AdConfig.webAdsEnabled)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -550,7 +596,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (threadId == null || maypoleName == null) return;
 
     try {
-      final shareUrl = '${AppConfig.appUrl}/chat/$threadId';
+      final metadata = MaypoleMetaData(
+        id: threadId,
+        name: maypoleName,
+        address: address ?? '',
+        latitude: _selectedThread.latitude,
+        longitude: _selectedThread.longitude,
+        placeType: _selectedThread.placeType,
+        googlePlaceId: _selectedThread.googlePlaceId ?? threadId,
+        locationSlug: _selectedThread.locationSlug,
+        placeSlug: _selectedThread.placeSlug,
+      );
+      final shareUrl = metadata
+          .semanticUri(baseUri: Uri.parse(AppConfig.appUrl))
+          .toString();
       final locationInfo = address != null ? ' at $address' : '';
       final shareText =
           'Check out the conversation at $maypoleName$locationInfo!\n\n$shareUrl';
@@ -587,21 +646,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         final user = authState.value;
 
         if (user != null) {
-          final isAlreadyInList = user.maypoleChatThreads
-              .any((thread) => thread.id == result.placeId);
+          final isAlreadyInList = user.maypoleChatThreads.any(
+            (thread) => thread.id == result.placeId,
+          );
 
           if (!isAlreadyInList) {
             // Add maypole to user's list immediately
             try {
-              await ref.read(maypoleChatThreadServiceProvider).addMaypoleToUserList(
-                userId: user.firebaseID,
-                placeId: result.placeId,
-                placeName: result.placeName,
-                address: result.address,
-                latitude: result.latitude,
-                longitude: result.longitude,
-                placeType: result.placeType,
-              );
+              await ref
+                  .read(maypoleChatThreadServiceProvider)
+                  .addMaypoleToUserList(
+                    userId: user.firebaseID,
+                    placeId: result.placeId,
+                    placeName: result.placeName,
+                    address: result.address,
+                    latitude: result.latitude,
+                    longitude: result.longitude,
+                    placeType: result.placeType,
+                  );
             } catch (e) {
               // Continue anyway - will be added when they send a message
             }
@@ -616,19 +678,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             address: result.address,
             latitude: result.latitude,
             longitude: result.longitude,
+            placeType: result.placeType,
+            googlePlaceId: result.placeId,
             isMaypoleThread: true,
           );
         });
       } else {
         // On mobile, navigate to the chat screen
         if (context.mounted) {
-          context.push('/chat/${result.placeId}', extra: {
-            'name': result.placeName,
-            'address': result.address,
-            'latitude': result.latitude,
-            'longitude': result.longitude,
-            'placeType': result.placeType,
-          });
+          context.push(
+            '/chat/${result.placeId}',
+            extra: {
+              'name': result.placeName,
+              'address': result.address,
+              'latitude': result.latitude,
+              'longitude': result.longitude,
+              'placeType': result.placeType,
+              'googlePlaceId': result.placeId,
+            },
+          );
         }
       }
     }
@@ -735,12 +803,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     String address,
     double? latitude,
     double? longitude,
+    String? placeType,
+    String? googlePlaceId,
+    String? locationSlug,
+    String? placeSlug,
     bool isWideScreen,
   ) async {
     // Increment counter and show interstitial ad based on Remote Config frequency
     _threadSwitchCount++;
     final frequency = AdConfig.interstitialFrequency;
-    if (_threadSwitchCount % frequency == 0 && AdConfig.interstitialAdsEnabled) {
+    if (_threadSwitchCount % frequency == 0 &&
+        AdConfig.interstitialAdsEnabled) {
       final adManager = ref.read(interstitialAdManagerProvider);
       if (adManager.isAdReady) {
         await adManager.showAd();
@@ -756,18 +829,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           address: address,
           latitude: latitude,
           longitude: longitude,
+          placeType: placeType,
+          googlePlaceId: googlePlaceId,
+          locationSlug: locationSlug,
+          placeSlug: placeSlug,
           isMaypoleThread: true,
         );
       });
     } else {
       // On mobile, navigate immediately
       if (context.mounted) {
-        context.push('/chat/$threadId', extra: {
-          'name': maypoleName,
-          'address': address,
-          'latitude': latitude,
-          'longitude': longitude,
-        });
+        context.push(
+          '/chat/$threadId',
+          extra: {
+            'name': maypoleName,
+            'address': address,
+            'latitude': latitude,
+            'longitude': longitude,
+            'placeType': placeType,
+            'googlePlaceId': googlePlaceId,
+            'locationSlug': locationSlug,
+            'placeSlug': placeSlug,
+          },
+        );
       }
     }
   }
