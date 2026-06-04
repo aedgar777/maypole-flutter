@@ -84,11 +84,23 @@ jobs:
           echo "✅ Node.js dependencies installed"
 
       - name: Deploy Firebase Tools
+        env:
+          GOOGLE_PLACES_SERVER_DEV_API_KEY: ${{ secrets.GOOGLE_PLACES_SERVER_DEV_API_KEY }}
         run: |
           echo "☁️  Deploying Firebase tools to maypole-flutter-dev..."
           echo '${{ secrets.MAYPOLE_FIREBASE_SERVICE_ACCOUNT_DEV }}' > $HOME/gcloud-service-key.json
           export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud-service-key.json
           npm install -g firebase-tools
+
+          if [ -z "$GOOGLE_PLACES_SERVER_DEV_API_KEY" ]; then
+            echo "❌ Missing required secret: GOOGLE_PLACES_SERVER_DEV_API_KEY"
+            exit 1
+          fi
+
+          printf '%s' "$GOOGLE_PLACES_SERVER_DEV_API_KEY" | firebase functions:secrets:set GOOGLE_PLACES_API_KEY \
+            --project maypole-flutter-dev \
+            --data-file - \
+            --force
           
           # Deploy all Firebase tools to dev
           firebase deploy \
@@ -416,18 +428,42 @@ jobs:
           EOF
 
       - name: Build Web
+        env:
+          FIREBASE_DEV_WEB_API_KEY: ${{ secrets.FIREBASE_DEV_WEB_API_KEY }}
+          FIREBASE_DEV_WEB_APP_ID: ${{ secrets.FIREBASE_DEV_WEB_APP_ID }}
+          FIREBASE_DEV_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_DEV_MESSAGING_SENDER_ID }}
+          FIREBASE_DEV_PROJECT_ID: ${{ secrets.FIREBASE_DEV_PROJECT_ID }}
+          FIREBASE_DEV_AUTH_DOMAIN: ${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }}
+          FIREBASE_DEV_STORAGE_BUCKET: ${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }}
+          FIREBASE_DEV_WEB_MEASUREMENT_ID: ${{ secrets.FIREBASE_DEV_WEB_MEASUREMENT_ID }}
+          GOOGLE_PLACES_DEV_API_KEY: ${{ secrets.GOOGLE_PLACES_DEV_API_KEY }}
         run: |
           echo "📦 Building web app (dev)..."
+          required_vars=(
+            FIREBASE_DEV_WEB_API_KEY
+            FIREBASE_DEV_WEB_APP_ID
+            FIREBASE_DEV_MESSAGING_SENDER_ID
+            FIREBASE_DEV_PROJECT_ID
+            FIREBASE_DEV_AUTH_DOMAIN
+            FIREBASE_DEV_STORAGE_BUCKET
+          )
+          for var_name in "${required_vars[@]}"; do
+            if [ -z "${!var_name}" ]; then
+              echo "❌ Missing required secret: $var_name"
+              exit 1
+            fi
+          done
+
           flutter build web \
             --dart-define=ENVIRONMENT=dev \
-            --dart-define=FIREBASE_DEV_WEB_API_KEY=${{ secrets.FIREBASE_DEV_WEB_API_KEY }} \
-            --dart-define=FIREBASE_DEV_WEB_APP_ID=${{ secrets.FIREBASE_DEV_WEB_APP_ID }} \
-            --dart-define=FIREBASE_DEV_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_DEV_MESSAGING_SENDER_ID }} \
-            --dart-define=FIREBASE_DEV_PROJECT_ID=${{ secrets.FIREBASE_DEV_PROJECT_ID }} \
-            --dart-define=FIREBASE_DEV_AUTH_DOMAIN=${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }} \
-            --dart-define=FIREBASE_DEV_STORAGE_BUCKET=${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }} \
-            --dart-define=FIREBASE_DEV_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_DEV_WEB_MEASUREMENT_ID }} \
-            --dart-define=GOOGLE_PLACES_API_KEY=${{ secrets.GOOGLE_PLACES_DEV_API_KEY }}
+            --dart-define=FIREBASE_DEV_WEB_API_KEY="$FIREBASE_DEV_WEB_API_KEY" \
+            --dart-define=FIREBASE_DEV_WEB_APP_ID="$FIREBASE_DEV_WEB_APP_ID" \
+            --dart-define=FIREBASE_DEV_MESSAGING_SENDER_ID="$FIREBASE_DEV_MESSAGING_SENDER_ID" \
+            --dart-define=FIREBASE_DEV_PROJECT_ID="$FIREBASE_DEV_PROJECT_ID" \
+            --dart-define=FIREBASE_DEV_AUTH_DOMAIN="$FIREBASE_DEV_AUTH_DOMAIN" \
+            --dart-define=FIREBASE_DEV_STORAGE_BUCKET="$FIREBASE_DEV_STORAGE_BUCKET" \
+            --dart-define=FIREBASE_DEV_WEB_MEASUREMENT_ID="$FIREBASE_DEV_WEB_MEASUREMENT_ID" \
+            --dart-define=GOOGLE_PLACES_API_KEY="$GOOGLE_PLACES_DEV_API_KEY"
           echo "✅ Build complete!"
 
       - name: Copy deeplink verification files

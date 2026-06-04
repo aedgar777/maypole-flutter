@@ -1,5 +1,8 @@
+// ignore_for_file: deprecated_member_use, avoid_web_libraries_in_flutter
+
 import 'dart:html' as html;
-import 'dart:js_util' as js_util;
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/material.dart';
@@ -32,7 +35,7 @@ class WebPlacePickerMap extends StatefulWidget {
 class _WebPlacePickerMapState extends State<WebPlacePickerMap> {
   late final String _viewType;
   html.DivElement? _mapDiv;
-  dynamic _map;
+  JSObject? _map;
 
   @override
   void initState() {
@@ -57,105 +60,121 @@ class _WebPlacePickerMapState extends State<WebPlacePickerMap> {
     final div = _mapDiv;
     if (div == null) return;
 
-    final google = js_util.getProperty<dynamic>(html.window, 'google');
-    final maps = google != null ? js_util.getProperty<dynamic>(google, 'maps') : null;
+    final google = (html.window as JSObject).getProperty<JSObject?>('google'.toJS);
+    final maps = google?.getProperty<JSObject?>('maps'.toJS);
     if (maps == null) {
       return;
     }
 
-    final mapCtor = js_util.getProperty<dynamic>(maps, 'Map');
-    final latLngCtor = js_util.getProperty<dynamic>(maps, 'LatLng');
-    final markerCtor = js_util.getProperty<dynamic>(maps, 'Marker');
-    final event = js_util.getProperty<dynamic>(maps, 'event');
-    final addListener = event != null ? js_util.getProperty<dynamic>(event, 'addListener') : null;
+    final mapCtor = maps.getProperty<JSFunction?>('Map'.toJS);
+    final latLngCtor = maps.getProperty<JSFunction?>('LatLng'.toJS);
+    final markerCtor = maps.getProperty<JSFunction?>('Marker'.toJS);
+    final eventObject = maps.getProperty<JSObject?>('event'.toJS);
+    final addListener = eventObject?.getProperty<JSFunction?>('addListener'.toJS);
 
-    if (mapCtor == null || latLngCtor == null || markerCtor == null || addListener == null) {
+    if (mapCtor == null ||
+        latLngCtor == null ||
+        markerCtor == null ||
+        eventObject == null ||
+        addListener == null) {
       return;
     }
+    final event = eventObject;
 
     final target = widget.initialCameraPosition.target;
-    final center = js_util.callConstructor(latLngCtor, [target.latitude, target.longitude]);
+    final center = latLngCtor.callAsConstructor<JSObject>(
+      target.latitude.toJS,
+      target.longitude.toJS,
+    );
 
-    final mapOptions = js_util.newObject();
-    js_util.setProperty(mapOptions, 'center', center);
-    js_util.setProperty(mapOptions, 'zoom', widget.initialCameraPosition.zoom);
-    js_util.setProperty(mapOptions, 'mapTypeId', 'roadmap');
-    js_util.setProperty(mapOptions, 'disableDefaultUI', false);
+    final mapOptions = <String, Object?>{
+      'center': center,
+      'zoom': widget.initialCameraPosition.zoom,
+      'mapTypeId': 'roadmap',
+      'disableDefaultUI': false,
+    }.jsify() as JSObject;
 
-    _map = js_util.callConstructor(mapCtor, [div, mapOptions]);
+    _map = mapCtor.callAsConstructor<JSObject>(div as JSObject, mapOptions);
+    final map = _map!;
 
     if (widget.mapStyle != null && widget.mapStyle!.isNotEmpty) {
       try {
-        final style = js_util.callMethod<dynamic>(js_util.getProperty(html.window, 'JSON'), 'parse', [widget.mapStyle!]);
-        final styleOptions = js_util.newObject();
-        js_util.setProperty(styleOptions, 'styles', style);
-        js_util.callMethod(_map, 'setOptions', [styleOptions]);
+        final json = (html.window as JSObject).getProperty<JSObject>('JSON'.toJS);
+        final style = json.callMethod<JSAny>('parse'.toJS, widget.mapStyle!.toJS);
+        final styleOptions = <String, Object?>{'styles': style}.jsify() as JSObject;
+        map.callMethod('setOptions'.toJS, styleOptions);
       } on Exception {
         // ignore: map style JSON parse failures silently
       }
     }
 
-    final markerOptions = js_util.newObject();
-    js_util.setProperty(markerOptions, 'map', _map);
-    js_util.setProperty(markerOptions, 'visible', false);
-    final marker = js_util.callConstructor(markerCtor, [markerOptions]);
+    final markerOptions = <String, Object?>{
+      'map': map,
+      'visible': false,
+    }.jsify() as JSObject;
+    final marker = markerCtor.callAsConstructor<JSObject>(markerOptions);
 
-    js_util.callMethod(event, 'addListener', [
-      _map,
-      'click',
-      js_util.allowInterop((dynamic e) {
-        final placeId = js_util.getProperty<dynamic>(e, 'placeId');
-        final latLng = js_util.getProperty<dynamic>(e, 'latLng');
+    event.callMethod(
+      'addListener'.toJS,
+      map,
+      'click'.toJS,
+      ((JSObject e) {
+        final placeId = e.getProperty<JSAny?>('placeId'.toJS);
+        final latLng = e.getProperty<JSObject?>('latLng'.toJS);
         if (latLng == null) {
           return;
         }
 
-        final lat = js_util.callMethod<num?>(latLng, 'lat', []);
-        final lng = js_util.callMethod<num?>(latLng, 'lng', []);
+        final lat = latLng.callMethod<JSNumber?>('lat'.toJS)?.toDartDouble;
+        final lng = latLng.callMethod<JSNumber?>('lng'.toJS)?.toDartDouble;
         if (lat == null || lng == null) return;
 
         if (placeId != null) {
-          js_util.callMethod(e, 'stop', []);
-          js_util.callMethod(marker, 'setVisible', [true]);
-          js_util.callMethod(marker, 'setPosition', [latLng]);
+          e.callMethod('stop'.toJS);
+          marker.callMethod('setVisible'.toJS, true.toJS);
+          marker.callMethod('setPosition'.toJS, latLng);
 
           widget.onPlaceSelected({
             'placeId': placeId.toString(),
-            'latitude': lat.toDouble(),
-            'longitude': lng.toDouble(),
+            'latitude': lat,
+            'longitude': lng,
           });
         }
-      }),
-    ]);
+      }).toJS,
+    );
 
-    js_util.callMethod(event, 'addListener', [
-      _map,
-      'idle',
-      js_util.allowInterop(() {
-        final centerNow = js_util.callMethod<dynamic>(_map, 'getCenter', []);
-        final zoomNow = js_util.callMethod<num?>(_map, 'getZoom', []);
-        final lat = centerNow != null ? js_util.callMethod<num?>(centerNow, 'lat', []) : null;
-        final lng = centerNow != null ? js_util.callMethod<num?>(centerNow, 'lng', []) : null;
+    event.callMethod(
+      'addListener'.toJS,
+      map,
+      'idle'.toJS,
+      (() {
+        final centerNow = map.callMethod<JSObject?>('getCenter'.toJS);
+        final zoomNow = map.callMethod<JSNumber?>('getZoom'.toJS)?.toDartDouble;
+        final lat = centerNow?.callMethod<JSNumber?>('lat'.toJS)?.toDartDouble;
+        final lng = centerNow?.callMethod<JSNumber?>('lng'.toJS)?.toDartDouble;
         if (lat != null && lng != null && zoomNow != null) {
           widget.onCameraMove?.call(
             CameraPosition(
-              target: LatLng(lat.toDouble(), lng.toDouble()),
-              zoom: zoomNow.toDouble(),
+              target: LatLng(lat, lng),
+              zoom: zoomNow,
             ),
           );
         }
         widget.onMapLoaded?.call();
-      }),
-    ]);
+      }).toJS,
+    );
 
     widget.onControllerReady?.call(
       (LatLng target, double zoom) async {
-        final nextCenter = js_util.callConstructor(latLngCtor, [target.latitude, target.longitude]);
-        js_util.callMethod(_map, 'setCenter', [nextCenter]);
-        js_util.callMethod(_map, 'setZoom', [zoom]);
+        final nextCenter = latLngCtor.callAsConstructor<JSObject>(
+          target.latitude.toJS,
+          target.longitude.toJS,
+        );
+        map.callMethod('setCenter'.toJS, nextCenter);
+        map.callMethod('setZoom'.toJS, zoom.toJS);
       },
       () async {
-        js_util.callMethod(marker, 'setVisible', [false]);
+        marker.callMethod('setVisible'.toJS, false.toJS);
       },
     );
   }

@@ -85,6 +85,22 @@ class MaypoleMetaData {
     );
   }
 
+  String get effectiveLocationSlug =>
+      (locationSlug != null && locationSlug!.isNotEmpty)
+      ? locationSlug!
+      : MaypoleSlugUtils.locationSlugFromAddress(address);
+
+  String get effectivePlaceSlug => (placeSlug != null && placeSlug!.isNotEmpty)
+      ? placeSlug!
+      : MaypoleSlugUtils.slugify(name);
+
+  Uri semanticUri({required Uri baseUri}) {
+    return baseUri.replace(
+      pathSegments: [effectiveLocationSlug, effectivePlaceSlug],
+      queryParameters: {'id': googlePlaceId ?? id},
+    );
+  }
+
   static double? _nullableDouble(dynamic value) {
     if (value is num) {
       return value.toDouble();
@@ -107,6 +123,12 @@ class MaypoleMetaData {
       'id': id,
       'name': name,
       'address': address,
+      if (googlePlaceId != null && googlePlaceId!.isNotEmpty)
+        'googlePlaceId': googlePlaceId,
+      if (googlePlaceIdAliases.isNotEmpty)
+        'googlePlaceIdAliases': googlePlaceIdAliases,
+      'locationSlug': effectiveLocationSlug,
+      'placeSlug': effectivePlaceSlug,
     };
 
     if (latitude != null) {
@@ -121,19 +143,52 @@ class MaypoleMetaData {
     if (placeType != null) {
       mapData['placeType'] = placeType!;
     }
-    if (googlePlaceId != null) {
-      mapData['googlePlaceId'] = googlePlaceId!;
-    }
-    if (googlePlaceIdAliases.isNotEmpty) {
-      mapData['googlePlaceIdAliases'] = googlePlaceIdAliases;
-    }
-    if (locationSlug != null) {
-      mapData['locationSlug'] = locationSlug!;
-    }
-    if (placeSlug != null) {
-      mapData['placeSlug'] = placeSlug!;
-    }
 
     return mapData;
+  }
+}
+
+class MaypoleSlugUtils {
+  static const String fallbackLocationSlug = 'nearby';
+  static const String fallbackPlaceSlug = 'maypole';
+
+  const MaypoleSlugUtils._();
+
+  static String slugify(String value, {String fallback = fallbackPlaceSlug}) {
+    final slug = value
+        .toLowerCase()
+        .replaceAll('&', ' and ')
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'^-+|-+$'), '')
+        .replaceAll(RegExp(r'-{2,}'), '-');
+
+    return slug.isEmpty ? fallback : slug;
+  }
+
+  static String locationSlugFromAddress(String? address) {
+    if (address == null || address.trim().isEmpty) {
+      return fallbackLocationSlug;
+    }
+
+    final parts = address
+        .split(',')
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+
+    final cityOrNeighborhood = parts.length >= 2
+        ? parts[parts.length - 2]
+        : parts.first;
+    final withoutStateOrPostalCode = cityOrNeighborhood
+        .replaceAll(RegExp(r'\b[A-Z]{2}\b'), '')
+        .replaceAll(RegExp(r'\b\d{5}(?:-\d{4})?\b'), '')
+        .trim();
+
+    return slugify(
+      withoutStateOrPostalCode.isEmpty
+          ? cityOrNeighborhood
+          : withoutStateOrPostalCode,
+      fallback: fallbackLocationSlug,
+    );
   }
 }
