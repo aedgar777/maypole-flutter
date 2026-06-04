@@ -297,10 +297,13 @@ jobs:
 
       - name: Sync iOS code signing certificates with Match
         working-directory: ios
+        timeout-minutes: 15
         env:
           MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
           MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
         run: |
           echo "🔐 Syncing code signing certificates and provisioning profiles..."
@@ -308,15 +311,46 @@ jobs:
           bundle exec fastlane sync_dev_signing
           echo "✅ Code signing setup complete!"
 
+      - name: Create iOS export options for CI
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+        run: |
+          cat > ios/ExportOptions.ci.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>teamID</key>
+            <string>${APPLE_TEAM_ID}</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${IOS_BUNDLE_ID}</key>
+              <string>match AppStore ${IOS_BUNDLE_ID}</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+          plutil -lint ios/ExportOptions.ci.plist
+
       - name: Build iOS IPA with Flutter
         run: |
           flutter build ipa \
             --release \
             --dart-define=ENVIRONMENT=dev \
-            --export-options-plist=ios/ExportOptions.plist
+            --export-options-plist=ios/ExportOptions.ci.plist
 
       - name: Deploy to TestFlight Internal Testing with Fastlane
         working-directory: ios
+        timeout-minutes: 30
         env:
           MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
           MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
@@ -330,7 +364,7 @@ jobs:
           export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/gcloud/application_default_credentials.json"
           export APP_STORE_CONNECT_API_KEY_KEY_FILEPATH="$HOME/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8"
           
-          # Deploy with Fastlane (upload_ipa_only since Flutter built the IPA)
+          # Deploy the Flutter-built IPA with Fastlane.
           bundle exec fastlane upload_ipa_only
           
           echo ""
