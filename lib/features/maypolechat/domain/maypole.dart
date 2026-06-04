@@ -70,11 +70,9 @@ class MaypoleMetaData {
       id: map['id'] ?? '',
       name: map['name'] ?? '',
       address: map['address'] ?? '',
-      latitude: (map['latitude'] as num?)?.toDouble(),
-      longitude: (map['longitude'] as num?)?.toDouble(),
-      lastTypedAt: map['lastTypedAt'] != null
-          ? (map['lastTypedAt'] as Timestamp).toDate()
-          : null,
+      latitude: _nullableDouble(map['latitude']),
+      longitude: _nullableDouble(map['longitude']),
+      lastTypedAt: _nullableDateTime(map['lastTypedAt']),
       placeType: map['placeType'] as String?,
       googlePlaceId: map['googlePlaceId'] as String?,
       googlePlaceIdAliases:
@@ -101,6 +99,23 @@ class MaypoleMetaData {
       pathSegments: [effectiveLocationSlug, effectivePlaceSlug],
       queryParameters: {'id': googlePlaceId ?? id},
     );
+  }
+
+  static double? _nullableDouble(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    return null;
+  }
+
+  static DateTime? _nullableDateTime(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    return null;
   }
 
   Map<String, dynamic> toMap() {
