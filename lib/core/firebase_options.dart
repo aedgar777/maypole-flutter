@@ -2,7 +2,7 @@
 // ignore_for_file: type=lint
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kDebugMode, kIsWeb, TargetPlatform;
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
@@ -19,7 +19,9 @@ class DefaultFirebaseOptions {
   // Helper methods to get specific environment variables with dart-define priority
   static String _getEnvironment() {
     const String dartDefineValue = String.fromEnvironment(
-        'ENVIRONMENT', defaultValue: '');
+      'ENVIRONMENT',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['ENVIRONMENT'] ?? 'dev';
@@ -30,7 +32,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseDevWebApiKey() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_DEV_WEB_API_KEY', defaultValue: '');
+      'FIREBASE_DEV_WEB_API_KEY',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_DEV_WEB_API_KEY'] ?? '';
@@ -41,7 +45,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseDevWebAppId() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_DEV_WEB_APP_ID', defaultValue: '');
+      'FIREBASE_DEV_WEB_APP_ID',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_DEV_WEB_APP_ID'] ?? '';
@@ -52,7 +58,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseDevMessagingSenderId() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_DEV_MESSAGING_SENDER_ID', defaultValue: '');
+      'FIREBASE_DEV_MESSAGING_SENDER_ID',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_DEV_MESSAGING_SENDER_ID'] ?? '';
@@ -63,7 +71,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseDevProjectId() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_DEV_PROJECT_ID', defaultValue: '');
+      'FIREBASE_DEV_PROJECT_ID',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_DEV_PROJECT_ID'] ?? '';
@@ -74,7 +84,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseDevAuthDomain() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_DEV_AUTH_DOMAIN', defaultValue: '');
+      'FIREBASE_DEV_AUTH_DOMAIN',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_DEV_AUTH_DOMAIN'] ?? '';
@@ -85,7 +97,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseDevStorageBucket() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_DEV_STORAGE_BUCKET', defaultValue: '');
+      'FIREBASE_DEV_STORAGE_BUCKET',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_DEV_STORAGE_BUCKET'] ?? '';
@@ -96,7 +110,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseDevWebMeasurementId() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_DEV_WEB_MEASUREMENT_ID', defaultValue: '');
+      'FIREBASE_DEV_WEB_MEASUREMENT_ID',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_DEV_WEB_MEASUREMENT_ID'] ?? '';
@@ -107,7 +123,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseDevAndroidApiKey() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_DEV_ANDROID_API_KEY', defaultValue: '');
+      'FIREBASE_DEV_ANDROID_API_KEY',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_DEV_ANDROID_API_KEY'] ?? '';
@@ -118,7 +136,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseDevAndroidAppId() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_DEV_ANDROID_APP_ID', defaultValue: '');
+      'FIREBASE_DEV_ANDROID_APP_ID',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_DEV_ANDROID_APP_ID'] ?? '';
@@ -129,7 +149,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseDevIosApiKey() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_DEV_IOS_API_KEY', defaultValue: '');
+      'FIREBASE_DEV_IOS_API_KEY',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_DEV_IOS_API_KEY'] ?? '';
@@ -140,7 +162,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseDevIosAppId() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_DEV_IOS_APP_ID', defaultValue: '');
+      'FIREBASE_DEV_IOS_APP_ID',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_DEV_IOS_APP_ID'] ?? '';
@@ -151,7 +175,9 @@ class DefaultFirebaseOptions {
 
   static String _getIosBundleId() {
     const String dartDefineValue = String.fromEnvironment(
-        'IOS_BUNDLE_ID', defaultValue: '');
+      'IOS_BUNDLE_ID',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['IOS_BUNDLE_ID'] ?? '';
@@ -163,7 +189,9 @@ class DefaultFirebaseOptions {
   // Production environment getters
   static String _getFirebaseProdWebApiKey() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_PROD_WEB_API_KEY', defaultValue: '');
+      'FIREBASE_PROD_WEB_API_KEY',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_PROD_WEB_API_KEY'] ?? '';
@@ -174,7 +202,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseProdWebAppId() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_PROD_WEB_APP_ID', defaultValue: '');
+      'FIREBASE_PROD_WEB_APP_ID',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_PROD_WEB_APP_ID'] ?? '';
@@ -185,7 +215,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseProdMessagingSenderId() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_PROD_MESSAGING_SENDER_ID', defaultValue: '');
+      'FIREBASE_PROD_MESSAGING_SENDER_ID',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_PROD_MESSAGING_SENDER_ID'] ?? '';
@@ -196,7 +228,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseProdProjectId() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_PROD_PROJECT_ID', defaultValue: '');
+      'FIREBASE_PROD_PROJECT_ID',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_PROD_PROJECT_ID'] ?? '';
@@ -207,7 +241,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseProdAuthDomain() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_PROD_AUTH_DOMAIN', defaultValue: '');
+      'FIREBASE_PROD_AUTH_DOMAIN',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_PROD_AUTH_DOMAIN'] ?? '';
@@ -218,7 +254,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseProdStorageBucket() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_PROD_STORAGE_BUCKET', defaultValue: '');
+      'FIREBASE_PROD_STORAGE_BUCKET',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_PROD_STORAGE_BUCKET'] ?? '';
@@ -229,7 +267,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseProdWebMeasurementId() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_PROD_WEB_MEASUREMENT_ID', defaultValue: '');
+      'FIREBASE_PROD_WEB_MEASUREMENT_ID',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_PROD_WEB_MEASUREMENT_ID'] ?? '';
@@ -240,7 +280,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseProdAndroidApiKey() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_PROD_ANDROID_API_KEY', defaultValue: '');
+      'FIREBASE_PROD_ANDROID_API_KEY',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_PROD_ANDROID_API_KEY'] ?? '';
@@ -251,7 +293,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseProdAndroidAppId() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_PROD_ANDROID_APP_ID', defaultValue: '');
+      'FIREBASE_PROD_ANDROID_APP_ID',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_PROD_ANDROID_APP_ID'] ?? '';
@@ -262,7 +306,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseProdIosApiKey() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_PROD_IOS_API_KEY', defaultValue: '');
+      'FIREBASE_PROD_IOS_API_KEY',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_PROD_IOS_API_KEY'] ?? '';
@@ -273,7 +319,9 @@ class DefaultFirebaseOptions {
 
   static String _getFirebaseProdIosAppId() {
     const String dartDefineValue = String.fromEnvironment(
-        'FIREBASE_PROD_IOS_APP_ID', defaultValue: '');
+      'FIREBASE_PROD_IOS_APP_ID',
+      defaultValue: '',
+    );
     if (dartDefineValue.isNotEmpty) return dartDefineValue;
     try {
       return dotenv.env['FIREBASE_PROD_IOS_APP_ID'] ?? '';
@@ -285,10 +333,6 @@ class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     // Get environment from dart-define, fallback to dotenv, then default to dev
     final environment = _getEnvironment();
-
-    if (kIsWeb && kDebugMode) {
-      // Debug logging for web to help diagnose configuration issues
-    }
 
     if (environment == 'production' || environment == 'prod') {
       return _getProductionOptions();
@@ -311,12 +355,12 @@ class DefaultFirebaseOptions {
       case TargetPlatform.windows:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for windows - '
-              'you can reconfigure this by running the FlutterFire CLI again.',
+          'you can reconfigure this by running the FlutterFire CLI again.',
         );
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
-              'you can reconfigure this by running the FlutterFire CLI again.',
+          'you can reconfigure this by running the FlutterFire CLI again.',
         );
       default:
         throw UnsupportedError(
@@ -339,12 +383,12 @@ class DefaultFirebaseOptions {
       case TargetPlatform.windows:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for windows - '
-              'you can reconfigure this by running the FlutterFire CLI again.',
+          'you can reconfigure this by running the FlutterFire CLI again.',
         );
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
-              'you can reconfigure this by running the FlutterFire CLI again.',
+          'you can reconfigure this by running the FlutterFire CLI again.',
         );
       default:
         throw UnsupportedError(
@@ -353,17 +397,31 @@ class DefaultFirebaseOptions {
     }
   }
 
-  // Development Environment (maypole-flutter-dev)
-  static FirebaseOptions get webDev {
-    final apiKey = _getFirebaseDevWebApiKey();
-    final appId = _getFirebaseDevWebAppId();
-    final messagingSenderId = _getFirebaseDevMessagingSenderId();
-    final projectId = _getFirebaseDevProjectId();
-    final authDomain = _getFirebaseDevAuthDomain();
-    final storageBucket = _getFirebaseDevStorageBucket();
-    final measurementId = _getFirebaseDevWebMeasurementId();
+  static FirebaseOptions _validatedWebOptions({
+    required String environment,
+    required String apiKey,
+    required String appId,
+    required String messagingSenderId,
+    required String projectId,
+    required String authDomain,
+    required String storageBucket,
+    required String measurementId,
+  }) {
+    final missingKeys = <String>[
+      if (apiKey.isEmpty) 'apiKey',
+      if (appId.isEmpty) 'appId',
+      if (messagingSenderId.isEmpty) 'messagingSenderId',
+      if (projectId.isEmpty) 'projectId',
+      if (authDomain.isEmpty) 'authDomain',
+      if (storageBucket.isEmpty) 'storageBucket',
+    ];
 
-    if (kIsWeb && kDebugMode) {
+    if (missingKeys.isNotEmpty) {
+      throw StateError(
+        'Missing Firebase web config for $environment: ${missingKeys.join(', ')}. '
+        'Web builds must provide these values via --dart-define because .env '
+        'is not loaded at runtime on Firebase Hosting.',
+      );
     }
 
     return FirebaseOptions(
@@ -374,6 +432,20 @@ class DefaultFirebaseOptions {
       authDomain: authDomain,
       storageBucket: storageBucket,
       measurementId: measurementId,
+    );
+  }
+
+  // Development Environment (maypole-flutter-dev)
+  static FirebaseOptions get webDev {
+    return _validatedWebOptions(
+      environment: 'dev',
+      apiKey: _getFirebaseDevWebApiKey(),
+      appId: _getFirebaseDevWebAppId(),
+      messagingSenderId: _getFirebaseDevMessagingSenderId(),
+      projectId: _getFirebaseDevProjectId(),
+      authDomain: _getFirebaseDevAuthDomain(),
+      storageBucket: _getFirebaseDevStorageBucket(),
+      measurementId: _getFirebaseDevWebMeasurementId(),
     );
   }
 
@@ -405,25 +477,15 @@ class DefaultFirebaseOptions {
 
   // Production Environment (maypole-flutter-ce6c3)
   static FirebaseOptions get webProduction {
-    final apiKey = _getFirebaseProdWebApiKey();
-    final appId = _getFirebaseProdWebAppId();
-    final messagingSenderId = _getFirebaseProdMessagingSenderId();
-    final projectId = _getFirebaseProdProjectId();
-    final authDomain = _getFirebaseProdAuthDomain();
-    final storageBucket = _getFirebaseProdStorageBucket();
-    final measurementId = _getFirebaseProdWebMeasurementId();
-
-    if (kIsWeb && kDebugMode) {
-    }
-
-    return FirebaseOptions(
-      apiKey: apiKey,
-      appId: appId,
-      messagingSenderId: messagingSenderId,
-      projectId: projectId,
-      authDomain: authDomain,
-      storageBucket: storageBucket,
-      measurementId: measurementId,
+    return _validatedWebOptions(
+      environment: 'production',
+      apiKey: _getFirebaseProdWebApiKey(),
+      appId: _getFirebaseProdWebAppId(),
+      messagingSenderId: _getFirebaseProdMessagingSenderId(),
+      projectId: _getFirebaseProdProjectId(),
+      authDomain: _getFirebaseProdAuthDomain(),
+      storageBucket: _getFirebaseProdStorageBucket(),
+      measurementId: _getFirebaseProdWebMeasurementId(),
     );
   }
 

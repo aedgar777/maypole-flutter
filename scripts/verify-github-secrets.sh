@@ -32,6 +32,8 @@ secrets_dev=(
     "FIREBASE_DEV_PROJECT_ID"
     "FIREBASE_DEV_AUTH_DOMAIN"
     "FIREBASE_DEV_STORAGE_BUCKET"
+    "GOOGLE_PLACES_DEV_API_KEY"
+    "GOOGLE_PLACES_SERVER_DEV_API_KEY"
 )
 
 for secret in "${secrets_dev[@]}"; do
@@ -57,6 +59,8 @@ secrets_prod=(
     "FIREBASE_PROD_PROJECT_ID"
     "FIREBASE_PROD_AUTH_DOMAIN"
     "FIREBASE_PROD_STORAGE_BUCKET"
+    "GOOGLE_PLACES_PROD_API_KEY"
+    "GOOGLE_PLACES_SERVER_PROD_API_KEY"
 )
 
 for secret in "${secrets_prod[@]}"; do

@@ -114,6 +114,16 @@ service cloud.firestore {
       }
     }
     
+    // Google Place ID aliases for resolving stale/deep-linked place IDs
+    match /placeIdAliases/{placeId} {
+      // Alias documents contain non-sensitive place ID to maypole ID mappings.
+      // Public reads are needed for unauthenticated shared web links.
+      allow read: if true;
+      
+      // Alias writes are handled by trusted Cloud Functions/admin SDK code.
+      allow write: if false;
+    }
+    
     // Direct Message threads collection rules
     match /DMThreads/{threadId} {
       // Helper function for create/update - check thread ID pattern

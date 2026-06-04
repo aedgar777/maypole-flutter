@@ -6,6 +6,7 @@ import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/identity/auth_providers.dart';
 import 'package:maypole/features/maypolesearch/data/models/autocomplete_response.dart';
 import 'package:maypole/features/home/presentation/widgets/maypole_list_panel.dart';
+import 'package:maypole/features/maypolechat/presentation/maypole_chat_providers.dart';
 import 'package:maypole/features/maypolechat/presentation/widgets/maypole_chat_content.dart';
 import 'package:maypole/core/utils/screen_utils.dart';
 import '../../domain/dm_thread.dart';
@@ -31,6 +32,10 @@ class _DmScreenState extends ConsumerState<DmScreen> {
   String? _currentAddress;
   double? _currentLatitude;
   double? _currentLongitude;
+  String? _currentPlaceType;
+  String? _currentGooglePlaceId;
+  String? _currentLocationSlug;
+  String? _currentPlaceSlug;
 
   @override
   void initState() {
@@ -66,8 +71,28 @@ class _DmScreenState extends ConsumerState<DmScreen> {
                         isMaypoleThread: _isMaypoleThread,
                         onSettingsPressed: () => context.push('/settings'),
                         onAddPressed: () => _handleAddPressed(context),
-                        onMaypoleThreadSelected: (threadId, maypoleName, address, latitude, longitude) =>
-                            _handleMaypoleThreadSelected(threadId, maypoleName, address, latitude, longitude),
+                        onMaypoleThreadSelected:
+                            (
+                              threadId,
+                              maypoleName,
+                              address,
+                              latitude,
+                              longitude,
+                              placeType,
+                              googlePlaceId,
+                              locationSlug,
+                              placeSlug,
+                            ) => _handleMaypoleThreadSelected(
+                              threadId,
+                              maypoleName,
+                              address,
+                              latitude,
+                              longitude,
+                              placeType,
+                              googlePlaceId,
+                              locationSlug,
+                              placeSlug,
+                            ),
                         onDmThreadSelected: (threadId) =>
                             _handleDmThreadSelected(threadId),
                         onTabChanged: (tabIndex) => setState(() {
@@ -89,6 +114,10 @@ class _DmScreenState extends ConsumerState<DmScreen> {
                     address: _currentAddress,
                     latitude: _currentLatitude,
                     longitude: _currentLongitude,
+                    placeType: _currentPlaceType,
+                    googlePlaceId: _currentGooglePlaceId,
+                    locationSlug: _currentLocationSlug,
+                    placeSlug: _currentPlaceSlug,
                     showAppBar: true,
                   );
                 } else if (!_isMaypoleThread && _currentDmThread != null) {
@@ -122,6 +151,10 @@ class _DmScreenState extends ConsumerState<DmScreen> {
         address: _currentAddress,
         latitude: _currentLatitude,
         longitude: _currentLongitude,
+        placeType: _currentPlaceType,
+        googlePlaceId: _currentGooglePlaceId,
+        locationSlug: _currentLocationSlug,
+        placeSlug: _currentPlaceSlug,
         showAppBar: false,
         autoFocus: true,
       );
@@ -139,25 +172,32 @@ class _DmScreenState extends ConsumerState<DmScreen> {
   Future<void> _handleAddPressed(BuildContext context) async {
     final result = await context.push<PlacePrediction>('/search');
     if (result != null && mounted) {
+      final resolvedMaypole = await ref
+          .read(maypoleResolverServiceProvider)
+          .resolvePrediction(result);
+
+      if (!mounted) return;
+
       // Navigate to the new chat
       if (context.mounted) {
-        context.go('/chat/${result.placeId}', extra: {
-          'name': result.placeName,
-          'address': result.address,
-          'latitude': result.latitude,
-          'longitude': result.longitude,
-          'placeType': result.placeType,
-        });
+        context.go(
+          '/chat/${resolvedMaypole.maypoleId}',
+          extra: resolvedMaypole.toNavigationExtra(),
+        );
       }
     }
   }
 
   void _handleMaypoleThreadSelected(
-    String threadId, 
+    String threadId,
     String maypoleName,
     String address,
     double? latitude,
     double? longitude,
+    String? placeType,
+    String? googlePlaceId,
+    String? locationSlug,
+    String? placeSlug,
   ) {
     setState(() {
       _currentThreadId = threadId;
@@ -165,6 +205,10 @@ class _DmScreenState extends ConsumerState<DmScreen> {
       _currentAddress = address;
       _currentLatitude = latitude;
       _currentLongitude = longitude;
+      _currentPlaceType = placeType;
+      _currentGooglePlaceId = googlePlaceId;
+      _currentLocationSlug = locationSlug;
+      _currentPlaceSlug = placeSlug;
       _isMaypoleThread = true;
       _currentDmThread = null;
     });

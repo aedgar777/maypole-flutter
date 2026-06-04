@@ -27,10 +27,7 @@ class RegistrationViewModel extends Notifier<RegistrationState> {
       );
       state = state.copyWith(isLoading: false, clearError: true);
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
     }
   }
 }

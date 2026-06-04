@@ -6,7 +6,6 @@ import 'package:maypole/core/services/fcm_service.dart';
 import 'package:maypole/core/services/user_data_prefetch_service.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 
-
 class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -21,11 +20,9 @@ class AuthService {
         return Stream.value(null);
       }
       // Listen to real-time Firestore updates
-      return _firestore
-          .collection('users')
-          .doc(firebaseUser.uid)
-          .snapshots()
-          .asyncMap((docSnapshot) async {
+      return _firestore.collection('users').doc(firebaseUser.uid).snapshots().asyncMap((
+        docSnapshot,
+      ) async {
         if (docSnapshot.exists) {
           final userData = docSnapshot.data() as Map<String, dynamic>;
           final user = DomainUser.fromMap(userData);
@@ -38,28 +35,28 @@ class AuthService {
           // 2. User was created in Firebase Auth but Firestore write failed
           // 3. User document was manually deleted
           // 4. Old test data exists
-          
+
           // Wait a moment to allow registration to complete
           // If the user was just created, the Firestore document should appear within 2-3 seconds
-          
+
           await Future.delayed(const Duration(seconds: 3));
-          
+
           // Check again if document exists now
           final recheckSnapshot = await _firestore
               .collection('users')
               .doc(firebaseUser.uid)
               .get();
-          
+
           if (recheckSnapshot.exists) {
             final userData = recheckSnapshot.data() as Map<String, dynamic>;
             final user = DomainUser.fromMap(userData);
             _session.currentUser = user;
             return user;
           }
-          
+
           // Document still doesn't exist after waiting - sign out the user
           await signOut();
-          
+
           _session.currentUser = null;
           return null;
         }
@@ -78,49 +75,43 @@ class AuthService {
           .doc(normalizedUsername)
           .get(const GetOptions(source: Source.server));
 
-      
       // If username document exists, check if it's orphaned
       if (result.exists) {
         final data = result.data() as Map<String, dynamic>?;
         final ownerId = data?['owner'] as String?;
-        
-        
+
         if (ownerId != null) {
           // Check if the owner user still exists
           final userDoc = await _firestore
               .collection('users')
               .doc(ownerId)
               .get(const GetOptions(source: Source.server));
-          
-          
+
           if (!userDoc.exists) {
-            
             // Clean up orphaned username
             await _firestore
                 .collection('usernames')
                 .doc(normalizedUsername)
                 .delete();
-            
+
             return true; // Username is now available
           } else {
             return false;
           }
         } else {
-          
           // Clean up malformed username document
           await _firestore
               .collection('usernames')
               .doc(normalizedUsername)
               .delete();
-          
+
           return true;
         }
       }
-      
+
       return true; // Username is available if document doesn't exist
     } catch (e) {
-      if (e is FirebaseException) {
-      }
+      if (e is FirebaseException) {}
       // Re-throw the error so it's clear there's a problem
       // Don't silently return false as that makes it seem like username is taken
       rethrow;
@@ -128,10 +119,10 @@ class AuthService {
   }
 
   Future<String?> registerWithEmailAndPassword(
-      String email,
-      String password,
-      String username,
-      ) async {
+    String email,
+    String password,
+    String username,
+  ) async {
     try {
       // Check username availability
       if (!await isUsernameAvailable(username)) {
@@ -142,10 +133,8 @@ class AuthService {
       }
 
       // Create Firebase Auth user
-      UserCredential result = await _firebaseAuth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      UserCredential result = await _firebaseAuth
+          .createUserWithEmailAndPassword(email: email, password: password);
 
       // Set display name on Firebase Auth user profile
       // This enables the %DISPLAY_NAME% variable in email templates
@@ -158,7 +147,7 @@ class AuthService {
       if (freshUser == null) {
         throw Exception('User authentication state lost during registration');
       }
-      
+
       // Get fresh ID token to ensure Firestore has latest auth state
       await freshUser.getIdToken(true);
 
@@ -170,19 +159,13 @@ class AuthService {
       );
 
       // Store in Firestore
-      await _firestore
-          .collection('users')
-          .doc(freshUser.uid)
-          .set(user.toMap());
+      await _firestore.collection('users').doc(freshUser.uid).set(user.toMap());
 
       // Set current user in session
       _session.currentUser = user;
 
       // Reserve the username
-      await _firestore
-          .collection('usernames')
-          .doc(username.toLowerCase())
-          .set({
+      await _firestore.collection('usernames').doc(username.toLowerCase()).set({
         'taken': true,
         'owner': freshUser.uid,
       });
@@ -191,20 +174,17 @@ class AuthService {
       try {
         await sendEmailVerification();
       } catch (e) {
-        if (e is FirebaseAuthException) {
-        }
+        if (e is FirebaseAuthException) {}
         // Don't fail registration if email sending fails
       }
 
       // Setup FCM for new user
       try {
         await _fcmService.setupForUser(freshUser.uid);
-      } catch (e) {
-      }
+      } catch (e) {}
 
       // Prefetch user data in background (new users won't have much data yet)
-      _prefetchService.prefetchUserData(freshUser.uid).catchError((e) {
-      });
+      _prefetchService.prefetchUserData(freshUser.uid).catchError((e) {});
 
       return freshUser.uid;
     } on FirebaseAuthException {
@@ -214,7 +194,10 @@ class AuthService {
     }
   }
 
-  Future<String?> signInWithEmailAndPassword(String email, String password) async {
+  Future<String?> signInWithEmailAndPassword(
+    String email,
+    String password,
+  ) async {
     try {
       UserCredential result = await _firebaseAuth.signInWithEmailAndPassword(
         email: email,
@@ -224,20 +207,18 @@ class AuthService {
       // Fetch and set domain user
       if (result.user != null) {
         await _fetchAndSetDomainUser(result.user!.uid);
-        
+
         // Check and update email verification status
         await checkEmailVerificationStatus();
-        
+
         // Setup FCM for returning user
         try {
           await _fcmService.setupForUser(result.user!.uid);
-        } catch (e) {
-        }
+        } catch (e) {}
 
         // Prefetch user data in background to warm up cache
         // This runs asynchronously and won't block the login flow
-        _prefetchService.prefetchUserData(result.user!.uid).catchError((e) {
-        });
+        _prefetchService.prefetchUserData(result.user!.uid).catchError((e) {});
       }
 
       return result.user?.uid;
@@ -252,7 +233,7 @@ class AuthService {
     final docSnapshot = await _firestore.collection('users').doc(uid).get();
     if (docSnapshot.exists) {
       _session.currentUser = DomainUser.fromMap(
-          docSnapshot.data() as Map<String, dynamic>
+        docSnapshot.data() as Map<String, dynamic>,
       );
     } else {
       _session.currentUser = null;
@@ -266,10 +247,9 @@ class AuthService {
       if (userId != null) {
         try {
           await _fcmService.cleanupForUser(userId);
-        } catch (e) {
-        }
+        } catch (e) {}
       }
-      
+
       await _firebaseAuth.signOut();
       _session.currentUser = null;
 
@@ -277,8 +257,7 @@ class AuthService {
       // This ensures next user login starts with fresh data
       try {
         await _prefetchService.clearCache();
-      } catch (e) {
-      }
+      } catch (e) {}
     } catch (e) {
       rethrow;
     }
@@ -325,8 +304,7 @@ class AuthService {
       // Cleanup FCM tokens
       try {
         await _fcmService.cleanupForUser(uid);
-      } catch (e) {
-      }
+      } catch (e) {}
 
       // Delete notifications subcollection
       try {
@@ -341,8 +319,7 @@ class AuthService {
           batch.delete(doc.reference);
         }
         await batch.commit();
-      } catch (e) {
-      }
+      } catch (e) {}
 
       // Delete username reservation
       try {
@@ -350,14 +327,12 @@ class AuthService {
             .collection('usernames')
             .doc(username.toLowerCase())
             .delete();
-      } catch (e) {
-      }
+      } catch (e) {}
 
       // Delete user document
       try {
         await _firestore.collection('users').doc(uid).delete();
-      } catch (e) {
-      }
+      } catch (e) {}
 
       // Finally, delete Firebase Auth account
       // If this fails due to requires-recent-login, the deletionRequested flag
@@ -368,13 +343,14 @@ class AuthService {
         if (e.code == 'requires-recent-login') {
           // The Firestore data is already marked for deletion
           // The cloud function will complete the auth deletion
-          
+
           // Sign out the user since their data is marked for deletion
           await signOut();
-          
+
           throw FirebaseAuthException(
             code: 'requires-recent-login',
-            message: 'Account data has been removed. Please sign in again to complete the deletion process.',
+            message:
+                'Account data has been removed. Please sign in again to complete the deletion process.',
           );
         }
         rethrow;
@@ -382,7 +358,6 @@ class AuthService {
 
       // Clear session
       _session.currentUser = null;
-      
     } on FirebaseAuthException {
       // Rethrow auth exceptions
       rethrow;
@@ -406,10 +381,10 @@ class AuthService {
 
       // Send verification email with custom landing page
       // The continueUrl is where users will be redirected after verifying their email
-      final projectId = AppConfig.isProduction 
-          ? 'maypole-flutter-ce6c3' 
+      final projectId = AppConfig.isProduction
+          ? 'maypole-flutter-ce6c3'
           : 'maypole-flutter-dev';
-      
+
       final actionCodeSettings = ActionCodeSettings(
         // Users will land on this page after clicking the verification link in their email
         url: 'https://$projectId.web.app/email-verified',
@@ -422,7 +397,7 @@ class AuthService {
         androidInstallApp: false,
         androidMinimumVersion: '1',
       );
-      
+
       await user.sendEmailVerification(actionCodeSettings);
     } on FirebaseAuthException {
       rethrow;
@@ -439,13 +414,12 @@ class AuthService {
       // Reload user to get latest verification status
       await user.reload();
       final reloadedUser = _firebaseAuth.currentUser;
-      
+
       if (reloadedUser != null && reloadedUser.emailVerified) {
         // Update Firestore with verification status
         await _updateEmailVerificationStatus(true);
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<void> _updateEmailVerificationStatus(bool isVerified) async {
@@ -453,10 +427,9 @@ class AuthService {
       final user = _firebaseAuth.currentUser;
       if (user == null) return;
 
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .update({'emailVerified': isVerified});
+      await _firestore.collection('users').doc(user.uid).update({
+        'emailVerified': isVerified,
+      });
 
       // Update session
       if (_session.currentUser != null) {

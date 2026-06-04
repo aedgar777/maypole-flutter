@@ -33,6 +33,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
   flutter_localizations:
     sdk: flutter
   intl: any
@@ -68,8 +70,6 @@ dependencies:
 
   http: any
   riverpod: any
-  flutter_web_plugins:
-    sdk: flutter
 dev_dependencies:
   flutter_test:
     sdk: flutter
