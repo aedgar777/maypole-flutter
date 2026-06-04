@@ -19,9 +19,10 @@ class Maypole {
     return Maypole(
       id: map['id'] ?? '',
       name: map['name'] ?? '',
-      messages: (map['messages'] as List<dynamic>?)
-          ?.map((e) => MaypoleMessage.fromMap(e as Map<String, dynamic>))
-          .toList() ??
+      messages:
+          (map['messages'] as List<dynamic>?)
+              ?.map((e) => MaypoleMessage.fromMap(e as Map<String, dynamic>))
+              .toList() ??
           [],
       imageCount: map['imageCount'] ?? 0,
     );
@@ -61,13 +62,28 @@ class MaypoleMetaData {
       id: map['id'] ?? '',
       name: map['name'] ?? '',
       address: map['address'] ?? '',
-      latitude: map['latitude'] as double?,
-      longitude: map['longitude'] as double?,
-      lastTypedAt: map['lastTypedAt'] != null 
-          ? (map['lastTypedAt'] as Timestamp).toDate()
-          : null,
+      latitude: _nullableDouble(map['latitude']),
+      longitude: _nullableDouble(map['longitude']),
+      lastTypedAt: _nullableDateTime(map['lastTypedAt']),
       placeType: map['placeType'] as String?,
     );
+  }
+
+  static double? _nullableDouble(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    return null;
+  }
+
+  static DateTime? _nullableDateTime(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    return null;
   }
 
   Map<String, dynamic> toMap() {
@@ -76,7 +92,7 @@ class MaypoleMetaData {
       'name': name,
       'address': address,
     };
-    
+
     if (latitude != null) {
       mapData['latitude'] = latitude!;
     }
@@ -89,7 +105,7 @@ class MaypoleMetaData {
     if (placeType != null) {
       mapData['placeType'] = placeType!;
     }
-    
+
     return mapData;
   }
 }
