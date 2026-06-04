@@ -87,10 +87,7 @@ void main() {
     });
 
     test('fromMap handles missing messages', () {
-      final map = {
-        'id': 'maypole123',
-        'name': 'Test Place',
-      };
+      final map = {'id': 'maypole123', 'name': 'Test Place'};
 
       final maypole = Maypole.fromMap(map);
 
@@ -100,11 +97,7 @@ void main() {
     });
 
     test('fromMap handles null values with defaults', () {
-      final map = <String, dynamic>{
-        'id': null,
-        'name': null,
-        'messages': null,
-      };
+      final map = <String, dynamic>{'id': null, 'name': null, 'messages': null};
 
       final maypole = Maypole.fromMap(map);
 
@@ -153,18 +146,17 @@ void main() {
     });
 
     test('toMap serializes correctly without lastTypedAt', () {
-      final metadata = MaypoleMetaData(
-        id: 'meta123',
-        name: 'Test Place',
-      );
+      final metadata = MaypoleMetaData(id: 'meta123', name: 'Test Place');
 
       final map = metadata.toMap();
 
       expect(map['id'], 'meta123');
       expect(map['name'], 'Test Place');
       expect(map['address'], ''); // Default empty string
+      expect(map['locationSlug'], 'nearby');
+      expect(map['placeSlug'], 'test-place');
       expect(map.containsKey('lastTypedAt'), false); // Not included when null
-      expect(map.length, 3); // id, name, address
+      expect(map.length, 5); // id, name, address, locationSlug, placeSlug
     });
 
     test('toMap serializes correctly with lastTypedAt', () {
@@ -180,9 +172,11 @@ void main() {
       expect(map['id'], 'meta123');
       expect(map['name'], 'Test Place');
       expect(map['address'], ''); // Default empty string
+      expect(map['locationSlug'], 'nearby');
+      expect(map['placeSlug'], 'test-place');
       expect(map.containsKey('lastTypedAt'), true);
       expect((map['lastTypedAt'] as Timestamp).toDate(), lastTyped);
-      expect(map.length, 4); // id, name, address, lastTypedAt
+      expect(map.length, 6); // id, name, address, slugs, lastTypedAt
     });
 
     test('fromMap deserializes correctly without lastTypedAt', () {
@@ -218,11 +212,7 @@ void main() {
     });
 
     test('fromMap handles null values with defaults', () {
-      final map = <String, dynamic>{
-        'id': null,
-        'name': null,
-        'address': null,
-      };
+      final map = <String, dynamic>{'id': null, 'name': null, 'address': null};
 
       final metadata = MaypoleMetaData.fromMap(map);
 
