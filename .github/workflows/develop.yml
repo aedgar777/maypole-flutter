@@ -22,7 +22,7 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Create dummy .env file for tests
+      - name: Create dummy ..env file for tests
         run: |
           cat > .env << EOF
           # Test Environment (Dummy values for testing)
@@ -84,11 +84,23 @@ jobs:
           echo "✅ Node.js dependencies installed"
 
       - name: Deploy Firebase Tools
+        env:
+          GOOGLE_PLACES_SERVER_DEV_API_KEY: ${{ secrets.GOOGLE_PLACES_SERVER_DEV_API_KEY }}
         run: |
           echo "☁️  Deploying Firebase tools to maypole-flutter-dev..."
           echo '${{ secrets.MAYPOLE_FIREBASE_SERVICE_ACCOUNT_DEV }}' > $HOME/gcloud-service-key.json
           export GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud-service-key.json
           npm install -g firebase-tools
+
+          if [ -z "$GOOGLE_PLACES_SERVER_DEV_API_KEY" ]; then
+            echo "❌ Missing required secret: GOOGLE_PLACES_SERVER_DEV_API_KEY"
+            exit 1
+          fi
+
+          printf '%s' "$GOOGLE_PLACES_SERVER_DEV_API_KEY" | firebase functions:secrets:set GOOGLE_PLACES_API_KEY \
+            --project maypole-flutter-dev \
+            --data-file - \
+            --force
           
           # Deploy all Firebase tools to dev
           firebase deploy \
@@ -111,7 +123,7 @@ jobs:
           ref: develop
           fetch-depth: 0
       
-      - name: Pull latest changes (including version bump)
+      - name: Pull latest changes
         run: |
           git pull origin develop
           echo "📱 Current version after pull:"
@@ -149,7 +161,7 @@ jobs:
           rm -rf android/.gradle
           rm -rf android/app/build
 
-      - name: Create .env file from secrets
+      - name: Create ..env file from secrets
         run: |
           cat > .env << EOF
           ENVIRONMENT=dev
@@ -189,7 +201,13 @@ jobs:
       - name: Build Android App Bundle (devRelease)
         run: |
           echo "📦 Building Android App Bundle (dev release)..."
-          flutter build appbundle --release --flavor dev --dart-define=ENVIRONMENT=dev
+          BUILD_NUMBER=$((100000 + GITHUB_RUN_NUMBER))
+          echo "Using CI build number: $BUILD_NUMBER"
+          flutter build appbundle \
+            --release \
+            --flavor dev \
+            --build-number="$BUILD_NUMBER" \
+            --dart-define=ENVIRONMENT=dev
           echo "✅ Build complete!"
 
       - name: Setup Ruby for Fastlane
@@ -227,7 +245,7 @@ jobs:
           ref: develop
           fetch-depth: 0
       
-      - name: Pull latest changes (including version bump)
+      - name: Pull latest changes
         run: |
           git pull origin develop
           echo "📱 Current version after pull:"
@@ -259,7 +277,7 @@ jobs:
           bundler-cache: true
           working-directory: ios
 
-      - name: Create .env file from secrets
+      - name: Create ..env file from secrets
         run: |
           cat > .env << EOF
           ENVIRONMENT=dev
@@ -297,10 +315,13 @@ jobs:
 
       - name: Sync iOS code signing certificates with Match
         working-directory: ios
+        timeout-minutes: 15
         env:
           MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
           MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
         run: |
           echo "🔐 Syncing code signing certificates and provisioning profiles..."
@@ -308,15 +329,49 @@ jobs:
           bundle exec fastlane sync_dev_signing
           echo "✅ Code signing setup complete!"
 
+      - name: Create iOS export options for CI
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+        run: |
+          cat > ios/ExportOptions.ci.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>teamID</key>
+            <string>${APPLE_TEAM_ID}</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${IOS_BUNDLE_ID}</key>
+              <string>match AppStore ${IOS_BUNDLE_ID}</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+          plutil -lint ios/ExportOptions.ci.plist
+
       - name: Build iOS IPA with Flutter
         run: |
+          BUILD_NUMBER=$((100000 + GITHUB_RUN_NUMBER))
+          echo "Using CI build number: $BUILD_NUMBER"
           flutter build ipa \
             --release \
+            --build-number="$BUILD_NUMBER" \
             --dart-define=ENVIRONMENT=dev \
-            --export-options-plist=ios/ExportOptions.plist
+            --export-options-plist=ios/ExportOptions.ci.plist
 
       - name: Deploy to TestFlight Internal Testing with Fastlane
         working-directory: ios
+        timeout-minutes: 30
         env:
           MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
           MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
@@ -330,7 +385,7 @@ jobs:
           export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/gcloud/application_default_credentials.json"
           export APP_STORE_CONNECT_API_KEY_KEY_FILEPATH="$HOME/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8"
           
-          # Deploy with Fastlane (upload_ipa_only since Flutter built the IPA)
+          # Deploy the Flutter-built IPA with Fastlane.
           bundle exec fastlane upload_ipa_only
           
           echo ""
@@ -348,7 +403,7 @@ jobs:
           ref: develop
           fetch-depth: 0
       
-      - name: Pull latest changes (including version bump)
+      - name: Pull latest changes
         run: |
           git pull origin develop
           echo "📱 Current version after pull:"
@@ -363,7 +418,7 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Create .env file from secrets
+      - name: Create ..env file from secrets
         run: |
           cat > .env << EOF
           ENVIRONMENT=dev
@@ -382,18 +437,42 @@ jobs:
           EOF
 
       - name: Build Web
+        env:
+          FIREBASE_DEV_WEB_API_KEY: ${{ secrets.FIREBASE_DEV_WEB_API_KEY }}
+          FIREBASE_DEV_WEB_APP_ID: ${{ secrets.FIREBASE_DEV_WEB_APP_ID }}
+          FIREBASE_DEV_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_DEV_MESSAGING_SENDER_ID }}
+          FIREBASE_DEV_PROJECT_ID: ${{ secrets.FIREBASE_DEV_PROJECT_ID }}
+          FIREBASE_DEV_AUTH_DOMAIN: ${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }}
+          FIREBASE_DEV_STORAGE_BUCKET: ${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }}
+          FIREBASE_DEV_WEB_MEASUREMENT_ID: ${{ secrets.FIREBASE_DEV_WEB_MEASUREMENT_ID }}
+          GOOGLE_PLACES_DEV_API_KEY: ${{ secrets.GOOGLE_PLACES_DEV_API_KEY }}
         run: |
           echo "📦 Building web app (dev)..."
+          required_vars=(
+            FIREBASE_DEV_WEB_API_KEY
+            FIREBASE_DEV_WEB_APP_ID
+            FIREBASE_DEV_MESSAGING_SENDER_ID
+            FIREBASE_DEV_PROJECT_ID
+            FIREBASE_DEV_AUTH_DOMAIN
+            FIREBASE_DEV_STORAGE_BUCKET
+          )
+          for var_name in "${required_vars[@]}"; do
+            if [ -z "${!var_name}" ]; then
+              echo "❌ Missing required secret: $var_name"
+              exit 1
+            fi
+          done
+
           flutter build web \
             --dart-define=ENVIRONMENT=dev \
-            --dart-define=FIREBASE_DEV_WEB_API_KEY=${{ secrets.FIREBASE_DEV_WEB_API_KEY }} \
-            --dart-define=FIREBASE_DEV_WEB_APP_ID=${{ secrets.FIREBASE_DEV_WEB_APP_ID }} \
-            --dart-define=FIREBASE_DEV_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_DEV_MESSAGING_SENDER_ID }} \
-            --dart-define=FIREBASE_DEV_PROJECT_ID=${{ secrets.FIREBASE_DEV_PROJECT_ID }} \
-            --dart-define=FIREBASE_DEV_AUTH_DOMAIN=${{ secrets.FIREBASE_DEV_AUTH_DOMAIN }} \
-            --dart-define=FIREBASE_DEV_STORAGE_BUCKET=${{ secrets.FIREBASE_DEV_STORAGE_BUCKET }} \
-            --dart-define=FIREBASE_DEV_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_DEV_WEB_MEASUREMENT_ID }} \
-            --dart-define=GOOGLE_PLACES_API_KEY=${{ secrets.GOOGLE_PLACES_DEV_API_KEY }}
+            --dart-define=FIREBASE_DEV_WEB_API_KEY="$FIREBASE_DEV_WEB_API_KEY" \
+            --dart-define=FIREBASE_DEV_WEB_APP_ID="$FIREBASE_DEV_WEB_APP_ID" \
+            --dart-define=FIREBASE_DEV_MESSAGING_SENDER_ID="$FIREBASE_DEV_MESSAGING_SENDER_ID" \
+            --dart-define=FIREBASE_DEV_PROJECT_ID="$FIREBASE_DEV_PROJECT_ID" \
+            --dart-define=FIREBASE_DEV_AUTH_DOMAIN="$FIREBASE_DEV_AUTH_DOMAIN" \
+            --dart-define=FIREBASE_DEV_STORAGE_BUCKET="$FIREBASE_DEV_STORAGE_BUCKET" \
+            --dart-define=FIREBASE_DEV_WEB_MEASUREMENT_ID="$FIREBASE_DEV_WEB_MEASUREMENT_ID" \
+            --dart-define=GOOGLE_PLACES_API_KEY="$GOOGLE_PLACES_DEV_API_KEY"
           echo "✅ Build complete!"
 
       - name: Copy deeplink verification files

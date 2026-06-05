@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:maypole/core/app_config.dart';
+import 'package:maypole/core/utils/screen_utils.dart';
 import 'package:maypole/core/widgets/cached_profile_avatar.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/features/identity/auth_providers.dart';
@@ -107,11 +108,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.settings),
-        leading: AppConfig.isWideScreen ? null : IconButton(
+        leading: !AppConfig.isWideScreen && ScreenUtils.shouldShowAppBarBackButton()
+            ? IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/home'),
-        ),
-        automaticallyImplyLeading: !AppConfig.isWideScreen,
+        )
+            : null,
+        automaticallyImplyLeading: !AppConfig.isWideScreen && ScreenUtils.shouldShowAppBarBackButton()
       ),
       body: authState.when(
         data: (user) {

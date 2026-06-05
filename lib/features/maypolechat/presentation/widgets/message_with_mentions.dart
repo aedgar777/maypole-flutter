@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/widgets/adaptive_context_menu_trigger.dart';
@@ -62,48 +63,141 @@ class MessageWithMentions extends StatelessWidget {
 
     return Opacity(
       opacity: opacity,
-      child: AdaptiveContextMenuTrigger(
-        onMenuOpened: () => _showContextMenu(context),
-        alignment: isOwnMessage ? Alignment.centerRight : Alignment.centerLeft,
-        child: RichText(
-          text: TextSpan(
-            style: theme.textTheme.bodyMedium,
-            children: [
-              TextSpan(
-                text: senderName,
-                style: const TextStyle(
-                  fontFamily: 'Lato',
-                  fontWeight: FontWeight.bold,
-                  color: violet,
-                ),
-                recognizer: TapGestureRecognizer()
-                  ..onTap = () => _navigateToProfile(context),
-              ),
-              if (isNearby)
-                WidgetSpan(
-                  alignment: PlaceholderAlignment.middle,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 2.0, right: 2.0),
-                    child: Icon(
-                      Icons.location_on,
-                      size: 14,
-                      color: brightTeal,
+      child: Builder(
+        builder: (triggerContext) {
+          return AdaptiveContextMenuTrigger(
+            onMenuOpened: () => _showContextMenu(context, triggerContext),
+            alignment: Alignment.centerLeft, // Maypole messages are always left-aligned
+            child: RichText(
+              text: TextSpan(
+                style: theme.textTheme.bodyMedium,
+                children: [
+                  TextSpan(
+                    text: senderName,
+                    style: const TextStyle(
+                      fontFamily: 'Lato',
+                      fontWeight: FontWeight.bold,
+                      color: violet,
                     ),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () => _navigateToProfile(context),
                   ),
-                ),
-              const TextSpan(text: ' '),
-              ...mentions,
-            ],
-          ),
-        ),
+                  if (isNearby)
+                    WidgetSpan(
+                      alignment: PlaceholderAlignment.middle,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 2.0, right: 2.0),
+                        child: Icon(
+                          Icons.location_on,
+                          size: 14,
+                          color: brightTeal,
+                        ),
+                      ),
+                    ),
+                  const TextSpan(text: ' '),
+                  ...mentions,
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  void _showContextMenu(BuildContext context) {
+  void _showContextMenu(BuildContext context, [BuildContext? triggerContext]) {
     final l10n = AppLocalizations.of(context)!;
     final timeString = _formatTimestamp(timestamp);
     
+    // Check if we're on a wide screen (desktop/web)
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWideScreen = screenWidth >= 600 || kIsWeb;
+    
+    if (isWideScreen && triggerContext != null) {
+      // Desktop: Show menu at the position of the 3-dot button
+      final RenderBox? renderBox = triggerContext.findRenderObject() as RenderBox?;
+      if (renderBox != null) {
+        final position = renderBox.localToGlobal(Offset.zero);
+        final size = renderBox.size;
+        
+        showMenu<dynamic>(
+          context: context,
+          position: RelativeRect.fromLTRB(
+            position.dx + size.width, // Always show to the right of left-aligned messages
+            position.dy,
+            position.dx + size.width + 200,
+            position.dy + size.height,
+          ),
+          items: <PopupMenuEntry<dynamic>>[
+            // Timestamp
+            PopupMenuItem(
+              enabled: false,
+              child: Row(
+                children: [
+                  const Icon(Icons.access_time, size: 20),
+                  const SizedBox(width: 8),
+                  Text(timeString),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
+            // Options based on message ownership
+            if (isOwnMessage) ...[
+              // Own message: Delete option
+              PopupMenuItem(
+                onTap: onDelete,
+                child: Row(
+                  children: [
+                    const Icon(Icons.delete, color: Colors.red, size: 20),
+                    const SizedBox(width: 8),
+                    Text(l10n.deleteMessage, style: const TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ] else ...[
+              // Other user's message: Tag, View Profile, and Report options
+              if (onTagUser != null) ...[
+                PopupMenuItem(
+                  onTap: onTagUser,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.alternate_email, size: 20),
+                      const SizedBox(width: 8),
+                      Text(l10n.tagUser(senderName)),
+                    ],
+                  ),
+                ),
+              ],
+              PopupMenuItem(
+                onTap: () async => await _navigateToProfile(context),
+                child: Row(
+                  children: [
+                    const Icon(Icons.person, size: 20),
+                    const SizedBox(width: 8),
+                    Text(l10n.viewProfile),
+                  ],
+                ),
+              ),
+              if (onReport != null) ...[
+                PopupMenuItem(
+                  onTap: onReport,
+                  child: const Row(
+                    children: [
+                      Icon(Icons.flag, color: Colors.orange, size: 20),
+                      SizedBox(width: 8),
+                      Text('Report Message', style: TextStyle(color: Colors.orange)),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ],
+        );
+        return;
+      }
+    }
+    
+    // Mobile: Use bottom sheet (existing behavior)
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -191,7 +285,6 @@ class MessageWithMentions extends StatelessWidget {
     // If senderId is present, navigate directly
     if (senderId.isNotEmpty) {
       final path = '/user-profile/$senderId';
-      debugPrint('Navigating to: $path with senderId');
       try {
         GoRouter.of(context).push(
           path,
@@ -201,13 +294,11 @@ class MessageWithMentions extends StatelessWidget {
           },
         );
       } catch (e) {
-        debugPrint('Navigation error: $e');
       }
       return;
     }
 
     // Fallback: Look up user by username for old messages
-    debugPrint('senderId is empty, looking up user by username: $senderName');
     try {
       // Show loading indicator
       showDialog(

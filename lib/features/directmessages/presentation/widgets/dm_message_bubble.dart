@@ -12,7 +12,7 @@ class DmMessageBubble extends StatelessWidget {
   final String partnerId;
   final String partnerUsername;
   final String partnerProfilePicUrl;
-  final VoidCallback? onDelete;
+  final Function(BuildContext triggerContext)? onDelete;
   final bool isGroupedWithNext;
   final bool isGroupedWithPrevious;
   final bool isDeleted;
@@ -64,68 +64,83 @@ class DmMessageBubble extends StatelessWidget {
     final bool hasImages = message.imageUrls.isNotEmpty;
     final bool hasText = message.body.isNotEmpty && !isDeleted;
 
-    return AdaptiveContextMenuTrigger(
-      onMenuOpened: !isDeleted ? () {
-        HapticFeedback.mediumImpact();
-        onDelete?.call();
-      } : () {},
-      alignment: isOwnMessage ? Alignment.centerRight : Alignment.centerLeft,
-      child: Align(
-        alignment: isOwnMessage ? Alignment.centerRight : Alignment.centerLeft,
-        child: Container(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.75,
-          ),
-          margin: EdgeInsets.fromLTRB(8, topMargin, 8, bottomMargin),
-          child: hasImages && hasText
-              ? _buildImageWithTextBubble(context, borderRadius)
-              : Container(
-                  decoration: BoxDecoration(
-                    color: isDeleted 
-                        ? Colors.transparent
-                        : (hasImages && !hasText 
-                            ? Colors.transparent 
-                            : (isOwnMessage ? Colors.blue[200] : Colors.grey[300])),
-                    border: isDeleted 
-                        ? Border.all(
-                            color: Colors.grey.withValues(alpha: 0.3),
-                            width: 1,
-                          )
-                        : null,
-                    borderRadius: borderRadius,
-                  ),
-                  padding: hasImages && !hasText 
-                      ? EdgeInsets.zero 
-                      : const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Display images if present (image-only messages)
-                      if (hasImages && !hasText) _buildImageGallery(context, borderRadius),
-                      // Display text if present (text-only messages)
-                      if (hasText && !hasImages)
-                        Text(
-                          message.body,
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 15,
-                          ),
-                        ),
-                      if (isDeleted)
-                        Text(
-                          'message deleted',
-                          style: TextStyle(
-                            color: Colors.grey.withValues(alpha: 0.6),
-                            fontSize: 15,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                    ],
-                  ),
+    // Keep web single-image message width consistent before/after upload.
+    // Pending bubbles use 250px, so final bubbles should match.
+    final isWebSingleImage = kIsWeb && hasImages && message.imageUrls.length == 1;
+    final maxBubbleWidth = isWebSingleImage
+        ? 250.0
+        : MediaQuery.of(context).size.width * 0.75;
+
+    return Builder(
+      builder: (triggerContext) {
+        // Build the actual bubble content
+        final bubbleContent = hasImages && hasText
+            ? _buildImageWithTextBubble(context, borderRadius)
+            : Container(
+                decoration: BoxDecoration(
+                  color: isDeleted 
+                      ? Colors.transparent
+                      : (hasImages && !hasText 
+                          ? Colors.transparent 
+                          : (isOwnMessage ? Colors.blue[200] : Colors.grey[300])),
+                  border: isDeleted 
+                      ? Border.all(
+                          color: Colors.grey.withValues(alpha: 0.3),
+                          width: 1,
+                        )
+                      : null,
+                  borderRadius: borderRadius,
                 ),
-        ),
-      ),
+                padding: hasImages && !hasText 
+                    ? EdgeInsets.zero 
+                    : const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Display images if present (image-only messages)
+                    if (hasImages && !hasText) _buildImageGallery(context, borderRadius),
+                    // Display text if present (text-only messages)
+                    if (hasText && !hasImages)
+                      Text(
+                        message.body,
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 15,
+                        ),
+                      ),
+                    if (isDeleted)
+                      Text(
+                        'message deleted',
+                        style: TextStyle(
+                          color: Colors.grey.withValues(alpha: 0.6),
+                          fontSize: 15,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                  ],
+                ),
+              );
+
+        // Wrap in constraints and alignment, then add the menu trigger around just the bubble
+        return Align(
+          alignment: isOwnMessage ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: maxBubbleWidth,
+            ),
+            margin: EdgeInsets.fromLTRB(8, topMargin, 8, bottomMargin),
+            child: AdaptiveContextMenuTrigger(
+              onMenuOpened: !isDeleted ? () {
+                HapticFeedback.mediumImpact();
+                onDelete?.call(triggerContext);
+              } : () {},
+              alignment: isOwnMessage ? Alignment.centerRight : Alignment.centerLeft,
+              child: bubbleContent,
+            ),
+          ),
+        );
+      },
     );
   }
 

@@ -1,9 +1,8 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_theme.dart';
-import 'package:maypole/features/maypolechat/presentation/screens/maypole_gallery_screen.dart';
-import 'package:maypole/features/maypolechat/presentation/maypole_chat_providers.dart';
 
 /// Widget that displays an image upload notification in the chat
 /// Shows: "<username> has added an image" with "an image" clickable
@@ -40,17 +39,9 @@ class ImageUploadNotification extends ConsumerWidget {
   }
 
   void _navigateToImage(BuildContext context, WidgetRef ref) {
-    // Simply navigate to gallery with the initial image ID
-    // The gallery screen will handle loading and opening the image
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MaypoleGalleryScreen(
-          threadId: maypoleId,
-          maypoleName: maypoleName,
-          initialImageId: imageId,
-        ),
-      ),
+    // Navigate to gallery with the initial image ID as query parameter
+    context.push(
+      '/chat/$maypoleId/gallery?name=${Uri.encodeComponent(maypoleName)}&imageId=${Uri.encodeComponent(imageId)}',
     );
   }
 

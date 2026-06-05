@@ -18,9 +18,6 @@ import 'core/widgets/beta_access_guard.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  debugPrint('Background message received: ${message.messageId}');
-  debugPrint('Title: ${message.notification?.title}');
-  debugPrint('Body: ${message.notification?.body}');
 }
 
 Future<void> main() async {
@@ -30,17 +27,17 @@ Future<void> main() async {
   // This enables proper deep linking on web
   usePathUrlStrategy();
 
-  // Load environment variables - try .env first (CI/CD), then .env.local (local dev)
-  try {
-    await dotenv.load(fileName: ".env");
-    debugPrint('Loaded .env file (CI/CD environment)');
-  } catch (e) {
+  // Load dotenv only on non-web (web uses dart-defines / hardcoded fallbacks)
+  if (!kIsWeb) {
     try {
-      await dotenv.load(fileName: ".env.local");
-      debugPrint('Loaded .env.local file (local development)');
+      await dotenv.load(fileName: ".env");
     } catch (e) {
-      debugPrint(
-          'Warning: No .env or .env.local file found. Using default values.');
+      debugPrint('Error loading .env: $e');
+      try {
+        await dotenv.load(fileName: ".env.local");
+      } catch (_) {
+        // Silent fallback
+      }
     }
   }
 
@@ -49,11 +46,9 @@ Future<void> main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    debugPrint('✅ Firebase initialized successfully');
   } catch (e) {
     // If Firebase is already initialized, continue silently
     if (e.toString().contains('duplicate-app')) {
-      debugPrint('Firebase already initialized, continuing...');
     } else {
       // Re-throw other errors
       rethrow;
@@ -67,9 +62,7 @@ Future<void> main() async {
       persistenceEnabled: true,
       cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
     );
-    debugPrint('✅ Firestore persistence enabled with unlimited cache');
   } catch (e) {
-    debugPrint('⚠️ Warning: Could not enable Firestore persistence: $e');
     // Continue anyway - app will work without persistence
   }
 

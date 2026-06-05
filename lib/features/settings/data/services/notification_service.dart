@@ -18,7 +18,6 @@ class NotificationService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.getBool(_hasAskedPermissionKey) ?? false;
     } catch (e) {
-      debugPrint('Error checking if permission was asked: $e');
       return false;
     }
   }
@@ -28,9 +27,7 @@ class NotificationService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_hasAskedPermissionKey, true);
-      debugPrint('Marked notification permission as asked');
     } catch (e) {
-      debugPrint('Error marking permission as asked: $e');
     }
   }
 
@@ -45,7 +42,6 @@ class NotificationService {
   /// Returns true if permission is granted, false otherwise.
   Future<bool> requestNotificationPermission({bool markAsAsked = true}) async {
     try {
-      debugPrint('Requesting notification permission...');
 
       bool granted;
       
@@ -62,12 +58,10 @@ class NotificationService {
         granted = settings.authorizationStatus == AuthorizationStatus.authorized ||
             settings.authorizationStatus == AuthorizationStatus.provisional;
         
-        debugPrint('Notification permission status (iOS FCM): ${settings.authorizationStatus}');
       } else {
         // On Android, use permission_handler
         final status = await Permission.notification.request();
         granted = status.isGranted;
-        debugPrint('Notification permission status (Android): $status');
       }
 
       // Mark that we've asked for permission
@@ -80,7 +74,6 @@ class NotificationService {
 
       return granted;
     } catch (e) {
-      debugPrint('Error requesting notification permission: $e');
       return false;
     }
   }
@@ -93,12 +86,10 @@ class NotificationService {
     final hasAsked = await hasAskedForPermission();
 
     if (hasAsked) {
-      debugPrint('Already asked for notification permission, skipping...');
       // Just check current status
       return await checkNotificationPermission();
     }
 
-    debugPrint('First time requesting notification permission...');
     return await requestNotificationPermission();
   }
 
@@ -117,17 +108,14 @@ class NotificationService {
         final settings = await messaging.getNotificationSettings();
         final isGranted = settings.authorizationStatus == AuthorizationStatus.authorized ||
             settings.authorizationStatus == AuthorizationStatus.provisional;
-        debugPrint('Notification permission status check (iOS FCM): ${settings.authorizationStatus} (granted: $isGranted)');
         return isGranted;
       } else {
         // On Android, use permission_handler
         final status = await Permission.notification.status;
         final isGranted = status.isGranted;
-        debugPrint('Notification permission status check (Android): $status (granted: $isGranted)');
         return isGranted;
       }
     } catch (e) {
-      debugPrint('Error checking notification permission: $e');
       return false;
     }
   }
@@ -145,11 +133,9 @@ class NotificationService {
 
       // Always check current system permission status first
       final systemPermission = await checkNotificationPermission();
-      debugPrint('Loading notification preferences - system permission: $systemPermission');
 
       if (jsonString == null) {
         // Return defaults with current system permission
-        debugPrint('No saved preferences found, using defaults with system permission: $systemPermission');
         final newPrefs = NotificationPreferences(
           systemPermissionGranted: systemPermission,
         );
@@ -161,13 +147,9 @@ class NotificationService {
       final json = jsonDecode(jsonString) as Map<String, dynamic>;
       final preferences = NotificationPreferences.fromJson(json);
       
-      debugPrint('Loaded saved preferences: tagging=${preferences.taggingNotificationsEnabled}, '
-          'dm=${preferences.directMessageNotificationsEnabled}, '
-          'systemPermission=${preferences.systemPermissionGranted}');
 
       // Update with current system permission if different
       if (preferences.systemPermissionGranted != systemPermission) {
-        debugPrint('System permission changed from ${preferences.systemPermissionGranted} to $systemPermission, updating...');
         final updatedPrefs = preferences.copyWith(
           systemPermissionGranted: systemPermission,
         );
@@ -178,7 +160,6 @@ class NotificationService {
 
       return preferences;
     } catch (e) {
-      debugPrint('Error loading notification preferences: $e');
       final systemPermission = await checkNotificationPermission();
       return NotificationPreferences(
         systemPermissionGranted: systemPermission,
@@ -192,9 +173,7 @@ class NotificationService {
       final prefs = await SharedPreferences.getInstance();
       final jsonString = jsonEncode(preferences.toJson());
       await prefs.setString(_prefsKey, jsonString);
-      debugPrint('Notification preferences saved');
     } catch (e) {
-      debugPrint('Error saving notification preferences: $e');
       rethrow;
     }
   }
@@ -220,13 +199,11 @@ class NotificationService {
   /// Update system permission status in stored preferences
   Future<void> _updateSystemPermissionStatus(bool granted) async {
     try {
-      debugPrint('Updating system permission status to: $granted');
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_prefsKey);
 
       NotificationPreferences preferences;
       if (jsonString == null) {
-        debugPrint('No existing preferences, creating new with system permission: $granted');
         preferences = NotificationPreferences(
           systemPermissionGranted: granted,
         );
@@ -234,24 +211,19 @@ class NotificationService {
         final json = jsonDecode(jsonString) as Map<String, dynamic>;
         preferences = NotificationPreferences.fromJson(json);
 
-        debugPrint('Current stored system permission: ${preferences.systemPermissionGranted}');
         
         // Only update if changed
         if (preferences.systemPermissionGranted == granted) {
-          debugPrint('System permission unchanged, skipping save');
           return;
         }
 
-        debugPrint('System permission changed, updating...');
         preferences = preferences.copyWith(
           systemPermissionGranted: granted,
         );
       }
 
       await savePreferences(preferences);
-      debugPrint('System permission status saved successfully');
     } catch (e) {
-      debugPrint('Error updating system permission status: $e');
     }
   }
 

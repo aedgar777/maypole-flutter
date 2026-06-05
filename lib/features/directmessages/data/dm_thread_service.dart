@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/features/directmessages/domain/dm_thread.dart';
 
@@ -27,6 +26,36 @@ class DMThreadService {
       return DMThread.fromMap(dmThreadDoc.data()!);
     }
     return null;
+  }
+
+  /// Creates a local-only ephemeral DM thread (not persisted to Firestore yet)
+  DMThread createEphemeralThread({
+    required String threadId,
+    required String currentUserId,
+    required String currentUsername,
+    required String currentUserProfpic,
+    required String partnerId,
+    required String partnerName,
+    required String partnerProfpic,
+  }) {
+    final now = DateTime.now();
+    return DMThread(
+      id: threadId,
+      lastMessageTime: now,
+      participants: {
+        currentUserId: DMParticipant(
+          id: currentUserId,
+          username: currentUsername,
+          profilePicUrl: currentUserProfpic,
+        ),
+        partnerId: DMParticipant(
+          id: partnerId,
+          username: partnerName,
+          profilePicUrl: partnerProfpic,
+        ),
+      },
+      hasMessages: false,
+    );
   }
 
   /// Gets or creates a DM thread between two users.
@@ -59,7 +88,6 @@ class DMThreadService {
     // Try to get existing thread
     final existingThread = await getDMThreadById(threadId);
     if (existingThread != null) {
-      debugPrint('✓ Found existing DM thread: $threadId');
       return existingThread;
     }
 
@@ -81,6 +109,7 @@ class DMThreadService {
         ),
       },
       lastMessage: null,
+      hasMessages: false, // New threads start without messages
     );
 
     // Save to Firestore - only one write needed!
@@ -89,7 +118,6 @@ class DMThreadService {
         .doc(threadId)
         .set(newThread.toMap());
 
-    debugPrint('✓ Created DM thread: $threadId with participants: [$currentUserId, $partnerId]');
 
     return newThread;
   }
@@ -105,9 +133,7 @@ class DMThreadService {
         .map((snapshot) {
       // Log cache vs server source for monitoring
       if (snapshot.metadata.isFromCache) {
-        debugPrint('📦 DM messages loaded from cache for thread: $threadId');
       } else {
-        debugPrint('🌐 DM messages loaded from server for thread: $threadId');
       }
       
       return snapshot.docs
@@ -143,17 +169,14 @@ class DMThreadService {
           .get(const GetOptions(source: Source.cache));
 
       if (cacheSnapshot.docs.isNotEmpty) {
-        debugPrint('📦 Retrieved ${cacheSnapshot.docs.length} DM messages from cache for thread: $threadId');
         return cacheSnapshot.docs
             .map((doc) => DirectMessage.fromMap(doc.data(), documentId: doc.id))
             .toList();
       }
     } catch (e) {
-      debugPrint('⚠️ Cache miss for DM thread $threadId: $e');
     }
 
     // Cache miss or error - fetch from server
-    debugPrint('🌐 Fetching DM messages from server for thread: $threadId');
     final serverSnapshot = await _firestore
         .collection('DMThreads')
         .doc(threadId)
@@ -174,6 +197,7 @@ class DMThreadService {
     String senderUsername,
     String recipientId, {
     List<String> imageUrls = const [],
+    DMThread? ephemeralThread,  // Optional ephemeral thread to persist if thread doesn't exist
   }) async {
     final now = DateTime.now();
     final message = DirectMessage(
@@ -184,6 +208,22 @@ class DMThreadService {
       imageUrls: imageUrls,
     );
 
+    // Check if thread exists in Firestore
+    final threadDoc = await _firestore.collection('DMThreads').doc(threadId).get();
+    
+    if (!threadDoc.exists) {
+      // Thread doesn't exist - this is an ephemeral thread being persisted
+      if (ephemeralThread != null) {
+        // Save the ephemeral thread to Firestore first
+        await _firestore
+            .collection('DMThreads')
+            .doc(threadId)
+            .set(ephemeralThread.toMap());
+      } else {
+        throw Exception('Thread does not exist and no ephemeral thread provided');
+      }
+    }
+
     // Add message to thread's messages subcollection
     await _firestore
         .collection('DMThreads')
@@ -192,7 +232,6 @@ class DMThreadService {
         .add(message.toMap());
 
     // Get current hiddenFor list
-    final threadDoc = await _firestore.collection('DMThreads').doc(threadId).get();
     final data = threadDoc.data();
     final hiddenFor = List<String>.from(data?['hiddenFor'] ?? []);
     
@@ -200,7 +239,7 @@ class DMThreadService {
     hiddenFor.removeWhere((id) => id == senderId || id == recipientId);
 
     // Update thread's lastMessage, lastMessageTime, unhide for both users,
-    // and mark as unread for recipient
+    // mark as unread for recipient, and set hasMessages to true
     await _firestore
         .collection('DMThreads')
         .doc(threadId)
@@ -208,11 +247,11 @@ class DMThreadService {
       'lastMessage': message.toMap(),
       'lastMessageTime': Timestamp.fromDate(now),
       'hiddenFor': hiddenFor,
+      'hasMessages': true,  // Mark that this thread now has messages
       'unreadBy.$recipientId': true,  // Mark as unread for recipient
       'unreadBy.$senderId': false,    // Mark as read for sender
     });
 
-    debugPrint('✓ Sent DM message to thread: $threadId');
 
     // Send notification to recipient
     await _sendDmNotification(
@@ -232,21 +271,10 @@ class DMThreadService {
         .orderBy('lastMessageTime', descending: true)
         .snapshots(includeMetadataChanges: true)
         .handleError((error) {
-      debugPrint('❌ Error in DM threads stream: $error');
-      debugPrint('⚠️ This might be a missing Firestore index!');
-      debugPrint('⚠️ Check the error message for a link to create the index');
-      debugPrint('⚠️ Or run: firebase deploy --only firestore:indexes');
       // Re-throw to propagate to UI
       throw error;
     })
         .map((snapshot) {
-      // Log cache vs server source for monitoring
-      if (snapshot.metadata.isFromCache) {
-        debugPrint('📦 DM thread list loaded from cache for user: $userId');
-      } else {
-        debugPrint('🌐 DM thread list loaded from server for user: $userId');
-      }
-      
       return snapshot.docs.map((doc) {
         try {
           final data = doc.data();
@@ -257,9 +285,14 @@ class DMThreadService {
             return null;
           }
           
+          // Check if this thread has messages (skip ephemeral threads without messages)
+          final hasMessages = data['hasMessages'] ?? false;
+          if (!hasMessages) {
+            return null;
+          }
+          
           // Check if this is an old-format thread (missing participants field)
           if (!data.containsKey('participants') || data['participants'] == null) {
-            debugPrint('⚠️ Skipping old-format DM thread ${doc.id} - needs migration');
             return null;
           }
           
@@ -294,7 +327,6 @@ class DMThreadService {
             hasUnread: dmThread.hasUnreadMessagesFor(userId),
           );
         } catch (e) {
-          debugPrint('Error processing DM thread ${doc.id}: $e');
           return null;
         }
       }).whereType<DMThreadMetaData>().toList();
@@ -307,9 +339,7 @@ class DMThreadService {
       await _firestore.collection('DMThreads').doc(threadId).update({
         'unreadBy.$userId': false,
       });
-      debugPrint('✓ Marked DM thread $threadId as read for user $userId');
     } catch (e) {
-      debugPrint('❌ Error marking DM thread as read: $e');
       rethrow;
     }
   }
@@ -319,27 +349,49 @@ class DMThreadService {
   Future<void> deleteDMThreadForUser(String threadId, String userId) async {
     try {
       final threadDoc = await _firestore.collection('DMThreads').doc(threadId).get();
-      
+
       if (!threadDoc.exists) {
-        debugPrint('Thread $threadId does not exist');
         return;
       }
-      
+
       final data = threadDoc.data()!;
       final hiddenFor = List<String>.from(data['hiddenFor'] ?? []);
-      
+
       // Add user to hiddenFor list if not already there
       if (!hiddenFor.contains(userId)) {
         hiddenFor.add(userId);
-        
+
         await _firestore.collection('DMThreads').doc(threadId).update({
           'hiddenFor': hiddenFor,
         });
-        
-        debugPrint('✓ Hidden DM thread $threadId for user $userId');
+
       }
     } catch (e) {
-      debugPrint('❌ Error hiding DM thread for user: $e');
+      rethrow;
+    }
+  }
+
+  /// Unhides a DM thread for a specific user by removing them from the hiddenFor list
+  Future<void> unhideDMThreadForUser(String threadId, String userId) async {
+    try {
+      final threadDoc = await _firestore.collection('DMThreads').doc(threadId).get();
+
+      if (!threadDoc.exists) {
+        return;
+      }
+
+      final data = threadDoc.data()!;
+      final hiddenFor = List<String>.from(data['hiddenFor'] ?? []);
+
+      if (hiddenFor.contains(userId)) {
+        hiddenFor.remove(userId);
+
+        await _firestore.collection('DMThreads').doc(threadId).update({
+          'hiddenFor': hiddenFor,
+        });
+
+      }
+    } catch (e) {
       rethrow;
     }
   }
@@ -368,7 +420,6 @@ class DMThreadService {
         'read': false,
       });
     } catch (e) {
-      debugPrint('Error sending DM notification: $e');
       // Don't throw - we don't want to fail message sending if notifications fail
     }
   }
@@ -392,7 +443,6 @@ class DMThreadService {
       final messageDoc = await messageRef.get();
 
       if (!messageDoc.exists) {
-        debugPrint('Message $messageId does not exist');
         return;
       }
 
@@ -417,10 +467,8 @@ class DMThreadService {
           'imageUrls': [], // Clear the images
         });
 
-        debugPrint('✓ Deleted DM message $messageId for user $userId (cleared content)');
       }
     } catch (e) {
-      debugPrint('❌ Error deleting DM message: $e');
       rethrow;
     }
   }

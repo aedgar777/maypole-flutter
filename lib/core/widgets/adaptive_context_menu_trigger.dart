@@ -45,22 +45,45 @@ class _AdaptiveContextMenuTriggerState extends State<AdaptiveContextMenuTrigger>
       return MouseRegion(
         onEnter: (_) => setState(() => _isHovered = true),
         onExit: (_) => setState(() => _isHovered = false),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // For right-aligned messages (user/own on right side), show 3-dot on LEFT of bubble (closest to center)
-            if (widget.alignment == Alignment.centerRight) ...[
-              _buildMenuButton(),
-              widget.child,
-            ] else if (widget.alignment == Alignment.centerLeft) ...[
-              // For left-aligned messages (partner on left side), show 3-dot on RIGHT of bubble (closest to center)
-              widget.child,
-              _buildMenuButton(),
-            ] else ...[
-              _buildMenuButton(),
-              widget.child,
+        child: SizedBox(
+          width: double.infinity,
+          child: Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: widget.alignment == Alignment.centerRight
+                ? MainAxisAlignment.end
+                : (widget.alignment == Alignment.centerLeft
+                    ? MainAxisAlignment.start
+                    : MainAxisAlignment.end),
+            children: [
+              // For right-aligned messages (user/own on right side), show 3-dot on LEFT of bubble (closest to center)
+              if (widget.alignment == Alignment.centerRight) ...[
+                _buildMenuButton(),
+                Flexible(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 600),
+                    child: widget.child,
+                  ),
+                ),
+              ] else if (widget.alignment == Alignment.centerLeft) ...[
+                // For left-aligned messages (partner on left side), show 3-dot on RIGHT of bubble (closest to center)
+                Flexible(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 600),
+                    child: widget.child,
+                  ),
+                ),
+                _buildMenuButton(),
+              ] else ...[
+                _buildMenuButton(),
+                Flexible(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 600),
+                    child: widget.child,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       );
     }
@@ -85,7 +108,7 @@ class _AdaptiveContextMenuTriggerState extends State<AdaptiveContextMenuTrigger>
           margin: const EdgeInsets.symmetric(horizontal: 4),
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(4),
           ),
           child: const Icon(

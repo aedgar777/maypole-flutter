@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # This script helps verify you have all the GitHub secrets set up correctly
-# Run this locally to see what secrets are defined in your .env file
+# Run this locally to see what secrets are defined in your ..env file
 
 echo "🔍 Verifying GitHub Secrets Configuration"
 echo "=========================================="
@@ -10,15 +10,15 @@ echo "This script checks your local .env file and tells you which"
 echo "secrets you need to add to GitHub Actions."
 echo ""
 
-if [ ! -f .env ]; then
+if [ ! -f ..env ]; then
     echo "❌ Error: .env file not found!"
     echo "Please create a .env file first."
     exit 1
 fi
 
-# Load .env
+# Load ..env
 set -a
-source .env
+source ..env
 set +a
 
 echo "📋 Required GitHub Secrets for DEVELOPMENT:"
@@ -32,6 +32,8 @@ secrets_dev=(
     "FIREBASE_DEV_PROJECT_ID"
     "FIREBASE_DEV_AUTH_DOMAIN"
     "FIREBASE_DEV_STORAGE_BUCKET"
+    "GOOGLE_PLACES_DEV_API_KEY"
+    "GOOGLE_PLACES_SERVER_DEV_API_KEY"
 )
 
 for secret in "${secrets_dev[@]}"; do
@@ -57,6 +59,8 @@ secrets_prod=(
     "FIREBASE_PROD_PROJECT_ID"
     "FIREBASE_PROD_AUTH_DOMAIN"
     "FIREBASE_PROD_STORAGE_BUCKET"
+    "GOOGLE_PLACES_PROD_API_KEY"
+    "GOOGLE_PLACES_SERVER_PROD_API_KEY"
 )
 
 for secret in "${secrets_prod[@]}"; do

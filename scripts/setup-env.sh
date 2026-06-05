@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Environment Setup Script for Maypole Flutter App
-# Usage: ./scripts/setup-env.sh [dev|prod]
+# Usage: ./scripts/setup-.env.sh [dev|prod]
 
 set -e
 
@@ -10,7 +10,7 @@ PROJECT_ROOT=$(dirname "$(dirname "$(realpath "$0")")")
 
 echo "🔧 Setting up $ENVIRONMENT environment..."
 
-# Check if .env.local exists
+# Check if ..env.local exists
 if [ ! -f "$PROJECT_ROOT/.env.local" ]; then
     echo "❌ .env.local not found!"
     echo "📋 Please copy .env.local.example to .env.local and fill in your Firebase credentials:"
@@ -25,7 +25,7 @@ if [ ! -f "$PROJECT_ROOT/.env.local" ]; then
     exit 1
 fi
 
-# Set environment in .env.local
+# Set environment in ..env.local
 if grep -q "^ENVIRONMENT=" "$PROJECT_ROOT/.env.local"; then
     # Update existing ENVIRONMENT line
     if [[ "$OSTYPE" == "darwin"* ]]; then

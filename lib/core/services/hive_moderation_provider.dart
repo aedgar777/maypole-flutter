@@ -8,7 +8,7 @@ final hiveModerationServiceProvider = Provider<HiveModerationService>((ref) {
   final accessKeyId = dotenv.env['HIVE_ACCESS_ID_KEY'] ?? '';
   
   if (apiToken.isEmpty || accessKeyId.isEmpty) {
-    throw Exception('HIVE_API_TOKEN and HIVE_ACCESS_ID_KEY not found in .env file. Please add your Hive.ai API credentials to the .env file.');
+    throw Exception('HIVE_API_TOKEN and HIVE_ACCESS_ID_KEY not found in ..env file. Please add your Hive.ai API credentials to the ..env file.');
   }
   
   return HiveModerationService(

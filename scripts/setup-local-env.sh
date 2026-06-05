@@ -1,6 +1,6 @@
 #!/bin/bash
 # Source this script to set up your local environment for iOS builds
-# Usage: source scripts/setup-local-env.sh
+# Usage: source scripts/setup-local-.env.sh
 
 echo "🔧 Setting up local iOS build environment..."
 
@@ -23,7 +23,7 @@ if command -v rbenv &> /dev/null; then
     echo "✅ rbenv initialized"
 fi
 
-# Load .env file
+# Load ..env file
 if [ -f "$PROJECT_ROOT/.env" ]; then
     echo "✅ Loading variables from .env..."
     set -a

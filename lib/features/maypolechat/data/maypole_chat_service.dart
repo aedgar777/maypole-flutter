@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
 import '../domain/maypole.dart';
@@ -44,9 +43,7 @@ class MaypoleChatService {
         .map((snapshot) {
       // Log cache vs server source for monitoring
       if (snapshot.metadata.isFromCache) {
-        debugPrint('📦 Maypole messages loaded from cache for thread: $threadId');
       } else {
-        debugPrint('🌐 Maypole messages loaded from server for thread: $threadId');
       }
       
       final messages = snapshot.docs
@@ -86,17 +83,14 @@ class MaypoleChatService {
           .get(const GetOptions(source: Source.cache));
 
       if (cacheSnapshot.docs.isEmpty) {
-        debugPrint('📦 No cached messages found for thread: $threadId');
         return null;
       }
 
-      debugPrint('📦 Retrieved ${cacheSnapshot.docs.length} cached maypole messages for thread: $threadId');
       final messages = cacheSnapshot.docs
           .map((doc) => MaypoleMessage.fromMap(doc.data(), documentId: doc.id))
           .toList();
       return _filterBlockedMessages(messages);
     } catch (e) {
-      debugPrint('⚠️ Cache miss for maypole thread $threadId: $e');
       return null;
     }
   }
@@ -118,10 +112,8 @@ class MaypoleChatService {
       }
 
       final timestamp = (snapshot.docs.first.data()['timestamp'] as Timestamp).toDate();
-      debugPrint('🔍 Most recent message timestamp for $threadId: $timestamp');
       return timestamp;
     } catch (e) {
-      debugPrint('⚠️ Error checking recent message timestamp: $e');
       return null;
     }
   }
@@ -144,7 +136,6 @@ class MaypoleChatService {
     
     if (serverMostRecent == null) {
       // No messages on server, cache is fine
-      debugPrint('✅ No server messages, using cache');
       return CacheValidationResult.cacheValid;
     }
 
@@ -153,26 +144,20 @@ class MaypoleChatService {
     
     if (timeDiff.abs() <= 1) {
       // Cache is current (within 1 second)
-      debugPrint('✅ Cache is current for thread: $threadId');
       return CacheValidationResult.cacheValid;
     } else if (timeDiff > 0) {
       // Server has newer messages
-      final newMessageCount = timeDiff ~/ 60; // Rough estimate
-      debugPrint('⚠️ Cache is stale: ~$newMessageCount new messages since last visit');
-      
       // Check if cached messages would still be in the "top 100" window
       // If hundreds of new messages exist, cached messages might be beyond the limit
       return CacheValidationResult.cacheStale;
     } else {
       // Cache is somehow newer than server (shouldn't happen, but handle gracefully)
-      debugPrint('⚠️ Unusual: Cache appears newer than server');
       return CacheValidationResult.cacheValid;
     }
   }
 
   /// Fetches fresh messages from server
   Future<List<MaypoleMessage>> getFreshMessages(String threadId) async {
-    debugPrint('🌐 Fetching fresh messages from server for thread: $threadId');
     final snapshot = await _firestore
         .collection('maypoles')
         .doc(threadId)
@@ -218,12 +203,15 @@ class MaypoleChatService {
 
     final batch = _firestore.batch();
 
-    // "Upsert" the maypole document: create if it doesn't exist, update if it does
+    // "Upsert" the maypole document: create if it doesn't exist, update if it does.
+    // Do not overwrite an existing address with an empty fallback value.
     final Map<String, dynamic> maypoleData = {
       'id': threadId,
       'name': maypoleName,
-      'address': address,
     };
+    if (address.trim().isNotEmpty) {
+      maypoleData['address'] = address;
+    }
     
     // Add coordinates if provided
     if (latitude != null) {
@@ -268,11 +256,11 @@ class MaypoleChatService {
       final updatedThread = MaypoleMetaData(
         id: threadId,
         name: maypoleName,
-        address: address,
-        latitude: latitude,
-        longitude: longitude,
+        address: address.trim().isNotEmpty ? address : oldThread.address,
+        latitude: latitude ?? oldThread.latitude,
+        longitude: longitude ?? oldThread.longitude,
         lastTypedAt: now,
-        placeType: placeType,
+        placeType: placeType ?? oldThread.placeType,
       );
       
       batch.update(userRef, {
@@ -405,14 +393,13 @@ class MaypoleChatService {
         await querySnapshot.docs.first.reference.delete();
       }
     } catch (e) {
-      debugPrint('Error deleting message: $e');
       rethrow;
     }
   }
 
   /// Adds a maypole thread to a user's maypoleChatThreads list
   /// This is called when a user opens a maypole on wide screen to make it immediately visible
-  /// Note: lastTypedAt is null until the user sends their first message
+  /// We set lastTypedAt to now so optimistic/newly added items appear at the top.
   Future<void> addMaypoleToUserList({
     required String userId,
     required String placeId,
@@ -430,7 +417,7 @@ class MaypoleChatService {
         address: address,
         latitude: latitude,
         longitude: longitude,
-        lastTypedAt: null, // Will be set when user sends first message
+        lastTypedAt: DateTime.now(),
         placeType: placeType,
       );
       
@@ -438,9 +425,7 @@ class MaypoleChatService {
         'maypoleChatThreads': FieldValue.arrayUnion([maypoleMetaData.toMap()])
       });
       
-      debugPrint('✓ Added maypole $placeId to user $userId\'s list');
     } catch (e) {
-      debugPrint('❌ Error adding maypole to user list: $e');
       rethrow;
     }
   }
@@ -453,7 +438,6 @@ class MaypoleChatService {
       final userDoc = await userRef.get();
       
       if (!userDoc.exists) {
-        debugPrint('User $userId does not exist');
         return;
       }
       
@@ -469,9 +453,7 @@ class MaypoleChatService {
         'maypoleChatThreads': maypoleChatThreads,
       });
       
-      debugPrint('✓ Removed maypole thread $threadId from user $userId\'s list');
     } catch (e) {
-      debugPrint('❌ Error removing maypole thread from user: $e');
       rethrow;
     }
   }
@@ -504,7 +486,6 @@ class MaypoleChatService {
         });
       }
     } catch (e) {
-      debugPrint('Error sending tag notifications: $e');
       // Don't throw - we don't want to fail message sending if notifications fail
     }
   }
@@ -527,7 +508,6 @@ class MaypoleChatService {
       final messageDoc = await messageRef.get();
 
       if (!messageDoc.exists) {
-        debugPrint('Message $messageId does not exist');
         return;
       }
 
@@ -542,9 +522,7 @@ class MaypoleChatService {
       // Permanently delete the message from Firebase
       await messageRef.delete();
 
-      debugPrint('✓ Permanently deleted maypole message $messageId');
     } catch (e) {
-      debugPrint('❌ Error deleting maypole message: $e');
       rethrow;
     }
   }

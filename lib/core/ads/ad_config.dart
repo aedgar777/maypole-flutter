@@ -14,7 +14,6 @@ class AdConfig {
     try {
       return RemoteConfigService().adsEnabled;
     } catch (e) {
-      debugPrint('⚠️ Error reading adsEnabled from Remote Config: $e');
       return true; // Default to enabled if Remote Config fails
     }
   }
@@ -66,7 +65,7 @@ class AdConfig {
     // Check environment from build configuration
     const dartDefineEnv = String.fromEnvironment('ENVIRONMENT', defaultValue: '');
     
-    // Check environment from .env file
+    // Check environment from ..env file
     String dotenvEnv = 'dev';
     try {
       dotenvEnv = dotenv.env['ENVIRONMENT'] ?? 'dev';
@@ -128,7 +127,7 @@ class AdConfig {
     // Check environment from build configuration
     const dartDefineEnv = String.fromEnvironment('ENVIRONMENT', defaultValue: '');
     
-    // Check environment from .env file
+    // Check environment from ..env file
     String dotenvEnv = 'dev';
     try {
       dotenvEnv = dotenv.env['ENVIRONMENT'] ?? 'dev';

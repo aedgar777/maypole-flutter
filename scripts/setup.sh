@@ -8,10 +8,10 @@ set -e
 echo " Setting up Maypole Flutter project for team development..."
 echo ""
 
-# Check if .env.local exists
+# Check if ..env.local exists
 if [ ! -f ".env.local" ]; then
     echo " Creating .env.local template from example..."
-    cp .env.example .env.local
+    cp ..env.example ..env.local
     echo "✅ Created .env.local template"
     echo ""
     echo " TEAM SETUP REQUIRED:"
@@ -34,7 +34,7 @@ else
     echo "✅ .env.local already exists"
     
     # Check if it looks like it has real values (not just template)
-    if grep -q "your_.*_api_key_here" .env.local; then
+    if grep -q "your_.*_api_key_here" ..env.local; then
         echo "⚠️  .env.local contains template values"
         echo "   You need the actual team Firebase configuration"
         echo ""
@@ -81,8 +81,8 @@ echo ""
 
 # Check if configuration looks ready for team development
 if [ -f ".env.local" ] && [ -f "android/app/google-services.json" ]; then
-    # Check if .env.local has real values
-    if ! grep -q "your_.*_api_key_here" .env.local; then
+    # Check if ..env.local has real values
+    if ! grep -q "your_.*_api_key_here" ..env.local; then
         echo "✅ Your project appears to be configured for team development!"
         echo ""
         echo " Ready to run against shared development environment:"

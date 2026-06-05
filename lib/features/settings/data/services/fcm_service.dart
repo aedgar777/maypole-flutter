@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:maypole/core/app_session.dart';
 
 /// Service for managing Firebase Cloud Messaging tokens and notifications
@@ -15,13 +14,11 @@ class FcmService {
     try {
       // Check existing permission status without requesting
       final settings = await _messaging.getNotificationSettings();
-      debugPrint('FCM permission status: ${settings.authorizationStatus}');
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional) {
         // Permission already granted, get the token
         final token = await _messaging.getToken();
-        debugPrint('FCM Token: $token');
 
         if (token != null) {
           await _updateUserFcmToken(token);
@@ -38,7 +35,6 @@ class FcmService {
       // FirebaseMessaging.onBackgroundMessage is static and must be
       // defined at the top level
     } catch (e) {
-      debugPrint('Error initializing FCM: $e');
     }
   }
 
@@ -53,13 +49,11 @@ class FcmService {
         sound: true,
       );
 
-      debugPrint('FCM permission status: ${settings.authorizationStatus}');
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional) {
         // Get the token
         final token = await _messaging.getToken();
-        debugPrint('FCM Token: $token');
 
         if (token != null) {
           await _updateUserFcmToken(token);
@@ -73,7 +67,6 @@ class FcmService {
 
       return false;
     } catch (e) {
-      debugPrint('Error requesting FCM permission: $e');
       return false;
     }
   }
@@ -83,7 +76,6 @@ class FcmService {
     try {
       final user = _session.currentUser;
       if (user == null) {
-        debugPrint('No current user, skipping FCM token update');
         return;
       }
 
@@ -91,18 +83,12 @@ class FcmService {
         'fcmToken': token,
       });
 
-      debugPrint('FCM token updated for user ${user.username}');
     } catch (e) {
-      debugPrint('Error updating FCM token: $e');
     }
   }
 
   /// Handle foreground messages
   void _handleForegroundMessage(RemoteMessage message) {
-    debugPrint('Received foreground message: ${message.messageId}');
-    debugPrint('Title: ${message.notification?.title}');
-    debugPrint('Body: ${message.notification?.body}');
-    debugPrint('Data: ${message.data}');
 
     // You can show a local notification here or update the UI
     // For now, we'll just log it
@@ -112,7 +98,6 @@ class FcmService {
   Future<void> deleteToken() async {
     try {
       await _messaging.deleteToken();
-      debugPrint('FCM token deleted');
 
       final user = _session.currentUser;
       if (user != null) {
@@ -121,7 +106,6 @@ class FcmService {
         });
       }
     } catch (e) {
-      debugPrint('Error deleting FCM token: $e');
     }
   }
 }
