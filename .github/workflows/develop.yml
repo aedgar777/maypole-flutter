@@ -123,7 +123,7 @@ jobs:
           ref: develop
           fetch-depth: 0
       
-      - name: Pull latest changes (including version bump)
+      - name: Pull latest changes
         run: |
           git pull origin develop
           echo "📱 Current version after pull:"
@@ -201,7 +201,13 @@ jobs:
       - name: Build Android App Bundle (devRelease)
         run: |
           echo "📦 Building Android App Bundle (dev release)..."
-          flutter build appbundle --release --flavor dev --dart-define=ENVIRONMENT=dev
+          BUILD_NUMBER=$((100000 + GITHUB_RUN_NUMBER))
+          echo "Using CI build number: $BUILD_NUMBER"
+          flutter build appbundle \
+            --release \
+            --flavor dev \
+            --build-number="$BUILD_NUMBER" \
+            --dart-define=ENVIRONMENT=dev
           echo "✅ Build complete!"
 
       - name: Setup Ruby for Fastlane
@@ -239,7 +245,7 @@ jobs:
           ref: develop
           fetch-depth: 0
       
-      - name: Pull latest changes (including version bump)
+      - name: Pull latest changes
         run: |
           git pull origin develop
           echo "📱 Current version after pull:"
@@ -355,8 +361,11 @@ jobs:
 
       - name: Build iOS IPA with Flutter
         run: |
+          BUILD_NUMBER=$((100000 + GITHUB_RUN_NUMBER))
+          echo "Using CI build number: $BUILD_NUMBER"
           flutter build ipa \
             --release \
+            --build-number="$BUILD_NUMBER" \
             --dart-define=ENVIRONMENT=dev \
             --export-options-plist=ios/ExportOptions.ci.plist
 
@@ -394,7 +403,7 @@ jobs:
           ref: develop
           fetch-depth: 0
       
-      - name: Pull latest changes (including version bump)
+      - name: Pull latest changes
         run: |
           git pull origin develop
           echo "📱 Current version after pull:"
