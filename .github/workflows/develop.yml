@@ -236,7 +236,7 @@ jobs:
   build_ios:
     name: Build and Deploy iOS (Dev TestFlight)
     needs: deploy_firebase
-    runs-on: macos-latest
+    runs-on: macos-26
     environment: development
     steps:
       - name: Checkout repository
@@ -251,13 +251,15 @@ jobs:
           echo "📱 Current version after pull:"
           grep '^version:' pubspec.yaml
 
-      - name: Select Xcode version
+      - name: Select Xcode 26
         run: |
-          if [ -d "/Applications/Xcode_15.4.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
-          elif [ -d "/Applications/Xcode_15.3.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_15.3.app/Contents/Developer
+          XCODE_APP=$(find /Applications -maxdepth 1 -name 'Xcode_26*.app' | sort -Vr | head -n 1)
+          if [ -z "$XCODE_APP" ]; then
+            echo "❌ Xcode 26 is required for App Store uploads. Installed Xcode versions:"
+            ls /Applications | grep Xcode || true
+            exit 1
           fi
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
           echo "Selected Xcode:"
           xcodebuild -version
 
@@ -361,10 +363,13 @@ jobs:
 
       - name: Build iOS IPA with Flutter
         run: |
+          BUILD_NAME="1.2.9"
           BUILD_NUMBER=$((100000 + GITHUB_RUN_NUMBER))
+          echo "Using CI build name: $BUILD_NAME"
           echo "Using CI build number: $BUILD_NUMBER"
           flutter build ipa \
             --release \
+            --build-name="$BUILD_NAME" \
             --build-number="$BUILD_NUMBER" \
             --dart-define=ENVIRONMENT=dev \
             --export-options-plist=ios/ExportOptions.ci.plist
