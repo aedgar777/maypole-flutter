@@ -1,7 +1,6 @@
 import 'dart:convert';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../../core/app_config.dart';
@@ -9,7 +8,7 @@ import '../models/autocomplete_request.dart';
 import '../models/autocomplete_response.dart';
 
 class MaypoleSearchService {
-  final String _apiKey = AppConfig.googlePlacesApiKey;
+  String get _apiKey => AppConfig.googlePlacesApiKey;
 
   // Use Cloud Function for web (required due to CORS), direct API for mobile
   String get _baseUrl {
@@ -22,16 +21,26 @@ class MaypoleSearchService {
 
   /// Fetch place details including coordinates and place type
   Future<Map<String, dynamic>?> getPlaceDetails(String placeId) async {
-    debugPrint('📍 Fetching Place Details for: $placeId');
     
-    // Use direct Google API for all platforms (less frequent, CORS should work with proper key setup)
-    final url = 'https://places.googleapis.com/v1/places/$placeId';
+    // Use Cloud Function for web to avoid CORS and referrer issues
+    final String url;
+    final Map<String, String> headers;
     
-    final headers = {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': _apiKey,
-      'X-Goog-FieldMask': 'id,displayName,formattedAddress,location,primaryType,types',
-    };
+    if (kIsWeb) {
+      url = AppConfig.cloudFunctionsPlaceDetailsUrl;
+      // Cloud Function uses Secret Manager - don't send API key from client
+      headers = {
+        'Content-Type': 'application/json',
+        'X-Place-Id': placeId,
+      };
+    } else {
+      url = 'https://places.googleapis.com/v1/places/$placeId';
+      headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': _apiKey,
+        'X-Goog-FieldMask': 'id,displayName,formattedAddress,location,primaryType,types',
+      };
+    }
 
     try {
       final response = await http.get(
@@ -39,51 +48,223 @@ class MaypoleSearchService {
         headers: headers,
       );
 
-      debugPrint('📡 Place Details Response Status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        debugPrint("✅ Place Details Response: ${response.body.substring(
-            0, response.body.length > 200 ? 200 : response.body.length)}...");
         
         // Parse the response to extract coordinates and place type
         final Map<String, dynamic> data = json.decode(response.body);
         
         return data;
       } else {
-        debugPrint('❌ Error Response: ${response.body}');
+        debugPrint('MaypoleSearchService: getPlaceDetails failed with status: ${response.statusCode}');
+        debugPrint('MaypoleSearchService: Response body: ${response.body}');
         return null;
       }
     } catch (e) {
-      debugPrint('💥 Exception during place details fetch: $e');
+      debugPrint('Reverse geocode error: $e');
       return null;
     }
   }
 
-  /// Reverse geocode coordinates to get place details
-  Future<Map<String, dynamic>?> reverseGeocode(double latitude, double longitude) async {
-    debugPrint('🗺️ Reverse geocoding: lat=$latitude, lon=$longitude');
+  /// Search for the nearest place around coordinates.
+  /// Prefer `searchNearbyPlaces` plus map viewport/screen filtering for map taps,
+  /// because this may return places that are near the coordinate but not visible.
+  Future<Map<String, dynamic>?> reverseGeocode(
+    double latitude,
+    double longitude, {
+    double radiusMeters = 150,
+    int maxResultCount = 5,
+  }) async {
     
-    // Use direct Google API for all platforms (less frequent, CORS should work with proper key setup)
-    final url = 'https://places.googleapis.com/v1/places:searchNearby';
+    // Use Cloud Function for web to avoid CORS and referrer issues
+    final String url;
+    final Map<String, String> headers;
+    final String? body;
     
-    final headers = {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': _apiKey,
-      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types',
-    };
+    if (kIsWeb) {
+      url = AppConfig.cloudFunctionsReverseGeocodeUrl;
+      // Cloud Function uses Secret Manager - don't send API key from client
+      headers = {
+        'Content-Type': 'application/json',
+      };
+      body = json.encode({
+        'latitude': latitude,
+        'longitude': longitude,
+        'radiusMeters': radiusMeters,
+        'maxResultCount': maxResultCount,
+      });
+    } else {
+      url = 'https://places.googleapis.com/v1/places:searchNearby';
+      headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': _apiKey,
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types',
+      };
+      body = json.encode({
+        'includedTypes': [
+          'restaurant',
+          'cafe',
+          'bar',
+          'store',
+          'park',
+          'tourist_attraction',
+          'museum',
+          'lodging',
+          'art_gallery',
+          'gas_station',
+          'pharmacy',
+          'bakery',
+          'bank',
+          'movie_theater',
+          'gym',
+          'library',
+          'stadium',
+          'zoo',
+        ],
+        'locationRestriction': {
+          'circle': {
+            'center': {
+              'latitude': latitude,
+              'longitude': longitude,
+            },
+            'radius': radiusMeters,
+          }
+        },
+        'maxResultCount': maxResultCount,
+        'rankPreference': 'DISTANCE',
+      });
+    }
 
-    final body = json.encode({
-      'locationRestriction': {
-        'circle': {
-          'center': {
-            'latitude': latitude,
-            'longitude': longitude,
-          },
-          'radius': 50.0, // Search within 50 meters
+    try {
+      final keyToLog = _apiKey.length > 5 ? '${_apiKey.substring(0, 5)}...' : (_apiKey.isEmpty ? 'EMPTY' : 'SHORT');
+      debugPrint('MaypoleSearchService: reverseGeocode called at ($latitude, $longitude)');
+      debugPrint('MaypoleSearchService: Environment: ${AppConfig.isProduction ? "PROD" : "DEV"}');
+      debugPrint('MaypoleSearchService: Using API Key: $keyToLog');
+      
+      final response = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: body,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        final places = data['places'] as List<dynamic>?;
+
+        debugPrint('MaypoleSearchService: Found ${places?.length ?? 0} places');
+
+        if (places == null || places.isEmpty) {
+          return null;
         }
-      },
-      'maxResultCount': 1,
-    });
+
+        Map<String, dynamic>? bestPlace;
+        var bestDistance = double.infinity;
+
+        for (final item in places) {
+          if (item is! Map<String, dynamic>) continue;
+          final location = item['location'] as Map<String, dynamic>?;
+          final placeLat = location?['latitude'] as double?;
+          final placeLon = location?['longitude'] as double?;
+          if (placeLat == null || placeLon == null) continue;
+
+          final distance = Geolocator.distanceBetween(
+            latitude,
+            longitude,
+            placeLat,
+            placeLon,
+          );
+
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            bestPlace = item;
+          }
+        }
+
+        if (bestPlace == null) {
+          return null;
+        }
+
+        debugPrint('MaypoleSearchService: Best match: ${bestPlace['displayName']?['text']} at ${bestDistance.toStringAsFixed(1)}m');
+
+        return {
+          ...bestPlace,
+          '_distanceMeters': bestDistance,
+        };
+      } else {
+        debugPrint('MaypoleSearchService: Error ${response.statusCode}');
+        debugPrint('MaypoleSearchService: Body: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('MaypoleSearchService: Exception: $e');
+      return null;
+    }
+  }
+
+  /// Search nearby places around a center point.
+  Future<List<Map<String, dynamic>>> searchNearbyPlaces(
+    double latitude,
+    double longitude, {
+    double radiusMeters = 300,
+    int maxResultCount = 20,
+  }) async {
+    final String url;
+    final Map<String, String> headers;
+    final String body;
+
+    if (kIsWeb) {
+      url = AppConfig.cloudFunctionsReverseGeocodeUrl;
+      headers = {
+        'Content-Type': 'application/json',
+      };
+      body = json.encode({
+        'latitude': latitude,
+        'longitude': longitude,
+        'radiusMeters': radiusMeters,
+        'maxResultCount': maxResultCount,
+      });
+    } else {
+      url = 'https://places.googleapis.com/v1/places:searchNearby';
+      headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': _apiKey,
+        'X-Goog-FieldMask':
+            'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types',
+      };
+      body = json.encode({
+        'includedTypes': [
+          'restaurant',
+          'cafe',
+          'bar',
+          'store',
+          'park',
+          'tourist_attraction',
+          'museum',
+          'lodging',
+          'art_gallery',
+          'gas_station',
+          'pharmacy',
+          'bakery',
+          'bank',
+          'movie_theater',
+          'gym',
+          'library',
+          'stadium',
+          'zoo',
+        ],
+        'locationRestriction': {
+          'circle': {
+            'center': {
+              'latitude': latitude,
+              'longitude': longitude,
+            },
+            'radius': radiusMeters,
+          }
+        },
+        'maxResultCount': maxResultCount,
+        'rankPreference': 'DISTANCE',
+      });
+    }
 
     try {
       final response = await http.post(
@@ -92,95 +273,79 @@ class MaypoleSearchService {
         body: body,
       );
 
-      debugPrint('📡 Reverse Geocode Response Status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        debugPrint("✅ Reverse Geocode Response: ${response.body.substring(
-            0, response.body.length > 200 ? 200 : response.body.length)}...");
-        
-        final Map<String, dynamic> data = json.decode(response.body);
-        final places = data['places'] as List<dynamic>?;
-        
-        if (places != null && places.isNotEmpty) {
-          return places[0] as Map<String, dynamic>;
-        }
-        
-        return null;
-      } else {
-        debugPrint('❌ Error Response: ${response.body}');
-        return null;
+      if (response.statusCode != 200) {
+        return const [];
       }
-    } catch (e) {
-      debugPrint('💥 Exception during reverse geocode: $e');
-      return null;
+
+      final Map<String, dynamic> data = json.decode(response.body);
+      final places = data['places'] as List<dynamic>?;
+      if (places == null || places.isEmpty) {
+        return const [];
+      }
+
+      final results = <Map<String, dynamic>>[];
+      for (final item in places) {
+        if (item is! Map<String, dynamic>) continue;
+        final location = item['location'] as Map<String, dynamic>?;
+        final placeLat = location?['latitude'] as double?;
+        final placeLon = location?['longitude'] as double?;
+        final placeId = item['id'] as String?;
+        if (placeLat == null || placeLon == null || placeId == null || placeId.isEmpty) {
+          continue;
+        }
+
+        final distance = Geolocator.distanceBetween(
+          latitude,
+          longitude,
+          placeLat,
+          placeLon,
+        );
+
+        results.add({
+          ...item,
+          '_distanceMeters': distance,
+        });
+      }
+
+      return results;
+    } catch (_) {
+      return const [];
     }
   }
 
   Future<AutocompleteResponse> autocomplete(AutocompleteRequest request) async {
-    debugPrint('🔍 Places Autocomplete Request');
-    debugPrint('  URL: $_baseUrl');
-    debugPrint('  Platform: ${kIsWeb ? "Web (Cloud Function)" : "Mobile (Direct API)"}');
+    // Build headers based on platform
+    Map<String, String> headers;
     
-    // For web, we use the mobile API key (not the web key) because the Cloud Function
-    // makes server-side calls to Google. The web key is only for Maps JavaScript API.
-    final apiKeyToUse = kIsWeb 
-        ? (AppConfig.isProduction 
-            ? dotenv.env['GOOGLE_PLACES_PROD_API_KEY'] ?? _apiKey
-            : dotenv.env['GOOGLE_PLACES_DEV_API_KEY'] ?? _apiKey)
-        : _apiKey;
-    
-    debugPrint('  API Key: ${apiKeyToUse.isNotEmpty ? "✓ Present (${apiKeyToUse.substring(0, 10)}...)" : "✗ Missing"}');
-
-    final headers = {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': apiKeyToUse,
-      'X-Goog-Field-Mask':
-          'suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat',
-    };
+    if (kIsWeb) {
+      // Cloud Function uses Secret Manager - don't send API key from client
+      headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-FieldMask': 'suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat',
+      };
+    } else {
+      headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': _apiKey,
+        'X-Goog-FieldMask': 'suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat',
+      };
+    }
 
     try {
-      debugPrint('📤 Sending request to: $_baseUrl');
-      debugPrint('📤 Request headers: $headers');
+      final body = request.toJson();
       
       final response = await http.post(
         Uri.parse(_baseUrl),
         headers: headers,
-        body: request.toJson(),
+        body: body,
       );
 
-      debugPrint('📡 Response Status: ${response.statusCode}');
-      debugPrint('📡 Response Headers: ${response.headers}');
-
       if (response.statusCode == 200) {
-        // Check if response is JSON
-        final contentType = response.headers['content-type'];
-        if (contentType != null && !contentType.contains('application/json')) {
-          debugPrint('❌ Unexpected content type: $contentType');
-          debugPrint('❌ Response body: ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}');
-          throw Exception('Server returned non-JSON response. Content-Type: $contentType');
-        }
-        
-        debugPrint("✅ Place Response: ${response.body.substring(
-            0, response.body.length > 200 ? 200 : response.body.length)}...");
         return AutocompleteResponse.fromJson(response.body);
       } else {
-        debugPrint('❌ Error Response (${response.statusCode}): ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}');
-        throw Exception(
-            'Failed to load predictions (${response.statusCode}): ${response
-                .body}');
+        throw Exception('Failed to load predictions (${response.statusCode}): ${response.body}');
       }
-    } catch (e, stackTrace) {
-      debugPrint('💥 Exception during autocomplete: $e');
-      debugPrint('💥 Stack trace: $stackTrace');
-      
-      if (kIsWeb && e.toString().contains('Failed to fetch')) {
-        throw Exception(
-            'Network error: Unable to reach server. This may be due to:\n'
-            '1. CORS restrictions\n'
-            '2. localhost not being in allowed websites\n'
-            '3. Network connectivity issues\n\n'
-            'Try adding http://localhost:* to your API key website restrictions for local testing.');
-      }
+    } catch (e) {
       rethrow;
     }
   }

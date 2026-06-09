@@ -1,21 +1,23 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import '../../domain/staged_image_info.dart';
 
 /// Widget for displaying staged images before sending in a DM
 /// Allows users to preview and remove images with an X button
 class StagedImagesWidget extends StatelessWidget {
-  final List<String> imagePaths;
+  final List<StagedImageInfo> images;
   final Function(int) onRemoveImage;
 
   const StagedImagesWidget({
     super.key,
-    required this.imagePaths,
+    required this.images,
     required this.onRemoveImage,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (imagePaths.isEmpty) {
+    if (images.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -24,10 +26,10 @@ class StagedImagesWidget extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: imagePaths.length,
+        itemCount: images.length,
         itemBuilder: (context, index) {
           return _StagedImageItem(
-            imagePath: imagePaths[index],
+            imageInfo: images[index],
             onRemove: () => onRemoveImage(index),
           );
         },
@@ -38,11 +40,11 @@ class StagedImagesWidget extends StatelessWidget {
 
 /// Individual staged image item with remove button
 class _StagedImageItem extends StatelessWidget {
-  final String imagePath;
+  final StagedImageInfo imageInfo;
   final VoidCallback onRemove;
 
   const _StagedImageItem({
-    required this.imagePath,
+    required this.imageInfo,
     required this.onRemove,
   });
 
@@ -57,12 +59,19 @@ class _StagedImageItem extends StatelessWidget {
           // Image preview
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.file(
-              File(imagePath),
-              width: 80,
-              height: 80,
-              fit: BoxFit.cover,
-            ),
+            child: kIsWeb
+                ? Image.network(
+                    imageInfo.path,
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.cover,
+                  )
+                : Image.file(
+                    File(imageInfo.path),
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.cover,
+                  ),
           ),
           // Remove button (X)
           Positioned(

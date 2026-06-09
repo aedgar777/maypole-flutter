@@ -23,7 +23,6 @@ class StorageService {
   /// Throws an exception if the upload fails.
   Future<String> uploadProfilePicture(String userId, String filePath, {bool useOptimized = true}) async {
     try {
-      debugPrint('Starting profile picture upload for user: $userId');
 
       // Get file extension
       final extension = filePath
@@ -54,8 +53,6 @@ class StorageService {
       // Get download URL
       final downloadUrl = await snapshot.ref.getDownloadURL();
 
-      debugPrint('Profile picture uploaded successfully. URL: $downloadUrl');
-      debugPrint('⏳ Cloud Function will create optimized variants in ~10 seconds');
 
       // Always return the original download URL
       // The optimized variants will be created by the Cloud Function
@@ -63,7 +60,6 @@ class StorageService {
       // TODO: Implement a background job to update to optimized URL after Cloud Function completes
       return downloadUrl;
     } catch (e) {
-      debugPrint('Failed to upload profile picture: $e');
       rethrow;
     }
   }
@@ -82,7 +78,6 @@ class StorageService {
       final basePath = originalUrl.split('.').first;
       return '${basePath}_$size.jpg';
     } catch (e) {
-      debugPrint('Failed to construct optimized URL: $e');
       return originalUrl;
     }
   }
@@ -94,15 +89,12 @@ class StorageService {
   Future<void> updateUserProfilePictureUrl(String userId,
       String profilePictureUrl) async {
     try {
-      debugPrint('Updating profile picture URL for user: $userId');
 
       await _firestore.collection('users').doc(userId).update({
         'profilePictureUrl': profilePictureUrl,
       });
 
-      debugPrint('Profile picture URL updated successfully');
     } catch (e) {
-      debugPrint('Failed to update profile picture URL: $e');
       rethrow;
     }
   }
@@ -113,7 +105,6 @@ class StorageService {
   /// [userId] - The Firebase user ID
   Future<void> deleteProfilePicture(String userId) async {
     try {
-      debugPrint('Deleting profile picture for user: $userId');
 
       // List all files in the user's profile pictures folder
       // Check both old and new paths for backwards compatibility
@@ -132,16 +123,12 @@ class StorageService {
           // Delete all files (includes optimized variants)
           for (final item in listResult.items) {
             await item.delete();
-            debugPrint('Deleted: ${item.fullPath}');
           }
         } catch (e) {
-          debugPrint('No files found at $path (this is okay)');
         }
       }
 
-      debugPrint('Profile picture deleted successfully');
     } catch (e) {
-      debugPrint('Failed to delete profile picture: $e');
       // Don't rethrow - it's okay if the file doesn't exist
     }
   }

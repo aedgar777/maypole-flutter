@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Environment Validation Script for Maypole Flutter App
-# Usage: ./scripts/validate-env.sh [dev|prod]
+# Usage: ./scripts/validate-.env.sh [dev|prod]
 
 set -e
 
@@ -11,7 +11,7 @@ ENV_FILE="$PROJECT_ROOT/.env.local"
 
 echo "🔍 Validating $ENVIRONMENT environment configuration..."
 
-# Check if .env.local exists
+# Check if ..env.local exists
 if [ ! -f "$ENV_FILE" ]; then
     echo "❌ .env.local not found!"
     echo "📋 Please run: cp .env.local.example .env.local"
@@ -32,6 +32,8 @@ if [ "$ENVIRONMENT" = "prod" ]; then
         "FIREBASE_PROD_PROJECT_ID"
         "FIREBASE_PROD_AUTH_DOMAIN"
         "FIREBASE_PROD_STORAGE_BUCKET"
+        "GOOGLE_PLACES_PROD_API_KEY"
+        "GOOGLE_PLACES_SERVER_PROD_API_KEY"
         "IOS_BUNDLE_ID"
     )
 else
@@ -47,6 +49,8 @@ else
         "FIREBASE_DEV_PROJECT_ID"
         "FIREBASE_DEV_AUTH_DOMAIN"
         "FIREBASE_DEV_STORAGE_BUCKET"
+        "GOOGLE_PLACES_DEV_API_KEY"
+        "GOOGLE_PLACES_SERVER_DEV_API_KEY"
         "IOS_BUNDLE_ID"
     )
 fi

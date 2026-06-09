@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/features/settings/data/services/storage_service.dart';
@@ -39,9 +38,6 @@ class SettingsViewModel extends Notifier<SettingsState> {
         filePath,
       );
       
-      debugPrint('🎯 VIEWMODEL: Received download URL: $downloadUrl');
-      debugPrint('🎯 VIEWMODEL: URL length: ${downloadUrl.length}');
-      debugPrint('🎯 VIEWMODEL: Is valid URL: ${downloadUrl.startsWith('http')}');
 
       // Update Firestore
       await storageService.updateUserProfilePictureUrl(
@@ -49,13 +45,11 @@ class SettingsViewModel extends Notifier<SettingsState> {
         downloadUrl,
       );
       
-      debugPrint('🎯 VIEWMODEL: Updated Firestore with URL');
 
       // Update local user object
       user.profilePictureUrl = downloadUrl;
       session.currentUser = user;
       
-      debugPrint('🎯 VIEWMODEL: Updated local session with URL');
 
       // Invalidate auth state to refresh UI with new profile picture
       ref.invalidate(authStateProvider);

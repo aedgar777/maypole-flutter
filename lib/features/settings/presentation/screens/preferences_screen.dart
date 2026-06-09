@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_config.dart';
+import 'package:maypole/core/utils/screen_utils.dart';
 import 'package:maypole/core/services/location_provider.dart';
-import 'package:maypole/core/services/location_service.dart';
 import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/features/settings/presentation/viewmodels/notification_settings_viewmodel.dart';
 import 'package:maypole/features/settings/presentation/widgets/location_features_dialog.dart';
@@ -238,11 +238,13 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Preferences'),
-        leading: AppConfig.isWideScreen ? null : IconButton(
+        leading: !AppConfig.isWideScreen && ScreenUtils.shouldShowAppBarBackButton()
+            ? IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
-        ),
-        automaticallyImplyLeading: !AppConfig.isWideScreen,
+        )
+            : null,
+        automaticallyImplyLeading: !AppConfig.isWideScreen && ScreenUtils.shouldShowAppBarBackButton()
       ),
       body: notificationState.isLoading
           ? const Center(child: CircularProgressIndicator())

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/utils/string_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
-import 'package:maypole/features/identity/domain/domain_user.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -13,7 +12,9 @@ import '../auth_providers.dart';
 import './widgets/auth_form_field.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  final String? returnTo;
+
+  const LoginScreen({super.key, this.returnTo});
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -31,21 +32,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  void _navigateToHome(BuildContext context) {
-    // Automatically navigate to home when user is logged in
+  String get _postAuthRoute {
+    final returnTo = widget.returnTo;
+    if (returnTo == null || returnTo.isEmpty) {
+      return '/home';
+    }
+
+    final uri = Uri.tryParse(returnTo);
+    if (uri == null || uri.hasScheme || uri.hasAuthority) {
+      return '/home';
+    }
+
+    return returnTo.startsWith('/') ? returnTo : '/$returnTo';
+  }
+
+  void _navigateAfterAuth(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.go('/home');
+        context.go(_postAuthRoute);
       }
     });
   }
 
   void _handleSignIn() {
     if (_formKey.currentState!.validate()) {
-      ref.read(loginViewModelProvider.notifier).signInWithEmail(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-      );
+      ref
+          .read(loginViewModelProvider.notifier)
+          .signInWithEmail(
+            _emailController.text.trim(),
+            _passwordController.text.trim(),
+          );
     }
   }
 
@@ -80,9 +96,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         // Apple App Store Badge
         InkWell(
           onTap: () async {
-            final Uri appStoreUrl = Uri.parse('https://apps.apple.com/us/app/maypole/id6757092758');
+            final Uri appStoreUrl = Uri.parse(
+              'https://apps.apple.com/us/app/maypole/id6757092758',
+            );
             if (await canLaunchUrl(appStoreUrl)) {
-              await launchUrl(appStoreUrl, mode: LaunchMode.externalApplication);
+              await launchUrl(
+                appStoreUrl,
+                mode: LaunchMode.externalApplication,
+              );
             }
           },
           child: SvgPicture.asset(
@@ -96,9 +117,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         // because the SVG has a black background rectangle
         InkWell(
           onTap: () async {
-            final Uri playStoreUrl = Uri.parse('https://play.google.com/store/apps/details?id=app.maypole.maypole');
+            final Uri playStoreUrl = Uri.parse(
+              'https://play.google.com/store/apps/details?id=app.maypole.maypole',
+            );
             if (await canLaunchUrl(playStoreUrl)) {
-              await launchUrl(playStoreUrl, mode: LaunchMode.externalApplication);
+              await launchUrl(
+                playStoreUrl,
+                mode: LaunchMode.externalApplication,
+              );
             }
           },
           child: Container(
@@ -121,7 +147,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Widget _buildFooterLinks(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -171,67 +197,87 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Column(
       children: [
         const Spacer(flex: 1),
-        Image.asset(
-          'assets/icons/ic_logo_main.png',
-          width: 300,
-          height: 300,
-        ),
+        Image.asset('assets/icons/ic_logo_main.png', width: 300, height: 300),
         const Spacer(flex: 1),
         Expanded(
           flex: 4,
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  AuthFormField(
-                    controller: _emailController,
-                    labelText: l10n.email,
-                    keyboardType: TextInputType.emailAddress,
-                    maxLength: StringUtils.maxEmailLength,
-                    onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
-                        _handleSignIn() : null,
-                    validator: (value) => StringUtils.validateEmail(value, l10n),
-                  ),
-                  const SizedBox(height: 20),
-                  AuthFormField(
-                    controller: _passwordController,
-                    labelText: l10n.password,
-                    obscureText: true,
-                    maxLength: StringUtils.maxPasswordLength,
-                    onFieldSubmitted: AppConfig.isWideScreen ? (_) =>
-                        _handleSignIn() : null,
-                    validator: (value) => StringUtils.validatePassword(value, l10n),
-                  ),
-                  const SizedBox(height: 30),
-                  if (loginState.isLoading)
-                    const CircularProgressIndicator()
-                  else
-                    Column(
-                      children: [
-                        ElevatedButton(
-                          onPressed: _handleSignIn,
-                          child: Text(l10n.signIn, style: const TextStyle(
-                              fontSize: 18)),
-                        ),
-                        const SizedBox(height: 10),
-                        TextButton(
-                          onPressed: () => context.go('/register'),
-                          child: Text(l10n.register),
-                        ),
-                        if (loginState.errorMessage != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 16),
-                            child: Text(
-                              loginState.errorMessage!,
-                              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: AppConfig.isWideScreen
+                      ? MediaQuery.of(context).size.width / 3
+                      : double.infinity,
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      AuthFormField(
+                        controller: _emailController,
+                        labelText: l10n.email,
+                        keyboardType: TextInputType.emailAddress,
+                        maxLength: StringUtils.maxEmailLength,
+                        onFieldSubmitted: AppConfig.isWideScreen
+                            ? (_) => _handleSignIn()
+                            : null,
+                        validator: (value) =>
+                            StringUtils.validateEmail(value, l10n),
+                      ),
+                      const SizedBox(height: 20),
+                      AuthFormField(
+                        controller: _passwordController,
+                        labelText: l10n.password,
+                        obscureText: true,
+                        maxLength: StringUtils.maxPasswordLength,
+                        onFieldSubmitted: AppConfig.isWideScreen
+                            ? (_) => _handleSignIn()
+                            : null,
+                        validator: (value) =>
+                            StringUtils.validatePassword(value, l10n),
+                      ),
+                      const SizedBox(height: 30),
+                      if (loginState.isLoading)
+                        const CircularProgressIndicator()
+                      else
+                        Column(
+                          children: [
+                            ElevatedButton(
+                              onPressed: _handleSignIn,
+                              child: Text(
+                                l10n.signIn,
+                                style: const TextStyle(fontSize: 18),
+                              ),
                             ),
-                          ),
-                      ],
-                    ),
-                ],
+                            const SizedBox(height: 10),
+                            TextButton(
+                              onPressed: () => context.go(
+                                Uri(
+                                  path: '/register',
+                                  queryParameters: widget.returnTo == null
+                                      ? null
+                                      : {'returnTo': widget.returnTo},
+                                ).toString(),
+                              ),
+                              child: Text(l10n.register),
+                            ),
+                            if (loginState.errorMessage != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 16),
+                                child: Text(
+                                  loginState.errorMessage!,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -258,39 +304,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      body: ref.watch(authStateProvider).when(
-        data: (user) {
-          if (user != null) {
-            _navigateToHome(context);
-            return const Center(child: CircularProgressIndicator());
-          }
-          return Stack(
-            children: [
-              _buildLoginForm(loginState, context),
-              if (!AppConfig.isProduction)
-                Positioned(
-                  bottom: 20,
-                  left: 16,
-                  child: Text(
-                    l10n.devEnvironment,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.normal,
+      body: ref
+          .watch(authStateProvider)
+          .when(
+            data: (user) {
+              if (user != null) {
+                _navigateAfterAuth(context);
+                return const Center(child: CircularProgressIndicator());
+              }
+              return Stack(
+                children: [
+                  _buildLoginForm(loginState, context),
+                  if (!AppConfig.isProduction)
+                    Positioned(
+                      bottom: 20,
+                      left: 16,
+                      child: Text(
+                        l10n.devEnvironment,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.normal,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-            ],
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            ErrorDialog.show(context, err);
-          });
-          return const Center(child: CircularProgressIndicator());
-        },
-      ),
+                ],
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, stack) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                ErrorDialog.show(context, err);
+              });
+              return const Center(child: CircularProgressIndicator());
+            },
+          ),
     );
   }
 }

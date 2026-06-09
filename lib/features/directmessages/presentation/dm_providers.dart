@@ -28,11 +28,65 @@ final dmMessagePreloaderProvider = Provider<DmMessagePreloader>((ref) {
   return preloader;
 });
 
-/// Streams all DM threads for a specific user ID
-/// Use this directly in the UI with the current user's ID
+/// Notifier for ephemeral (unsaved) DM threads.
+class EphemeralDmThreadsNotifier extends Notifier<List<DMThread>> {
+  @override
+  List<DMThread> build() => [];
+
+  void addThread(DMThread thread) {
+    if (!state.any((t) => t.id == thread.id)) {
+      state = [...state, thread];
+    }
+  }
+
+  void removeThread(String threadId) {
+    state = state.where((t) => t.id != threadId).toList();
+  }
+}
+
+/// Provider for ephemeral (unsaved) DM threads.
+final ephemeralDmThreadsProvider =
+    NotifierProvider<EphemeralDmThreadsNotifier, List<DMThread>>(
+  EphemeralDmThreadsNotifier.new,
+);
+
+/// Streams all DM threads for a specific user ID, including ephemeral threads
+/// Ephemeral threads are merged with Firestore threads for the UI
 final dmThreadsByUserProvider = StreamProvider.family<List<DMThreadMetaData>, String>((ref, userId) {
   // Use ref.read() not ref.watch() to avoid rebuild loops in StreamProvider
-  return ref.read(dmThreadServiceProvider).getUserDmThreads(userId);
+  final firestoreStream = ref.read(dmThreadServiceProvider).getUserDmThreads(userId);
+  
+  // Combine with ephemeral threads
+  return firestoreStream.map((firestoreThreads) {
+    final ephemeralThreads = ref.read(ephemeralDmThreadsProvider);
+    
+    // Convert ephemeral DMThreads to DMThreadMetaData
+    final ephemeralMetadata = ephemeralThreads.map((thread) {
+      // Find the other participant (not the current user)
+      final otherParticipantId = thread.participantIds.firstWhere(
+        (id) => id != userId,
+        orElse: () => thread.participantIds.first,
+      );
+      final otherParticipant = thread.participants[otherParticipantId];
+      
+      return DMThreadMetaData(
+        id: thread.id,
+        name: thread.id,
+        lastMessageTime: thread.lastMessageTime,
+        partnerName: otherParticipant?.username ?? 'Unknown',
+        partnerId: otherParticipantId,
+        partnerProfpic: otherParticipant?.profilePicUrl ?? '',
+        lastMessageBody: thread.lastMessage?.body,
+        hasUnread: thread.unreadBy[userId] ?? false,
+      );
+    }).toList();
+    
+    // Merge and sort by lastMessageTime (newest first)
+    final List<DMThreadMetaData> allThreads = [...firestoreThreads, ...ephemeralMetadata];
+    allThreads.sort((a, b) => b.lastMessageTime.compareTo(a.lastMessageTime));
+    
+    return allThreads;
+  });
 });
 
 /// DM View Model provider without autoDispose to maintain cache

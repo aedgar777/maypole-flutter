@@ -1,10 +1,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
 import 'package:maypole/core/utils/date_time_utils.dart';
+import 'package:maypole/core/utils/screen_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/core/widgets/report_content_dialog.dart';
 import 'package:maypole/core/widgets/app_toast.dart';
@@ -76,6 +77,7 @@ class _MaypoleGalleryScreenState extends ConsumerState<MaypoleGalleryScreen> {
         builder: (context) => _ImageFullscreenView(
           image: image,
           allImages: allImages,
+          threadId: widget.threadId,
         ),
       ),
     );
@@ -89,7 +91,14 @@ class _MaypoleGalleryScreenState extends ConsumerState<MaypoleGalleryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.maypoleName} Gallery'),
-        automaticallyImplyLeading: !AppConfig.isWideScreen,
+        // Only show in-app back button on legacy iOS without swipe-back support.
+        automaticallyImplyLeading: ScreenUtils.shouldShowAppBarBackButton(),
+        leading: ScreenUtils.shouldShowAppBarBackButton()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
       ),
       body: imagesAsyncValue.when(
         data: (images) {
@@ -173,7 +182,59 @@ class _MaypoleGalleryScreenState extends ConsumerState<MaypoleGalleryScreen> {
   }
 }
 
-/// Widget for displaying an image thumbnail with timestamp overlay
+/// Widget that displays an image with platform-appropriate loading
+/// On web: uses Image.network (avoids CORS issues with Firebase Storage)
+/// On mobile: uses CachedNetworkImage (for better caching)
+class _AdaptiveNetworkImage extends StatelessWidget {
+  final String imageUrl;
+  final BoxFit fit;
+  final Widget placeholder;
+  final Widget errorWidget;
+  final int? memCacheWidth;
+  final int? memCacheHeight;
+
+  const _AdaptiveNetworkImage({
+    required this.imageUrl,
+    required this.fit,
+    required this.placeholder,
+    required this.errorWidget,
+    this.memCacheWidth,
+    this.memCacheHeight,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (kIsWeb) {
+      // On web, use Image.network with HTML element strategy to avoid CORS
+      return Image.network(
+        imageUrl,
+        fit: fit,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return placeholder;
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return errorWidget;
+        },
+      );
+    }
+
+    // On mobile, use CachedNetworkImage for better caching
+    return CachedNetworkImage(
+      imageUrl: imageUrl,
+      fit: fit,
+      cacheManager: MaypoleImageCacheManager.instance,
+      memCacheWidth: memCacheWidth,
+      memCacheHeight: memCacheHeight,
+      fadeInDuration: const Duration(milliseconds: 200),
+      fadeOutDuration: const Duration(milliseconds: 100),
+      placeholder: (context, url) => placeholder,
+      errorWidget: (context, url, error) {
+        return errorWidget;
+      },
+    );
+  }
+}
 class _ImageThumbnail extends StatelessWidget {
   final MaypoleImage image;
   final VoidCallback onTap;
@@ -197,17 +258,13 @@ class _ImageThumbnail extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Image with custom cache manager
-            CachedNetworkImage(
+            // Image with platform-appropriate loading
+            _AdaptiveNetworkImage(
               imageUrl: image.storageUrl,
               fit: BoxFit.cover,
-              alignment: Alignment.center, // Ensure center cropping
-              cacheManager: MaypoleImageCacheManager.instance,
               memCacheWidth: 400, // Resize in memory for thumbnails
               memCacheHeight: 400,
-              fadeInDuration: const Duration(milliseconds: 200),
-              fadeOutDuration: const Duration(milliseconds: 100),
-              placeholder: (context, url) => Container(
+              placeholder: Container(
                 color: Colors.grey[900],
                 child: const Center(
                   child: SizedBox(
@@ -220,26 +277,23 @@ class _ImageThumbnail extends StatelessWidget {
                   ),
                 ),
               ),
-              errorWidget: (context, url, error) {
-                debugPrint('❌ Thumbnail load error: $error for URL: $url');
-                return Container(
-                  color: Colors.grey[900],
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.broken_image, color: Colors.white38, size: 32),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Load error',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.3),
-                          fontSize: 10,
-                        ),
+              errorWidget: Container(
+                color: Colors.grey[900],
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.broken_image, color: Colors.white38, size: 32),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Load error',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        fontSize: 10,
                       ),
-                    ],
-                  ),
-                );
-              },
+                    ),
+                  ],
+                ),
+              ),
             ),
             // Timestamp overlay at bottom
             Positioned(
@@ -288,10 +342,12 @@ class _ImageThumbnail extends StatelessWidget {
 class _ImageFullscreenView extends ConsumerStatefulWidget {
   final MaypoleImage image;
   final List<MaypoleImage> allImages;
+  final String threadId;
 
   const _ImageFullscreenView({
     required this.image,
     required this.allImages,
+    required this.threadId,
   });
 
   @override
@@ -326,7 +382,14 @@ class _ImageFullscreenViewState extends ConsumerState<_ImageFullscreenView> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        automaticallyImplyLeading: !AppConfig.isWideScreen,
+        // Only show in-app back button on legacy iOS without swipe-back support.
+        automaticallyImplyLeading: ScreenUtils.shouldShowAppBarBackButton(),
+        leading: ScreenUtils.shouldShowAppBarBackButton()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -366,15 +429,14 @@ class _ImageFullscreenViewState extends ConsumerState<_ImageFullscreenView> {
             child: InteractiveViewer(
               minScale: 0.5,
               maxScale: 4.0,
-              child: CachedNetworkImage(
+              child: _AdaptiveNetworkImage(
                 imageUrl: image.storageUrl,
                 fit: BoxFit.contain,
-                cacheManager: MaypoleImageCacheManager.instance,
                 // No resize for full-screen view - use original quality
-                placeholder: (context, url) => const Center(
+                placeholder: const Center(
                   child: CircularProgressIndicator(),
                 ),
-                errorWidget: (context, url, error) => const Center(
+                errorWidget: const Center(
                   child: Icon(Icons.error, color: Colors.white38, size: 64),
                 ),
               ),
@@ -419,9 +481,51 @@ class _ImageFullscreenViewState extends ConsumerState<_ImageFullscreenView> {
     );
 
     if (confirm == true && mounted) {
-      // TODO: Implement delete functionality with provider
-      // For now, just close the view
-      Navigator.pop(context);
+      final currentUser = AppSession().currentUser;
+      if (currentUser == null) return;
+
+      try {
+        // Show loading indicator
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+
+        // Delete the image using the service
+        await ref.read(maypoleImageServiceProvider).deleteImage(
+          widget.threadId,
+          image.id,
+          currentUser.firebaseID,
+        );
+
+        // Close loading dialog
+        if (mounted) {
+          Navigator.pop(context);
+        }
+
+        // Close the fullscreen view
+        if (mounted) {
+          Navigator.pop(context);
+        }
+
+        // Show success message
+        if (mounted) {
+          AppToast.showSuccess(context, 'Image deleted successfully');
+        }
+      } catch (e) {
+        // Close loading dialog if still open
+        if (mounted) {
+          Navigator.pop(context);
+        }
+
+        // Show error message
+        if (mounted) {
+          AppToast.showError(context, 'Failed to delete image: ${e.toString()}');
+        }
+      }
     }
   }
 

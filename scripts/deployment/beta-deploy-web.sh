@@ -52,9 +52,6 @@ cp public/.well-known/apple-app-site-association build/web/.well-known/apple-app
 # Copy Android Asset Links file
 cp public/.well-known/assetlinks.json build/web/.well-known/assetlinks.json
 
-# Copy ads.txt file for AdSense
-cp web/ads.txt build/web/ads.txt
-
 echo "✅ Verification files copied!"
 echo ""
 

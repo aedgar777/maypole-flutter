@@ -15,7 +15,7 @@ echo ""
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# Load environment variables from .env
+# Load environment variables from ..env
 if [ -f "$PROJECT_ROOT/.env" ]; then
     echo "✅ Loading environment from .env..."
     export $(grep -v '^#' "$PROJECT_ROOT/.env" | grep -v '^$' | xargs)
@@ -24,7 +24,7 @@ else
     exit 1
 fi
 
-# Load .env.local if it exists (for secrets - this file is gitignored)
+# Load ..env.local if it exists (for secrets - this file is gitignored)
 if [ -f "$PROJECT_ROOT/.env.local" ]; then
     echo "✅ Loading secrets from .env.local..."
     export $(grep -v '^#' "$PROJECT_ROOT/.env.local" | grep -v '^$' | xargs)

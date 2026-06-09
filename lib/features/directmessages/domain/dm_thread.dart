@@ -39,6 +39,7 @@ class DMThread {
   final Map<String, DMParticipant> participants;  // Map of userId -> participant info
   final List<String> hiddenFor;  // List of userIds who have hidden this thread
   final Map<String, bool> unreadBy;  // Map of userId -> has unread messages
+  final bool hasMessages;  // Whether this thread has any messages sent
 
   const DMThread({
     required this.id,
@@ -47,6 +48,7 @@ class DMThread {
     this.lastMessage,
     this.hiddenFor = const [],
     this.unreadBy = const {},
+    this.hasMessages = false,
   });
 
   // Helper to get participantIds as a list (for Firestore queries)
@@ -78,6 +80,7 @@ class DMThread {
           : null,
       hiddenFor: List<String>.from(map['hiddenFor'] ?? []),
       unreadBy: unreadBy,
+      hasMessages: map['hasMessages'] ?? false,
     );
   }
 
@@ -90,6 +93,7 @@ class DMThread {
       'lastMessage': lastMessage?.toMap(),
       'hiddenFor': hiddenFor,
       'unreadBy': unreadBy,
+      'hasMessages': hasMessages,
     };
   }
 

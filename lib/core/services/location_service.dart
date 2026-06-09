@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import '../utils/place_geofence_utils.dart';
 
@@ -47,29 +46,22 @@ class LocationService {
   Future<Position?> getCurrentPosition() async {
     try {
       final hasPermission = await hasLocationPermission();
-      debugPrint('🔐 Location permission status: $hasPermission');
       if (!hasPermission) {
-        debugPrint('❌ No location permission');
         return null;
       }
 
       final serviceEnabled = await isLocationServiceEnabled();
-      debugPrint('📡 Location service enabled: $serviceEnabled');
       if (!serviceEnabled) {
-        debugPrint('❌ Location service not enabled');
         return null;
       }
 
-      debugPrint('📍 Fetching current position...');
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      debugPrint('✅ Got position: lat=${position.latitude}, lon=${position.longitude}');
       _lastKnownPosition = position;
       return position;
     } catch (e) {
-      debugPrint('💥 Error getting position: $e');
       // Return last known position if available
       return _lastKnownPosition;
     }
