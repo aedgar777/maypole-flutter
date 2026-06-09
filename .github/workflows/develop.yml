@@ -74,7 +74,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install Node.js Cloud Functions dependencies
         run: |
@@ -106,7 +106,8 @@ jobs:
           firebase deploy \
             --only firestore:rules,firestore:indexes,storage,functions \
             --project maypole-flutter-dev \
-            --non-interactive
+            --non-interactive \
+            --force
           
           echo ""
           echo "✅ Firebase tools deployed!"
@@ -115,6 +116,7 @@ jobs:
     name: Build and Deploy Android (Dev Internal)
     needs: deploy_firebase
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     environment: development
     steps:
       - name: Checkout repository
@@ -199,6 +201,11 @@ jobs:
           KEYSTORE_EOF
 
       - name: Build Android App Bundle (devRelease)
+        env:
+          # Disable the Gradle daemon and file-system watching on CI to reduce
+          # memory/resource usage. Parallel builds are intentionally NOT enabled
+          # because they raise peak memory and can trigger runner termination.
+          GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.vfs.watch=false
         run: |
           echo "📦 Building Android App Bundle (dev release)..."
           BUILD_NUMBER=$((100000 + GITHUB_RUN_NUMBER))
