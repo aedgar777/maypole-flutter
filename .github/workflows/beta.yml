@@ -280,12 +280,16 @@ jobs:
           bundle exec fastlane sync_prod_signing
           echo "✅ Code signing setup complete!"
 
-      - name: Build iOS IPA with Flutter
+      - name: Configure Flutter build settings (dart-defines)
         run: |
-          flutter build ipa \
+          # Writes ENVIRONMENT=production into ios/Flutter/Generated.xcconfig so the
+          # gym/xcodebuild archive (run by Fastlane) compiles with the right config.
+          # --config-only skips the redundant full IPA build; Fastlane re-archives.
+          flutter build ios \
             --release \
-            --dart-define=ENVIRONMENT=production \
-            --export-options-plist=ios/ExportOptions.plist
+            --no-codesign \
+            --config-only \
+            --dart-define=ENVIRONMENT=production
 
       - name: Deploy to TestFlight Beta with Fastlane
         working-directory: ios
