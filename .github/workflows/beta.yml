@@ -189,7 +189,7 @@ jobs:
 
   build_ios:
     name: Build and Deploy iOS (Beta TestFlight)
-    runs-on: macos-latest
+    runs-on: macos-26
     needs: bump_version
     environment: production
     steps:
@@ -205,13 +205,15 @@ jobs:
           echo "📱 Current version after pull:"
           grep '^version:' pubspec.yaml
 
-      - name: Select Xcode version
+      - name: Select Xcode 26
         run: |
-          if [ -d "/Applications/Xcode_15.4.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
-          elif [ -d "/Applications/Xcode_15.3.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_15.3.app/Contents/Developer
+          XCODE_APP=$(find /Applications -maxdepth 1 -name 'Xcode_26*.app' | sort -Vr | head -n 1)
+          if [ -z "$XCODE_APP" ]; then
+            echo "❌ Xcode 26 is required for App Store uploads. Installed Xcode versions:"
+            ls /Applications | grep Xcode || true
+            exit 1
           fi
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
           echo "Selected Xcode:"
           xcodebuild -version
 
@@ -280,12 +282,16 @@ jobs:
           bundle exec fastlane sync_prod_signing
           echo "✅ Code signing setup complete!"
 
-      - name: Build iOS IPA with Flutter
+      - name: Configure Flutter build settings (dart-defines)
         run: |
-          flutter build ipa \
+          # Writes ENVIRONMENT=production into ios/Flutter/Generated.xcconfig so the
+          # gym/xcodebuild archive (run by Fastlane) compiles with the right config.
+          # --config-only skips the redundant full IPA build; Fastlane re-archives.
+          flutter build ios \
             --release \
-            --dart-define=ENVIRONMENT=production \
-            --export-options-plist=ios/ExportOptions.plist
+            --no-codesign \
+            --config-only \
+            --dart-define=ENVIRONMENT=production
 
       - name: Deploy to TestFlight Beta with Fastlane
         working-directory: ios
