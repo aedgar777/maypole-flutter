@@ -219,16 +219,11 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
 
   /// Check if a message was sent from within the place's geofence range
   /// Uses dynamic range based on place type (e.g., 5km for cities, 500m for restaurants)
+  ///
+  /// This is based solely on the sender's location at the time the message was
+  /// sent (stored on the message). The viewer's own location and preferences are
+  /// intentionally irrelevant here.
   bool _isMessageFromNearby(MaypoleMessage message) {
-    // Check if user has enabled "Show When at Location" feature
-    final locationState = ref.watch(locationSettingsViewModelProvider);
-    final showWhenAtLocation = locationState.preferences.showWhenAtLocation;
-
-    // If feature is disabled, don't show badges
-    if (!showWhenAtLocation) {
-      return false;
-    }
-
     // If no coordinates for the place or message, can't determine
     if (widget.latitude == null || widget.longitude == null) {
       return false;
