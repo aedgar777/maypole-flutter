@@ -6,10 +6,57 @@ on:
       - beta
 
 jobs:
+  bump_version:
+    name: Bump Patch Version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      new_version: ${{ steps.bump.outputs.new_version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Bump patch version
+        id: bump
+        run: |
+          chmod +x scripts/auto-bump-version.sh scripts/get-version.sh
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin beta || echo "⚠️ Pull failed, but continuing..."
+          echo "📱 Current version:"
+          ./scripts/get-version.sh
+          ./scripts/auto-bump-version.sh patch
+          echo "✅ New version:"
+          ./scripts/get-version.sh
+          if git diff --quiet pubspec.yaml; then
+            echo "ℹ️ No version changes detected, skipping commit"
+            exit 0
+          fi
+          NEW_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          git add pubspec.yaml
+          git commit -m "chore: bump version to $NEW_VERSION (Beta) [skip ci]"
+          for i in {1..3}; do
+            if git push origin beta; then
+              echo "✅ Successfully pushed version bump"
+              exit 0
+            else
+              echo "⚠️ Push failed (attempt $i/3), pulling and retrying..."
+              git pull --rebase origin beta
+            fi
+          done
+          echo "❌ Failed to push after 3 attempts"
+          exit 1
+
   build_android:
     name: Build and Deploy Android (Beta)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
+    needs: bump_version
     environment: production
     steps:
       - name: Checkout repository
@@ -56,7 +103,7 @@ jobs:
           rm -rf android/.gradle
           rm -rf android/app/build
 
-      - name: Create ..env file from secrets
+      - name: Create .env file from secrets
         run: |
           cat > .env << EOF
           ENVIRONMENT=production
@@ -106,18 +153,15 @@ jobs:
 
       - name: Build Android App Bundle (prodRelease)
         env:
+          # Disable the Gradle daemon and file-system watching on CI to reduce
+          # memory/resource usage. Parallel builds are intentionally NOT enabled
+          # because they raise peak memory and can trigger runner termination.
           GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.vfs.watch=false
         run: |
           echo "📦 Building Android App Bundle (prod release for beta)..."
           echo "Using flavor: prod"
           echo "Using ENVIRONMENT: production"
-          BUILD_NUMBER=$((200000 + GITHUB_RUN_NUMBER))
-          echo "Using CI build number: $BUILD_NUMBER"
-          flutter build appbundle \
-            --release \
-            --flavor prod \
-            --build-number="$BUILD_NUMBER" \
-            --dart-define=ENVIRONMENT=production
+          flutter build appbundle --release --flavor prod --dart-define=ENVIRONMENT=production
           echo "✅ Build complete!"
 
       - name: Setup Ruby for Fastlane
@@ -146,6 +190,7 @@ jobs:
   build_ios:
     name: Build and Deploy iOS (Beta TestFlight)
     runs-on: macos-26
+    needs: bump_version
     environment: production
     steps:
       - name: Checkout repository
@@ -154,7 +199,7 @@ jobs:
           ref: beta
           fetch-depth: 0
       
-      - name: Pull latest changes
+      - name: Pull latest changes (including version bump)
         run: |
           git pull origin beta
           echo "📱 Current version after pull:"
@@ -188,7 +233,7 @@ jobs:
           bundler-cache: true
           working-directory: ios
 
-      - name: Create ..env file from secrets
+      - name: Create .env file from secrets
         run: |
           cat > .env << EOF
           ENVIRONMENT=production
@@ -226,13 +271,10 @@ jobs:
 
       - name: Sync iOS code signing certificates with Match
         working-directory: ios
-        timeout-minutes: 15
         env:
           MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
           MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
         run: |
           echo "🔐 Syncing code signing certificates and provisioning profiles..."
@@ -240,52 +282,19 @@ jobs:
           bundle exec fastlane sync_prod_signing
           echo "✅ Code signing setup complete!"
 
-      - name: Create iOS export options for CI
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+      - name: Configure Flutter build settings (dart-defines)
         run: |
-          cat > ios/ExportOptions.ci.plist << EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key>
-            <string>app-store</string>
-            <key>uploadBitcode</key>
-            <false/>
-            <key>uploadSymbols</key>
-            <true/>
-            <key>signingStyle</key>
-            <string>manual</string>
-            <key>teamID</key>
-            <string>${APPLE_TEAM_ID}</string>
-            <key>provisioningProfiles</key>
-            <dict>
-              <key>${IOS_BUNDLE_ID}</key>
-              <string>match AppStore ${IOS_BUNDLE_ID}</string>
-            </dict>
-          </dict>
-          </plist>
-          EOF
-          plutil -lint ios/ExportOptions.ci.plist
-
-      - name: Build iOS IPA with Flutter
-        run: |
-          BUILD_NAME="1.2.9"
-          BUILD_NUMBER=$((200000 + GITHUB_RUN_NUMBER))
-          echo "Using CI build name: $BUILD_NAME"
-          echo "Using CI build number: $BUILD_NUMBER"
-          flutter build ipa \
+          # Writes ENVIRONMENT=production into ios/Flutter/Generated.xcconfig so the
+          # gym/xcodebuild archive (run by Fastlane) compiles with the right config.
+          # --config-only skips the redundant full IPA build; Fastlane re-archives.
+          flutter build ios \
             --release \
-            --build-name="$BUILD_NAME" \
-            --build-number="$BUILD_NUMBER" \
-            --dart-define=ENVIRONMENT=production \
-            --export-options-plist=ios/ExportOptions.ci.plist
+            --no-codesign \
+            --config-only \
+            --dart-define=ENVIRONMENT=production
 
       - name: Deploy to TestFlight Beta with Fastlane
         working-directory: ios
-        timeout-minutes: 30
         env:
           MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
           MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
@@ -299,9 +308,8 @@ jobs:
           export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/gcloud/application_default_credentials.json"
           export APP_STORE_CONNECT_API_KEY_KEY_FILEPATH="$HOME/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8"
           
-          # Deploy the Flutter-built IPA with Fastlane. Avoid rebuilding in Fastlane,
-          # which previously caused App Store Connect uploads to appear hung in CI.
-          bundle exec fastlane upload_beta_ipa
+          # Deploy with Fastlane
+          bundle exec fastlane deploy_beta
           
           echo ""
           echo "🎉 Beta build deployed to TestFlight Beta Testing!"
@@ -309,6 +317,7 @@ jobs:
   build_web:
     name: Build and Deploy Web (Beta Channel)
     runs-on: ubuntu-latest
+    needs: bump_version
     environment: production
     steps:
       - name: Checkout repository
@@ -317,7 +326,7 @@ jobs:
           ref: beta
           fetch-depth: 0
       
-      - name: Pull latest changes
+      - name: Pull latest changes (including version bump)
         run: |
           git pull origin beta
           echo "📱 Current version after pull:"
@@ -332,7 +341,7 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Create ..env file from secrets
+      - name: Create .env file from secrets
         run: |
           cat > .env << EOF
           ENVIRONMENT=production

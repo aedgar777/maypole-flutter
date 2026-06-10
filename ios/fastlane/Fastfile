@@ -115,20 +115,10 @@ platform :ios do
     # Sync certificates
     sync_prod_signing
 
-    # Build the app
-    build_app(
-      workspace: "Runner.xcworkspace",
-      scheme: "Runner",
-      export_method: "app-store",
-      export_options: {
-        method: "app-store",
-        provisioningProfiles: {
-          ENV["IOS_BUNDLE_ID"] => "match AppStore #{ENV['IOS_BUNDLE_ID']}"
-        }
-      }
-    )
+    bundle_id = ENV["IOS_BUNDLE_ID"]
 
-    # Create API key for App Store Connect
+    # Create the App Store Connect API key first so we can look up the latest
+    # build number *before* building.
     api_key = app_store_connect_api_key(
       key_id: ENV["APP_STORE_CONNECT_API_KEY_KEY_ID"],
       issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
@@ -136,15 +126,70 @@ platform :ios do
       in_house: false
     )
 
-    # Upload to TestFlight (beta group)
-    upload_to_testflight(
-      api_key: api_key,
-      skip_waiting_for_build_processing: true,
-      distribute_external: true,
-      groups: ["Beta Testers"],
-      notify_external_testers: true,
-      changelog: "New beta release with bug fixes and improvements"
-    )
+    # Read the marketing version (CFBundleShortVersionString) and build number
+    # from pubspec.yaml. Fastfile lives in ios/fastlane, so pubspec is two levels up.
+    pubspec = File.read(File.expand_path("../../pubspec.yaml", __dir__))
+    version_line = pubspec[/^version:\s*(.+)$/, 1].to_s.strip
+    marketing_version = version_line.split("+").first
+    pubspec_build = (version_line.split("+")[1] || "0").to_i
+
+    # Find the highest build number already uploaded to TestFlight for this
+    # marketing version so we never collide with it (the -19232 duplicate error).
+    latest_build = begin
+      latest_testflight_build_number(
+        api_key: api_key,
+        app_identifier: bundle_id,
+        version: marketing_version,
+        initial_build_number: 0
+      )
+    rescue => e
+      UI.important("Could not fetch latest TestFlight build number (#{e.message}). Falling back to pubspec build number.")
+      0
+    end
+
+    # Use the highest of (TestFlight latest + 1) and the pubspec build number.
+    build_number = [latest_build + 1, pubspec_build].max
+    UI.message("📦 Uploading build #{build_number} (TestFlight latest: #{latest_build}, pubspec: #{pubspec_build})")
+
+    max_attempts = 3
+    attempt = 0
+    begin
+      attempt += 1
+
+      # Build the app, overriding the Flutter build number so CFBundleVersion is
+      # unique. Command-line build settings take precedence over Generated.xcconfig.
+      build_app(
+        workspace: "Runner.xcworkspace",
+        scheme: "Runner",
+        export_method: "app-store",
+        xcargs: "FLUTTER_BUILD_NUMBER=#{build_number} CURRENT_PROJECT_VERSION=#{build_number}",
+        export_options: {
+          method: "app-store",
+          provisioningProfiles: {
+            bundle_id => "match AppStore #{bundle_id}"
+          }
+        }
+      )
+
+      # Upload to TestFlight (beta group)
+      upload_to_testflight(
+        api_key: api_key,
+        skip_waiting_for_build_processing: true,
+        distribute_external: true,
+        groups: ["Beta Testers"],
+        notify_external_testers: true,
+        changelog: "New beta release with bug fixes and improvements"
+      )
+    rescue => e
+      duplicate_error = e.message =~ /already been used|-19232|must be higher than the previously uploaded/i
+      if duplicate_error && attempt < max_attempts
+        build_number += 1
+        UI.important("⚠️ Build number already used on App Store Connect. Rebuilding with build #{build_number} (attempt #{attempt + 1}/#{max_attempts})...")
+        retry
+      else
+        raise e
+      end
+    end
   end
 
   desc "Upload pre-built IPA to TestFlight"
