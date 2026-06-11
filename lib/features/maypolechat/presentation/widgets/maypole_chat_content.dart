@@ -87,10 +87,6 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     _scrollController.addListener(_onScroll);
     _updateCurrentPosition();
 
-    if (widget.placeType != null) {
-      final radius = PlaceGeofenceUtils.getRadiusForPlaceType(widget.placeType);
-    } else {}
-
     // Auto-focus if requested
     if (widget.autoFocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -140,10 +136,15 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     return isNearby ?? false;
   }
 
-  /// Check if user is within range of the place based on its type
-  /// Uses dynamic geofencing: countries (500km), states (200km), cities (15km),
-  /// neighborhoods (5km), establishments (500m), buildings (200m)
-  bool get _isWithinPlaceRange {
+  /// Check if the next outgoing message should include the location badge.
+  /// This is intentionally decided at send time so disabling the setting stops
+  /// new badges without hiding badges on messages that were already sent.
+  bool get _shouldBadgeNextMessage {
+    final locationState = ref.read(locationSettingsViewModelProvider);
+    if (!locationState.preferences.showWhenAtLocation) {
+      return false;
+    }
+
     if (widget.latitude == null || widget.longitude == null) {
       return false;
     }
@@ -152,24 +153,13 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       return false;
     }
 
-    final locationService = ref.read(locationServiceProvider);
-    final isInRange = locationService.isPositionInRangeOfPlace(
+    return PlaceGeofenceUtils.isUserInRange(
+      userLatitude: _currentPosition!.latitude,
+      userLongitude: _currentPosition!.longitude,
       placeLatitude: widget.latitude!,
       placeLongitude: widget.longitude!,
-      position: _currentPosition,
       placeType: widget.placeType,
     );
-
-    if (isInRange != null) {
-      final radius = PlaceGeofenceUtils.getRadiusForPlaceType(widget.placeType);
-      final distance = PlaceGeofenceUtils.getDistanceToPlace(
-        position: _currentPosition,
-        placeLatitude: widget.latitude!,
-        placeLongitude: widget.longitude!,
-      );
-    }
-
-    return isInRange ?? false;
   }
 
   /// Check if image upload button should be enabled
@@ -217,14 +207,16 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     );
   }
 
-  /// Check if a message was sent from within the place's geofence range
-  /// Uses dynamic range based on place type (e.g., 5km for cities, 500m for restaurants)
-  ///
-  /// This is based solely on the sender's location at the time the message was
-  /// sent (stored on the message). The viewer's own location and preferences are
-  /// intentionally irrelevant here.
-  bool _isMessageFromNearby(MaypoleMessage message) {
-    // If no coordinates for the place or message, can't determine
+  /// Check if a message should show the location badge.
+  /// New messages persist the sender's badge choice at send time. Older messages
+  /// without that field fall back to the legacy coordinate-based behavior so
+  /// existing badges remain visible.
+  bool _shouldShowLocationBadge(MaypoleMessage message) {
+    if (message.showLocationBadge != null) {
+      return message.showLocationBadge!;
+    }
+
+    // Legacy fallback for messages sent before showLocationBadge was persisted.
     if (widget.latitude == null || widget.longitude == null) {
       return false;
     }
@@ -233,16 +225,13 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       return false;
     }
 
-    // Use dynamic geofence range based on place type
-    final isInRange = PlaceGeofenceUtils.isUserInRange(
+    return PlaceGeofenceUtils.isUserInRange(
       userLatitude: message.senderLatitude!,
       userLongitude: message.senderLongitude!,
       placeLatitude: widget.latitude!,
       placeLongitude: widget.longitude!,
       placeType: widget.placeType,
     );
-
-    return isInRange;
   }
 
   @override
@@ -384,7 +373,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                                       message.senderProfilePictureUrl,
                                   body: message.body,
                                   timestamp: message.timestamp,
-                                  isNearby: _isMessageFromNearby(message),
+                                  isNearby: _shouldShowLocationBadge(message),
                                   isOwnMessage: isOwnMessage,
                                   onTagUser: !widget.readOnly && !isOwnMessage
                                       ? () => _tagUser(
@@ -504,7 +493,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
         ),
         boxShadow: [
           BoxShadow(
-            color: brightTeal.withOpacity(0.2),
+            color: brightTeal.withValues(alpha: 0.2),
             blurRadius: 12,
             offset: const Offset(0, 2),
           ),
@@ -556,7 +545,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                       Text(
                         'Sign up or log in to post messages',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
+                          color: Colors.white.withValues(alpha: 0.85),
                           fontSize: 13,
                         ),
                       ),
@@ -579,6 +568,8 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
             .read(mentionControllerProvider.notifier)
             .getMentionedUserIds();
 
+        final showLocationBadge = _shouldBadgeNextMessage;
+
         ref
             .read(maypoleChatViewModelProvider(widget.threadId).notifier)
             .sendMessage(
@@ -592,6 +583,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
               senderLatitude: _currentPosition?.latitude,
               senderLongitude: _currentPosition?.longitude,
               placeType: widget.placeType,
+              showLocationBadge: showLocationBadge,
             );
 
         _messageController.clear();

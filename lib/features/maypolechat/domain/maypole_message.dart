@@ -15,6 +15,7 @@ class MaypoleMessage {
   final String? imageId; // For image upload messages, the ID of the uploaded image
   final double? senderLatitude; // Sender's latitude when message was sent
   final double? senderLongitude; // Sender's longitude when message was sent
+  final bool? showLocationBadge; // Whether this message should show the location pin
 
   const MaypoleMessage({
     this.id,
@@ -29,6 +30,7 @@ class MaypoleMessage {
     this.imageId,
     this.senderLatitude,
     this.senderLongitude,
+    this.showLocationBadge,
   });
 
   factory MaypoleMessage.fromMap(Map<String, dynamic> map, {String? documentId}) {
@@ -48,8 +50,9 @@ class MaypoleMessage {
           [],
       messageType: map['messageType'] as String?,
       imageId: map['imageId'] as String?,
-      senderLatitude: map['senderLatitude'] as double?,
-      senderLongitude: map['senderLongitude'] as double?,
+      senderLatitude: (map['senderLatitude'] as num?)?.toDouble(),
+      senderLongitude: (map['senderLongitude'] as num?)?.toDouble(),
+      showLocationBadge: map['showLocationBadge'] as bool?,
     );
   }
 
@@ -77,6 +80,9 @@ class MaypoleMessage {
     }
     if (senderLongitude != null) {
       map['senderLongitude'] = senderLongitude!;
+    }
+    if (showLocationBadge != null) {
+      map['showLocationBadge'] = showLocationBadge!;
     }
     
     return map;
