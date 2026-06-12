@@ -21,13 +21,16 @@ hive_api_token = SecretParam("HIVE_API_TOKEN")
 
 
 def json_response(data, status=200):
+    # NOTE: CORS headers are intentionally NOT set here. Every function that
+    # returns json_response is decorated with `@https_fn.on_request(cors=...)`,
+    # which already injects the Access-Control-Allow-* headers. Adding them here
+    # too produces duplicate `Access-Control-Allow-Origin` headers on the
+    # response, which browsers reject as a CORS error (breaking web clients while
+    # mobile, which doesn't enforce CORS, keeps working).
     return https_fn.Response(
         json.dumps(data),
         status=status,
         headers={
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, X-Goog-Api-Key, X-Place-Id',
         },
     )

@@ -114,6 +114,7 @@ class MaypoleChatViewModel extends AsyncNotifier<List<MaypoleMessage>> {
         double? senderLatitude,
         double? senderLongitude,
         String? placeType,
+        bool showLocationBadge = false,
       }) async {
     try {
       await _threadService.sendMessage(
@@ -128,6 +129,7 @@ class MaypoleChatViewModel extends AsyncNotifier<List<MaypoleMessage>> {
         senderLatitude: senderLatitude,
         senderLongitude: senderLongitude,
         placeType: placeType,
+        showLocationBadge: showLocationBadge,
       );
     } catch (e, st) {
       state = AsyncValue.error(e, st);

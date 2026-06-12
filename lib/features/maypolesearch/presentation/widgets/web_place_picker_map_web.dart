@@ -16,7 +16,12 @@ class WebPlacePickerMap extends StatefulWidget {
   final ValueChanged<Map<String, dynamic>> onPlaceSelected;
   final ValueChanged<CameraPosition>? onCameraMove;
   final VoidCallback? onMapLoaded;
+  final VoidCallback? onMapTapped;
   final WebMapControllerReady? onControllerReady;
+
+  /// The user's current location. When non-null a blue "my location" dot is
+  /// rendered on the map, matching the native `myLocationEnabled` blue dot.
+  final LatLng? myLocation;
 
   const WebPlacePickerMap({
     super.key,
@@ -25,7 +30,9 @@ class WebPlacePickerMap extends StatefulWidget {
     this.mapStyle,
     this.onCameraMove,
     this.onMapLoaded,
+    this.onMapTapped,
     this.onControllerReady,
+    this.myLocation,
   });
 
   @override
@@ -36,6 +43,8 @@ class _WebPlacePickerMapState extends State<WebPlacePickerMap> {
   late final String _viewType;
   html.DivElement? _mapDiv;
   JSObject? _map;
+  JSFunction? _latLngCtor;
+  JSObject? _myLocationMarker;
 
   @override
   void initState() {
@@ -80,6 +89,7 @@ class _WebPlacePickerMapState extends State<WebPlacePickerMap> {
       return;
     }
     final event = eventObject;
+    _latLngCtor = latLngCtor;
 
     final target = widget.initialCameraPosition.target;
     final center = latLngCtor.callAsConstructor<JSObject>(
@@ -96,6 +106,11 @@ class _WebPlacePickerMapState extends State<WebPlacePickerMap> {
 
     _map = mapCtor.callAsConstructor<JSObject>(div as JSObject, mapOptions);
     final map = _map!;
+
+    // Expose the underlying JS map instance so web integration tests can drive
+    // real POI tap events through the click listener wired below. Harmless in
+    // production (the map already lives in the page DOM).
+    (html.window as JSObject).setProperty('maypoleWebMap'.toJS, map);
 
     if (widget.mapStyle != null && widget.mapStyle!.isNotEmpty) {
       try {
@@ -114,12 +129,32 @@ class _WebPlacePickerMapState extends State<WebPlacePickerMap> {
     }.jsify() as JSObject;
     final marker = markerCtor.callAsConstructor<JSObject>(markerOptions);
 
+    // Blue "my location" dot, mirroring the native `myLocationEnabled` indicator.
+    final myLocationIcon = <String, Object?>{
+      'path': 0, // google.maps.SymbolPath.CIRCLE
+      'scale': 7,
+      'fillColor': '#4285F4',
+      'fillOpacity': 1,
+      'strokeColor': '#FFFFFF',
+      'strokeWeight': 2,
+    }.jsify() as JSObject;
+    final myLocationMarkerOptions = <String, Object?>{
+      'map': map,
+      'visible': false,
+      'clickable': false,
+      'zIndex': 1000,
+      'icon': myLocationIcon,
+    }.jsify() as JSObject;
+    _myLocationMarker =
+        markerCtor.callAsConstructor<JSObject>(myLocationMarkerOptions);
+    _updateMyLocation();
+
     event.callMethod(
       'addListener'.toJS,
       map,
       'click'.toJS,
       ((JSObject e) {
-        final placeId = e.getProperty<JSAny?>('placeId'.toJS);
+        final placeId = _extractPlaceId(e.getProperty<JSAny?>('placeId'.toJS));
         final latLng = e.getProperty<JSObject?>('latLng'.toJS);
         if (latLng == null) {
           return;
@@ -130,15 +165,20 @@ class _WebPlacePickerMapState extends State<WebPlacePickerMap> {
         if (lat == null || lng == null) return;
 
         if (placeId != null) {
+          // Suppress Google's default POI info window so we can show our own
+          // bottom sheet, matching the native (Android/iOS) behavior.
           e.callMethod('stop'.toJS);
           marker.callMethod('setVisible'.toJS, true.toJS);
           marker.callMethod('setPosition'.toJS, latLng);
 
           widget.onPlaceSelected({
-            'placeId': placeId.toString(),
+            'placeId': placeId,
             'latitude': lat,
             'longitude': lng,
           });
+        } else {
+          // Plain map tap (no POI). Mirror mobile by clearing any selection.
+          widget.onMapTapped?.call();
         }
       }).toJS,
     );
@@ -177,6 +217,55 @@ class _WebPlacePickerMapState extends State<WebPlacePickerMap> {
         marker.callMethod('setVisible'.toJS, false.toJS);
       },
     );
+  }
+
+  /// Converts a Google Maps `IconMouseEvent.placeId` (a JS string when the user
+  /// tapped a POI, otherwise null/undefined) into a Dart [String].
+  ///
+  /// The raw value is a JS string, not a Dart String, so calling `toString()`
+  /// on the boxed `JSAny` does NOT yield the place id (it produces a mangled
+  /// representation). We must unbox it via the JS interop conversion so that
+  /// the id we forward is a valid Google Place ID that Place Details can
+  /// resolve — otherwise the lookup 404s and the bottom sheet is stuck on the
+  /// "Selected Place" placeholder.
+  String? _extractPlaceId(JSAny? placeId) {
+    if (placeId == null) return null;
+    if (placeId.isA<JSString>()) {
+      final id = (placeId as JSString).toDart;
+      return id.isEmpty ? null : id;
+    }
+    final dartValue = placeId.dartify();
+    final id = dartValue?.toString();
+    return (id == null || id.isEmpty) ? null : id;
+  }
+
+  @override
+  void didUpdateWidget(covariant WebPlacePickerMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.myLocation != widget.myLocation) {
+      _updateMyLocation();
+    }
+  }
+
+  /// Positions (or hides) the blue "my location" dot. Safe to call before the
+  /// JS map is ready; it no-ops until the marker has been created.
+  void _updateMyLocation() {
+    final marker = _myLocationMarker;
+    final latLngCtor = _latLngCtor;
+    if (marker == null || latLngCtor == null) return;
+
+    final location = widget.myLocation;
+    if (location == null) {
+      marker.callMethod('setVisible'.toJS, false.toJS);
+      return;
+    }
+
+    final position = latLngCtor.callAsConstructor<JSObject>(
+      location.latitude.toJS,
+      location.longitude.toJS,
+    );
+    marker.callMethod('setPosition'.toJS, position);
+    marker.callMethod('setVisible'.toJS, true.toJS);
   }
 
   @override
