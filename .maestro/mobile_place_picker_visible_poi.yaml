@@ -21,7 +21,7 @@ name: Mobile place picker selects only real visible Google POIs
 # opens with The Studio Museum in Harlem already visible. Override these if the
 # screenshot shows the blank area or POI label/icon at a different point:
 #   -e BLANK_MAP_TAP='50%,62%'
-#   -e STUDIO_MUSEUM_POI_TAP='50%,48%'
+#   -e STUDIO_MUSEUM_POI_TAP='46%,41%'
 
 - launchApp:
     clearState: false
@@ -36,6 +36,13 @@ name: Mobile place picker selects only real visible Google POIs
       - tapOn: Password
       - inputText: ${MAESTRO_PASSWORD}
       - hideKeyboard
+      # hideKeyboard is unreliable on iOS and can leave the keyboard covering
+      # the Sign In button. Tapping the keyboard's "done" key reliably dismisses
+      # it on iOS; it is optional so Android (which has no such key) is unaffected.
+      - tapOn:
+          text: done
+          optional: true
+      - waitForAnimationToEnd
       - tapOn: Sign In
       - extendedWaitUntil:
           notVisible: Sign In
@@ -51,8 +58,11 @@ name: Mobile place picker selects only real visible Google POIs
 - extendedWaitUntil:
     visible: Search for a maypole
     timeout: 20000
-- waitForAnimationToEnd
-- waitForAnimationToEnd
+# Google map tiles can take ~20s to render on a fresh launch. The pulsing
+# current-location dot keeps the screen animating, so this waits the full
+# timeout, giving tiles and POI labels time to appear before we tap.
+- waitForAnimationToEnd:
+    timeout: 20000
 - takeScreenshot: place-picker-initial-map
 
 # Repeatedly tap an area that should not correspond to a visible Google POI label/icon.
@@ -79,8 +89,19 @@ name: Mobile place picker selects only real visible Google POIs
 # The Studio Museum in Harlem. This must be a native Google Maps POI tap, not a
 # search result or app-rendered marker.
 - tapOn:
-    point: ${STUDIO_MUSEUM_POI_TAP || '50%,48%'}
+    point: ${STUDIO_MUSEUM_POI_TAP || '46%,41%'}
 - waitForAnimationToEnd
 - takeScreenshot: place-picker-after-studio-museum-poi-tap
-- assertVisible: The Studio Museum in Harlem
+# The selection bottom sheet slides up with an animation, so wait for the POI
+# name to appear rather than asserting instantly (avoids a race with the sheet
+# transition and the pulsing current-location dot).
+#
+# The sheet exposes the POI title and its street address as a single merged
+# accessibility node (e.g. "The Studio Museum in Harlem\n144 W 125th St, ...").
+# Maestro matches text as a full-string regex, so we wrap the name in a DOTALL
+# (?s).* pattern to match the combined multi-line node.
+- extendedWaitUntil:
+    visible:
+      text: "(?s).*The Studio Museum in Harlem.*"
+    timeout: 20000
 - assertVisible: Chat Here

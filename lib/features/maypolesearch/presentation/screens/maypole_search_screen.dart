@@ -686,30 +686,41 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
     final placeId = poi['placeId'] as String?;
     final name = poi['name'] as String?;
     final location = (poi['location'] as Map<Object?, Object?>?)?.cast<String, Object?>();
-    final lat = location?['latitude'] as double?;
-    final lng = location?['longitude'] as double?;
-    if (placeId == null || placeId.isEmpty || name == null || name.trim().isEmpty || lat == null || lng == null) {
+    final lat = (location?['latitude'] as num?)?.toDouble();
+    final lng = (location?['longitude'] as num?)?.toDouble();
+    debugPrint('MaypoleSearchScreen: native POI tap placeId=$placeId name=$name lat=$lat lng=$lng');
+    if (placeId == null || placeId.isEmpty || lat == null || lng == null) {
       return;
     }
 
-    final fallbackDetails = {
-      'id': placeId,
-      'displayName': {'text': name},
-      'location': {'latitude': lat, 'longitude': lng},
-      'isNativePoi': true,
-    };
+    // Select the POI immediately using the data Google already gave us, so the
+    // bottom sheet appears as soon as the user taps (matching Android). Richer
+    // details are fetched afterwards and merged in without blocking selection.
+    final immediateName = name?.trim().isNotEmpty == true ? name!.trim() : 'Selected Place';
+    ref.read(maypoleSearchViewModelProvider.notifier).setSelectedPlace(
+          placeDetails: {
+            'id': placeId,
+            'displayName': {'text': immediateName},
+            'location': {'latitude': lat, 'longitude': lng},
+            'isNativePoi': true,
+          },
+          location: LatLng(lat, lng),
+        );
 
     final fetchedDetails = await ref.read(maypoleSearchServiceProvider).getPlaceDetails(placeId);
+    if (fetchedDetails == null) return;
     if (!mounted || _searchFocusNode.hasFocus || _searchController.text.trim().isNotEmpty) return;
 
     final placeDetails = {
-      ...fallbackDetails,
-      if (fetchedDetails != null) ...fetchedDetails,
+      'id': placeId,
+      'displayName': {'text': immediateName},
+      'location': {'latitude': lat, 'longitude': lng},
+      ...fetchedDetails,
       'isNativePoi': true,
     };
-    final detailsLocation = placeDetails['location'] as Map<String, dynamic>?;
-    final selectedLat = detailsLocation?['latitude'] as double? ?? lat;
-    final selectedLng = detailsLocation?['longitude'] as double? ?? lng;
+    final detailsLocation = (placeDetails['location'] as Map?)?.cast<String, Object?>();
+    final selectedLat = (detailsLocation?['latitude'] as num?)?.toDouble() ?? lat;
+    final selectedLng = (detailsLocation?['longitude'] as num?)?.toDouble() ?? lng;
 
     ref.read(maypoleSearchViewModelProvider.notifier).setSelectedPlace(
           placeDetails: placeDetails,
