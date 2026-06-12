@@ -11,6 +11,7 @@ import GoogleMaps
     // Google Maps API Key
     GMSServices.provideAPIKey("AIzaSyA7kcPWjaVK3iC4qbmSO1vuTBEk11llq9A")
     GeneratedPluginRegistrant.register(with: self)
+    MaypoleInstallGoogleMapPoiBridge()
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }

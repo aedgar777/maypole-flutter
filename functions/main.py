@@ -6,13 +6,20 @@
 
 from account_deletion import on_account_deletion_requested
 from notifications import send_notification
-from places import places_autocomplete, resolve_maypole
+from places import (
+    places_autocomplete,
+    places_place_details,
+    places_reverse_geocode,
+    resolve_maypole,
+)
 from storage_optimization import optimize_profile_picture
 
 __all__ = [
     'on_account_deletion_requested',
     'optimize_profile_picture',
     'places_autocomplete',
+    'places_place_details',
+    'places_reverse_geocode',
     'resolve_maypole',
     'send_notification',
 ]

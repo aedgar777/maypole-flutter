@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 
@@ -8,39 +8,20 @@ import '../models/autocomplete_request.dart';
 import '../models/autocomplete_response.dart';
 
 class MaypoleSearchService {
-  String get _apiKey => AppConfig.googlePlacesApiKey;
-
-  // Use Cloud Function for web (required due to CORS), direct API for mobile
-  String get _baseUrl {
-    if (kIsWeb) {
-      // Use Cloud Function to avoid CORS issues with Places API (New)
-      return AppConfig.cloudFunctionsUrl;
-    }
-    return 'https://places.googleapis.com/v1/places:autocomplete';
-  }
+  // All platforms route Places (New) requests through Cloud Functions so the
+  // API key stays server-side (in Secret Manager). This avoids CORS issues on
+  // web and per-platform API key restriction issues on mobile (an API key can
+  // only be restricted to one of Android OR iOS apps, never both).
+  String get _baseUrl => AppConfig.cloudFunctionsUrl;
 
   /// Fetch place details including coordinates and place type
   Future<Map<String, dynamic>?> getPlaceDetails(String placeId) async {
-    
-    // Use Cloud Function for web to avoid CORS and referrer issues
-    final String url;
-    final Map<String, String> headers;
-    
-    if (kIsWeb) {
-      url = AppConfig.cloudFunctionsPlaceDetailsUrl;
-      // Cloud Function uses Secret Manager - don't send API key from client
-      headers = {
-        'Content-Type': 'application/json',
-        'X-Place-Id': placeId,
-      };
-    } else {
-      url = 'https://places.googleapis.com/v1/places/$placeId';
-      headers = {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': _apiKey,
-        'X-Goog-FieldMask': 'id,displayName,formattedAddress,location,primaryType,types',
-      };
-    }
+    // Cloud Function uses Secret Manager - don't send API key from client
+    final String url = AppConfig.cloudFunctionsPlaceDetailsUrl;
+    final Map<String, String> headers = {
+      'Content-Type': 'application/json',
+      'X-Place-Id': placeId,
+    };
 
     try {
       final response = await http.get(
@@ -75,72 +56,22 @@ class MaypoleSearchService {
     double radiusMeters = 150,
     int maxResultCount = 5,
   }) async {
-    
-    // Use Cloud Function for web to avoid CORS and referrer issues
-    final String url;
-    final Map<String, String> headers;
-    final String? body;
-    
-    if (kIsWeb) {
-      url = AppConfig.cloudFunctionsReverseGeocodeUrl;
-      // Cloud Function uses Secret Manager - don't send API key from client
-      headers = {
-        'Content-Type': 'application/json',
-      };
-      body = json.encode({
-        'latitude': latitude,
-        'longitude': longitude,
-        'radiusMeters': radiusMeters,
-        'maxResultCount': maxResultCount,
-      });
-    } else {
-      url = 'https://places.googleapis.com/v1/places:searchNearby';
-      headers = {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': _apiKey,
-        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types',
-      };
-      body = json.encode({
-        'includedTypes': [
-          'restaurant',
-          'cafe',
-          'bar',
-          'store',
-          'park',
-          'tourist_attraction',
-          'museum',
-          'lodging',
-          'art_gallery',
-          'gas_station',
-          'pharmacy',
-          'bakery',
-          'bank',
-          'movie_theater',
-          'gym',
-          'library',
-          'stadium',
-          'zoo',
-        ],
-        'locationRestriction': {
-          'circle': {
-            'center': {
-              'latitude': latitude,
-              'longitude': longitude,
-            },
-            'radius': radiusMeters,
-          }
-        },
-        'maxResultCount': maxResultCount,
-        'rankPreference': 'DISTANCE',
-      });
-    }
+    // Cloud Function uses Secret Manager - don't send API key from client.
+    final String url = AppConfig.cloudFunctionsReverseGeocodeUrl;
+    final Map<String, String> headers = {
+      'Content-Type': 'application/json',
+    };
+    final String body = json.encode({
+      'latitude': latitude,
+      'longitude': longitude,
+      'radiusMeters': radiusMeters,
+      'maxResultCount': maxResultCount,
+    });
 
     try {
-      final keyToLog = _apiKey.length > 5 ? '${_apiKey.substring(0, 5)}...' : (_apiKey.isEmpty ? 'EMPTY' : 'SHORT');
       debugPrint('MaypoleSearchService: reverseGeocode called at ($latitude, $longitude)');
       debugPrint('MaypoleSearchService: Environment: ${AppConfig.isProduction ? "PROD" : "DEV"}');
-      debugPrint('MaypoleSearchService: Using API Key: $keyToLog');
-      
+
       final response = await http.post(
         Uri.parse(url),
         headers: headers,
@@ -208,63 +139,17 @@ class MaypoleSearchService {
     double radiusMeters = 300,
     int maxResultCount = 20,
   }) async {
-    final String url;
-    final Map<String, String> headers;
-    final String body;
-
-    if (kIsWeb) {
-      url = AppConfig.cloudFunctionsReverseGeocodeUrl;
-      headers = {
-        'Content-Type': 'application/json',
-      };
-      body = json.encode({
-        'latitude': latitude,
-        'longitude': longitude,
-        'radiusMeters': radiusMeters,
-        'maxResultCount': maxResultCount,
-      });
-    } else {
-      url = 'https://places.googleapis.com/v1/places:searchNearby';
-      headers = {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': _apiKey,
-        'X-Goog-FieldMask':
-            'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types',
-      };
-      body = json.encode({
-        'includedTypes': [
-          'restaurant',
-          'cafe',
-          'bar',
-          'store',
-          'park',
-          'tourist_attraction',
-          'museum',
-          'lodging',
-          'art_gallery',
-          'gas_station',
-          'pharmacy',
-          'bakery',
-          'bank',
-          'movie_theater',
-          'gym',
-          'library',
-          'stadium',
-          'zoo',
-        ],
-        'locationRestriction': {
-          'circle': {
-            'center': {
-              'latitude': latitude,
-              'longitude': longitude,
-            },
-            'radius': radiusMeters,
-          }
-        },
-        'maxResultCount': maxResultCount,
-        'rankPreference': 'DISTANCE',
-      });
-    }
+    // Cloud Function uses Secret Manager - don't send API key from client.
+    final String url = AppConfig.cloudFunctionsReverseGeocodeUrl;
+    final Map<String, String> headers = {
+      'Content-Type': 'application/json',
+    };
+    final String body = json.encode({
+      'latitude': latitude,
+      'longitude': longitude,
+      'radiusMeters': radiusMeters,
+      'maxResultCount': maxResultCount,
+    });
 
     try {
       final response = await http.post(
@@ -314,22 +199,11 @@ class MaypoleSearchService {
   }
 
   Future<AutocompleteResponse> autocomplete(AutocompleteRequest request) async {
-    // Build headers based on platform
-    Map<String, String> headers;
-    
-    if (kIsWeb) {
-      // Cloud Function uses Secret Manager - don't send API key from client
-      headers = {
-        'Content-Type': 'application/json',
-        'X-Goog-FieldMask': 'suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat',
-      };
-    } else {
-      headers = {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': _apiKey,
-        'X-Goog-FieldMask': 'suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat',
-      };
-    }
+    // Cloud Function uses Secret Manager - don't send API key from client.
+    final Map<String, String> headers = {
+      'Content-Type': 'application/json',
+      'X-Goog-FieldMask': 'suggestions.placePrediction.placeId,suggestions.placePrediction.text,suggestions.placePrediction.structuredFormat',
+    };
 
     try {
       final body = request.toJson();

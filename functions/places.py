@@ -96,6 +96,68 @@ def _search_place_by_text(query, api_key):
     return None
 
 
+_NEARBY_INCLUDED_TYPES = [
+    'restaurant',
+    'cafe',
+    'bar',
+    'store',
+    'park',
+    'tourist_attraction',
+    'museum',
+    'lodging',
+    'art_gallery',
+    'gas_station',
+    'pharmacy',
+    'bakery',
+    'bank',
+    'movie_theater',
+    'gym',
+    'library',
+    'stadium',
+    'zoo',
+]
+
+
+def _search_nearby(latitude, longitude, radius_meters, max_result_count, api_key, included_types=None):
+    response = requests.post(
+        'https://places.googleapis.com/v1/places:searchNearby',
+        headers={
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': api_key,
+            'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.primaryType,places.types',
+        },
+        json={
+            'includedTypes': included_types or _NEARBY_INCLUDED_TYPES,
+            'locationRestriction': {
+                'circle': {
+                    'center': {
+                        'latitude': latitude,
+                        'longitude': longitude,
+                    },
+                    'radius': radius_meters,
+                }
+            },
+            'maxResultCount': max_result_count,
+            'rankPreference': 'DISTANCE',
+        },
+        timeout=10,
+    )
+
+    if response.status_code == 200:
+        return response.json()
+
+    print(
+        f'Nearby Search failed at ({latitude}, {longitude}): {response.status_code} {response.text}',
+        flush=True,
+    )
+    if response.status_code in (401, 403):
+        raise RuntimeError(
+            'Google Places API key is not authorized for server-side Nearby Search requests. '
+            'Check the GOOGLE_PLACES_API_KEY function secret and its API key restrictions.'
+        )
+    return None
+
+
 def _place_details_to_metadata(place_details, fallback_place_id=None):
     display_name = place_details.get('displayName') or {}
     name = display_name.get('text') or 'Unknown Place'
@@ -347,3 +409,92 @@ def places_autocomplete(req: https_fn.Request) -> https_fn.Response:
             status=500,
             headers={'Content-Type': 'application/json'}
         )
+
+
+@https_fn.on_request(
+    cors=options.CorsOptions(
+        cors_origins="*",
+        cors_methods=["get", "post", "options"],
+    ),
+    max_instances=10,
+    secrets=[goog_places_api_key],
+)
+def places_place_details(req: https_fn.Request) -> https_fn.Response:
+    """
+    Proxy function for Google Places API place details requests.
+
+    Keeps the (app/IP-restricted) Places API key on the server so mobile and web
+    clients never need to ship a key. The place id may be supplied via the
+    `X-Place-Id` header (preferred), a `placeId` query param, or a JSON body.
+    """
+    if req.method not in ('GET', 'POST'):
+        return json_response({'error': 'Method not allowed'}, status=405)
+
+    try:
+        api_key = _get_places_api_key(req)
+        if not api_key:
+            return json_response({'error': 'API key is required'}, status=400)
+
+        place_id = req.headers.get('X-Place-Id') or req.args.get('placeId')
+        if not place_id and req.method == 'POST':
+            body = req.get_json(silent=True) or {}
+            place_id = body.get('placeId') or body.get('placeID')
+
+        if not place_id:
+            return json_response({'error': 'placeId is required'}, status=400)
+
+        details = _fetch_place_details(place_id, api_key)
+        if details is None:
+            return json_response({'error': 'Place not found'}, status=404)
+
+        return json_response(details)
+    except Exception as e:
+        return json_response({'error': str(e)}, status=500)
+
+
+@https_fn.on_request(
+    cors=options.CorsOptions(
+        cors_origins="*",
+        cors_methods=["get", "post", "options"],
+    ),
+    max_instances=10,
+    secrets=[goog_places_api_key],
+)
+def places_reverse_geocode(req: https_fn.Request) -> https_fn.Response:
+    """
+    Proxy function for Google Places API nearby search ("reverse geocode").
+
+    Accepts a JSON body of { latitude, longitude, radiusMeters, maxResultCount }
+    and returns the raw Google Nearby Search payload ({ "places": [...] }) so the
+    client can perform its own distance ranking.
+    """
+    if req.method != 'POST':
+        return json_response({'error': 'Method not allowed'}, status=405)
+
+    try:
+        api_key = _get_places_api_key(req)
+        if not api_key:
+            return json_response({'error': 'API key is required'}, status=400)
+
+        body = req.get_json(silent=True) or {}
+        latitude = body.get('latitude')
+        longitude = body.get('longitude')
+        if latitude is None or longitude is None:
+            return json_response({'error': 'latitude and longitude are required'}, status=400)
+
+        radius_meters = body.get('radiusMeters', 150)
+        max_result_count = body.get('maxResultCount', 5)
+        included_types = body.get('includedTypes')
+
+        result = _search_nearby(
+            latitude,
+            longitude,
+            radius_meters,
+            max_result_count,
+            api_key,
+            included_types=included_types,
+        )
+
+        return json_response(result or {'places': []})
+    except Exception as e:
+        return json_response({'error': str(e)}, status=500)

@@ -12,7 +12,9 @@ class WebPlacePickerMap extends StatelessWidget {
   final ValueChanged<Map<String, dynamic>> onPlaceSelected;
   final ValueChanged<CameraPosition>? onCameraMove;
   final VoidCallback? onMapLoaded;
+  final VoidCallback? onMapTapped;
   final WebMapControllerReady? onControllerReady;
+  final LatLng? myLocation;
 
   const WebPlacePickerMap({
     super.key,
@@ -21,7 +23,9 @@ class WebPlacePickerMap extends StatelessWidget {
     this.mapStyle,
     this.onCameraMove,
     this.onMapLoaded,
+    this.onMapTapped,
     this.onControllerReady,
+    this.myLocation,
   });
 
   @override
