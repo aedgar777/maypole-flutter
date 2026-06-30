@@ -416,9 +416,26 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       return Material(child: body);
     }
 
-    return Scaffold(
-      appBar: _buildChatAppBar(showAdAboveAppBar: showAdAboveAppBar),
-      body: body,
+    // Deep links open this chat as the only route in the navigation stack, so
+    // the Android system back button/gesture would otherwise exit the app.
+    // We always intercept the pop and decide manually: if there is in-app
+    // history, pop normally; otherwise route to the home/chat list so the user
+    // lands in the app instead of leaving it.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        final router = GoRouter.of(context);
+        if (router.canPop()) {
+          router.pop();
+        } else {
+          router.go('/home');
+        }
+      },
+      child: Scaffold(
+        appBar: _buildChatAppBar(showAdAboveAppBar: showAdAboveAppBar),
+        body: body,
+      ),
     );
   }
 
@@ -823,6 +840,14 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       final shareUrl = metadata
           .semanticUri(baseUri: Uri.parse(AppConfig.appUrl))
           .toString();
+
+      debugPrint(
+        '🔗 [DeepLink] Share generated url="$shareUrl" '
+        '(appUrl=${AppConfig.appUrl} threadId=${widget.threadId} '
+        'googlePlaceId=${widget.googlePlaceId} '
+        'locationSlug=${widget.locationSlug} placeSlug=${widget.placeSlug} '
+        'name="${widget.maypoleName}" address="${widget.address}")',
+      );
 
       // Create share text with maypole name and address if available
       final locationInfo = widget.address != null
