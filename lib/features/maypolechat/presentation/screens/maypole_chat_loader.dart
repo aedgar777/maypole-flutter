@@ -299,16 +299,15 @@ class _MaypoleChatLoaderState extends ConsumerState<MaypoleChatLoader> {
   /// the home/chat list instead of exiting the app when there is no in-app
   /// navigation history to pop.
   Widget _withDeepLinkBackHandling(BuildContext context, Widget child) {
+    // Allow native back/swipe-back when there is in-app history to pop; only
+    // intercept when this screen is the deep-link root (nothing to pop) so we
+    // route into the app instead of exiting it.
+    final canPop = GoRouter.of(context).canPop();
     return PopScope(
-      canPop: false,
+      canPop: canPop,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        final router = GoRouter.of(context);
-        if (router.canPop()) {
-          router.pop();
-        } else {
-          router.go('/home');
-        }
+        GoRouter.of(context).go('/home');
       },
       child: child,
     );

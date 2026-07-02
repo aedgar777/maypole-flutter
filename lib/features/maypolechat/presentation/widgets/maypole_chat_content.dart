@@ -11,6 +11,7 @@ import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/services/location_provider.dart';
 import 'package:maypole/core/utils/place_geofence_utils.dart';
 import 'package:maypole/core/utils/screen_utils.dart';
+import 'package:maypole/core/utils/share_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/core/widgets/report_content_dialog.dart';
@@ -416,32 +417,47 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       return Material(child: body);
     }
 
-    // Deep links open this chat as the only route in the navigation stack, so
-    // the Android system back button/gesture would otherwise exit the app.
-    // We always intercept the pop and decide manually: if there is in-app
-    // history, pop normally; otherwise route to the home/chat list so the user
-    // lands in the app instead of leaving it.
+    // When the user navigated here normally there is in-app history to pop, so
+    // we let the platform handle the back gesture/button natively — this keeps
+    // the iOS interactive swipe-back working (a `canPop: false` PopScope would
+    // disable it). Deep links open this chat as the only route, so there is
+    // nothing to pop; in that case we block the default pop and route the user
+    // into the app instead of letting the OS close it.
+    final canPop = GoRouter.of(context).canPop();
     return PopScope(
-      canPop: false,
+      canPop: canPop,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        final router = GoRouter.of(context);
-        if (router.canPop()) {
-          router.pop();
-        } else {
-          router.go('/home');
-        }
+        // Reached only when canPop is false (deep-link entry, no history).
+        GoRouter.of(context).go('/home');
       },
       child: Scaffold(
-        appBar: _buildChatAppBar(showAdAboveAppBar: showAdAboveAppBar),
+        appBar: _buildChatAppBar(
+          showAdAboveAppBar: showAdAboveAppBar,
+          canPop: canPop,
+        ),
         body: body,
       ),
     );
   }
 
-  PreferredSizeWidget _buildChatAppBar({required bool showAdAboveAppBar}) {
+  PreferredSizeWidget _buildChatAppBar({
+    required bool showAdAboveAppBar,
+    required bool canPop,
+  }) {
+    final showBackButton = ScreenUtils.shouldShowAppBarBackButton();
     final appBar = AppBar(
-      automaticallyImplyLeading: ScreenUtils.shouldShowAppBarBackButton(),
+      automaticallyImplyLeading: showBackButton,
+      // When there is no route to pop (deep-link entry) the implicit back
+      // button won't render, so provide an explicit affordance on iOS that
+      // takes the user home instead of leaving them stranded on the screen.
+      leading: (showBackButton && !canPop)
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new),
+              onPressed: () => context.go('/home'),
+              tooltip: 'Back',
+            )
+          : null,
       title: Text(
         widget.maypoleName,
         maxLines: 1,
@@ -857,8 +873,14 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       final shareText =
           'Check out the conversation at ${widget.maypoleName}$locationInfo!\n\n$shareUrl';
 
-      // Use the native share dialog
-      await Share.share(shareText, subject: 'Join the conversation on Maypole');
+      // Use the native share dialog. `sharePositionOrigin` is required on iPad
+      // (the share sheet is a popover that must anchor to a source rect) and is
+      // harmless on other platforms, so we always provide it.
+      await Share.share(
+        shareText,
+        subject: 'Join the conversation on Maypole',
+        sharePositionOrigin: shareOriginFromContext(context),
+      );
     } catch (e) {
       if (context.mounted) {
         AppToast.showError(context, 'Failed to share conversation');

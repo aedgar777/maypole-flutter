@@ -1,0 +1,18 @@
+appId: app.maypole.maypole
+---
+# Verify the custom URL scheme deep link opens the app.
+# On first launch iOS may show "Open in Maypole?" dialog.
+
+# Open a deep link to the help page (public route, no auth needed)
+- openLink: maypole://help
+
+# Dismiss the iOS confirmation dialog if it appears
+- tapOn:
+    text: "Open"
+    optional: true
+
+# Verify the app rendered content (the app launched successfully)
+- extendedWaitUntil:
+    visible:
+      text: ".*"
+    timeout: 15000
