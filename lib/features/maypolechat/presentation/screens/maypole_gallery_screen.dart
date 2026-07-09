@@ -91,7 +91,7 @@ class _MaypoleGalleryScreenState extends ConsumerState<MaypoleGalleryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.maypoleName} Gallery'),
-        // Only show in-app back button on legacy iOS without swipe-back support.
+        // Show an explicit in-app back button on iOS (alongside swipe-back).
         automaticallyImplyLeading: ScreenUtils.shouldShowAppBarBackButton(),
         leading: ScreenUtils.shouldShowAppBarBackButton()
             ? IconButton(
@@ -382,7 +382,7 @@ class _ImageFullscreenViewState extends ConsumerState<_ImageFullscreenView> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        // Only show in-app back button on legacy iOS without swipe-back support.
+        // Show an explicit in-app back button on iOS (alongside swipe-back).
         automaticallyImplyLeading: ScreenUtils.shouldShowAppBarBackButton(),
         leading: ScreenUtils.shouldShowAppBarBackButton()
             ? IconButton(
