@@ -1,0 +1,56 @@
+name: Regenerate iOS Signing
+
+# Run this manually (Actions tab -> "Regenerate iOS Signing" -> "Run workflow")
+# whenever the app's entitlements/capabilities change (e.g. Associated Domains
+# for deep links). It regenerates the provisioning profile via fastlane match
+# and writes the refreshed, encrypted copy back to the GCS bucket so subsequent
+# (readonly) build jobs pick it up.
+on:
+  workflow_dispatch:
+
+jobs:
+  regenerate_signing:
+    name: Regenerate iOS Provisioning Profile
+    runs-on: macos-26
+    environment: development
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Ruby for Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2.0'
+          bundler-cache: true
+          working-directory: ios
+
+      - name: Setup GCP credentials for Match
+        env:
+          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+        run: |
+          mkdir -p ~/.config/gcloud
+          printf '%s\n' "$GCP_SERVICE_ACCOUNT_KEY" > ~/.config/gcloud/application_default_credentials.json
+
+      - name: Setup App Store Connect API key
+        run: |
+          mkdir -p ~/private_keys
+          echo "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}" > ~/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+
+      - name: Regenerate provisioning profile with Match
+        working-directory: ios
+        timeout-minutes: 15
+        env:
+          MATCH_GCS_BUCKET: ${{ secrets.MATCH_GCS_BUCKET }}
+          MATCH_GCS_PROJECT_ID: ${{ secrets.MATCH_GCS_PROJECT_ID }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+          APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+        run: |
+          export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/gcloud/application_default_credentials.json"
+          export APP_STORE_CONNECT_API_KEY_KEY_FILEPATH="$HOME/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8"
+          echo "🔐 Regenerating provisioning profile (writes refreshed copy to GCS)..."
+          bundle exec fastlane regenerate_signing
+          echo "✅ Provisioning profile regenerated. Re-run your normal iOS build now."
