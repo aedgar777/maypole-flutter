@@ -47,6 +47,17 @@ class ScreenUtils {
     return width >= wideScreenThreshold || kIsWeb;
   }
 
+  /// Returns true if the screen is narrow (mobile / mobile web), i.e. below the
+  /// [wideScreenThreshold]. Unlike [isWideScreenFromContext], this does NOT
+  /// force web to always be treated as wide.
+  ///
+  /// Use this to determine whether to lock orientation to portrait on
+  /// small-screen devices (phones, small browser windows).
+  static bool isNarrowScreen(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    return screenWidth < wideScreenThreshold;
+  }
+
   /// Returns true only for iOS devices.
   static bool get isIOS {
     return !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;

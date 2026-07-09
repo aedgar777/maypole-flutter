@@ -12,6 +12,7 @@ import 'core/app_theme.dart';
 import 'core/firebase_options.dart';
 import 'core/widgets/notification_handler.dart';
 import 'core/widgets/beta_access_guard.dart';
+import 'core/widgets/orientation_locker.dart';
 
 /// Handler for background messages when app is terminated
 /// This runs in a separate isolate and cannot access app state
@@ -123,7 +124,9 @@ class MyApp extends ConsumerWidget {
       supportedLocales: AppLocalizations.supportedLocales,
     );
     
-    final wrappedApp = NotificationHandler(child: app);
+    final wrappedApp = OrientationLocker(
+      child: NotificationHandler(child: app),
+    );
     
     // Only wrap with BetaAccessGuard for web beta environment
     if (isBetaWeb) {
