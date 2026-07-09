@@ -36,6 +36,30 @@ platform :ios do
     )
   end
 
+  desc "Regenerate provisioning profiles and write them to GCS (NOT readonly)."
+  desc "Run this once whenever the app's entitlements/capabilities change"
+  desc "(e.g. Associated Domains for deep links) so the stored profile is refreshed."
+  lane :regenerate_signing do
+    # Authenticate to the Apple Developer Portal using the App Store Connect
+    # API key so match can create/regenerate profiles non-interactively.
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
+      key_filepath: ENV["APP_STORE_CONNECT_API_KEY_KEY_FILEPATH"],
+      in_house: false
+    )
+
+    match(
+      type: "appstore",
+      app_identifier: ENV["IOS_BUNDLE_ID"],
+      api_key: api_key,
+      readonly: false,        # Allow writing the refreshed profile back to GCS
+      force: true,            # Regenerate the profile to pick up new capabilities
+      skip_confirmation: true,
+      verbose: false
+    )
+  end
+
   desc "Sync production certificates and provisioning profiles"
   lane :sync_prod_signing do
     match(

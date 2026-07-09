@@ -9,5 +9,8 @@ gem "cocoapods", "~> 1.16"
 # Pretty terminal output for Xcode builds
 gem "xcpretty", "~> 0.3"
 
+# Required by Ruby 3.4+ (erb was removed from bundled gems)
+gem "erb"
+
 # Bundler version constraint (Fastlane 2.x requires < 3.0)
 # GitHub Actions uses ruby/setup-ruby with bundler-cache which handles this automatically
