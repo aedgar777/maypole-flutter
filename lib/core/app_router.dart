@@ -55,17 +55,55 @@ bool _isPublicMaypoleChatRoute({
   return !reservedTopLevelRoutes.contains(uri.pathSegments.first);
 }
 
+/// Builds the login redirect target, preserving the originally requested
+/// location (path + query) as a `returnTo` parameter.
+///
+/// This ensures that when an unauthenticated user opens a deep link to a
+/// protected route, they are sent to the matching screen after authenticating
+/// instead of being dropped on the home screen. [LoginScreen] consumes the
+/// `returnTo` value to navigate post-auth.
+String _loginRedirect(Uri uri) {
+  final target = uri.toString();
+
+  // Never round-trip back to the auth screens.
+  if (target.isEmpty ||
+      target == '/' ||
+      target.startsWith('/login') ||
+      target.startsWith('/register')) {
+    return '/login';
+  }
+
+  return Uri(
+    path: '/login',
+    queryParameters: {'returnTo': target},
+  ).toString();
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   final authService = ref.watch(authServiceProvider);
 
   return GoRouter(
     initialLocation: '/login',
     refreshListenable: GoRouterRefreshStream(authService.user),
-    errorBuilder: (context, state) => const HomeScreen(),
+    errorBuilder: (context, state) {
+      debugPrint(
+        '🧭 [DeepLink] errorBuilder hit -> uri="${state.uri}" '
+        'matchedLocation="${state.matchedLocation}" fullPath="${state.fullPath}" '
+        'error=${state.error}',
+      );
+      return const HomeScreen();
+    },
     redirect: (context, state) {
       final authState = ref.read(authStateProvider);
       final currentPath = state.matchedLocation;
       final uri = state.uri;
+
+      debugPrint(
+        '🧭 [DeepLink] redirect ENTER uri="$uri" matchedLocation="$currentPath" '
+        'fullPath="${state.fullPath}" pathSegments=${uri.pathSegments} '
+        'query=${uri.queryParameters} authLoading=${authState.isLoading} '
+        'authed=${authState.value != null}',
+      );
 
       // Define public routes that don't require authentication
       final publicRoutes = [
@@ -85,8 +123,14 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       final isPublicRoute = publicRoutes.contains(currentPath) || isMaypoleChat;
 
+      debugPrint(
+        '🧭 [DeepLink] redirect classify isMaypoleChat=$isMaypoleChat '
+        'isPublicRoute=$isPublicRoute',
+      );
+
       // If auth is still loading AND it's a maypole chat, allow it immediately
       if (authState.isLoading && isMaypoleChat) {
+        debugPrint('🧭 [DeepLink] redirect DECISION: allow (loading+chat)');
         return null;
       }
 
@@ -94,16 +138,23 @@ final routerProvider = Provider<GoRouter>((ref) {
       // For protected routes, redirect to login (which will show loading state)
       if (authState.isLoading) {
         if (isPublicRoute) {
+          debugPrint('🧭 [DeepLink] redirect DECISION: allow (loading+public)');
           return null;
         }
-        return '/login';
+        final target = _loginRedirect(uri);
+        debugPrint('🧭 [DeepLink] redirect DECISION: -> "$target" (loading+protected)');
+        return target;
       }
 
       final isAuthenticated = authState.value != null;
 
-      // If user is not authenticated and trying to access a protected route
+      // If user is not authenticated and trying to access a protected route,
+      // redirect to login while preserving the deep-link destination so the
+      // user lands on the requested screen after signing in.
       if (!isAuthenticated && !isPublicRoute) {
-        return '/login';
+        final target = _loginRedirect(uri);
+        debugPrint('🧭 [DeepLink] redirect DECISION: -> "$target" (unauth+protected)');
+        return target;
       }
 
       // Don't redirect authenticated users away from login/register
@@ -112,6 +163,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // The login screen itself will handle authenticated users appropriately
 
       // No redirect needed
+      debugPrint('🧭 [DeepLink] redirect DECISION: allow (no redirect)');
       return null;
     },
     routes: <RouteBase>[
@@ -273,7 +325,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           final locationSlug = state.pathParameters['locationSlug'];
           final placeSlug = state.pathParameters['placeSlug'];
 
+          debugPrint(
+            '🧭 [DeepLink] semantic route builder uri="${state.uri}" '
+            'locationSlug="$locationSlug" placeSlug="$placeSlug" '
+            'threadId="$threadId"',
+          );
+
           if (threadId == null || threadId.isEmpty) {
+            debugPrint(
+              '🧭 [DeepLink] semantic route: missing thread id -> HomeScreen',
+            );
             return const HomeScreen();
           }
 

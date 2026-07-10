@@ -165,7 +165,10 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
               if (!AppConfig.isWideScreen)
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  height: MediaQuery.of(context).padding.top + (kToolbarHeight / 2),
+                  height: MediaQuery.of(context).padding.top +
+                      ((!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
+                          ? kToolbarHeight
+                          : kToolbarHeight / 2),
                   color: (_searchFocusNode.hasFocus || _searchController.text.isNotEmpty)
                       ? darkPurple.withValues(alpha: 0.9)
                       : Colors.transparent,
@@ -418,7 +421,7 @@ class _MaypoleSearchScreenState extends ConsumerState<MaypoleSearchScreen> {
 
           if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
             Positioned(
-              top: MediaQuery.of(context).padding.top + (kToolbarHeight / 2) + 8,
+              top: MediaQuery.of(context).padding.top + 8,
               left: 8,
               child: Material(
                 color: darkPurple.withValues(alpha: 0.9),

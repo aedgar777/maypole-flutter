@@ -26,6 +26,7 @@ import 'package:maypole/core/ads/ad_config.dart';
 import 'package:maypole/core/ads/ad_providers.dart';
 import 'package:maypole/core/services/permissions_provider.dart';
 import 'package:maypole/core/utils/screen_utils.dart';
+import 'package:maypole/core/utils/share_utils.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import '../../../identity/auth_providers.dart';
 import '../../../directmessages/presentation/dm_providers.dart';
@@ -621,10 +622,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           AppToast.showSuccess(context, 'Link copied to clipboard');
         }
       } else {
-        // On mobile, use the share dialog
+        // On mobile, use the share dialog. `sharePositionOrigin` is required on
+        // iPad (popover anchor) and harmless elsewhere.
         await Share.share(
           shareText,
           subject: 'Join the conversation on Maypole',
+          sharePositionOrigin: shareOriginFromContext(context),
         );
       }
     } catch (e) {
