@@ -47,6 +47,17 @@ class ScreenUtils {
     return width >= wideScreenThreshold || kIsWeb;
   }
 
+  /// Returns true if the screen is narrow (mobile / mobile web), i.e. below the
+  /// [wideScreenThreshold]. Unlike [isWideScreenFromContext], this does NOT
+  /// force web to always be treated as wide.
+  ///
+  /// Use this to determine whether to lock orientation to portrait on
+  /// small-screen devices (phones, small browser windows).
+  static bool isNarrowScreen(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    return screenWidth < wideScreenThreshold;
+  }
+
   /// Returns true only for iOS devices.
   static bool get isIOS {
     return !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
@@ -61,19 +72,12 @@ class ScreenUtils {
     return match != null ? int.tryParse(match.group(1)!) : null;
   }
 
-  /// Shows an in-app AppBar back button only for legacy iOS versions that
-  /// don't support swipe-to-go-back. Never shows on Android/web.
-  static bool shouldShowAppBarBackButton({
-    int swipeBackSupportedFromIOSMajor = 7,
-  }) {
-    if (!isIOS) return false;
-
-    final majorVersion = getiOSMajorVersion();
-    if (majorVersion == null) {
-      // Default to no explicit AppBar back button when version is unknown.
-      return false;
-    }
-
-    return majorVersion < swipeBackSupportedFromIOSMajor;
-  }
+  /// Whether non-home screens should display an explicit AppBar back button.
+  ///
+  /// On iOS we always show a back chevron: users expect a visible affordance in
+  /// the nav bar in addition to the swipe-back gesture, and relying on the
+  /// gesture alone leaves them stranded when a route can't be popped (e.g. a
+  /// deep-link entry). Android and web have their own system back affordances,
+  /// so no in-app button is added there.
+  static bool shouldShowAppBarBackButton() => isIOS;
 }

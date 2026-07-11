@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/maypole.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -223,56 +224,64 @@ class _MaypoleChatLoaderState extends ConsumerState<MaypoleChatLoader> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Loading place details...'),
-            ],
+      return _withDeepLinkBackHandling(
+        context,
+        const Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Loading place details...'),
+              ],
+            ),
           ),
         ),
       );
     }
 
     if (_error != null && _placeName == 'Unknown Place') {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Error')),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                'Failed to load place details',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _error ?? 'Unknown error',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _isLoading = true;
-                    _error = null;
-                  });
-                  _fetchPlaceDetails();
-                },
-                child: const Text('Retry'),
-              ),
-            ],
+      return _withDeepLinkBackHandling(
+        context,
+        Scaffold(
+          appBar: AppBar(title: const Text('Error')),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  'Failed to load place details',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _error ?? 'Unknown error',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _isLoading = true;
+                      _error = null;
+                    });
+                    _fetchPlaceDetails();
+                  },
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
 
-    // Navigate to the actual chat screen with the fetched details
+    // Navigate to the actual chat screen with the fetched details.
+    // MaypoleChatScreen wraps its own Scaffold in a PopScope that handles the
+    // deep-link back behavior, so no extra handling is needed here.
     return MaypoleChatScreen(
       threadId: _resolvedThreadId ?? widget.threadId,
       maypoleName: _placeName ?? 'Unknown Place',
@@ -283,6 +292,24 @@ class _MaypoleChatLoaderState extends ConsumerState<MaypoleChatLoader> {
       googlePlaceId: _googlePlaceId,
       locationSlug: _locationSlug,
       placeSlug: _placeSlug,
+    );
+  }
+
+  /// Wraps a deep-link entry screen so the Android system back button routes to
+  /// the home/chat list instead of exiting the app when there is no in-app
+  /// navigation history to pop.
+  Widget _withDeepLinkBackHandling(BuildContext context, Widget child) {
+    // Allow native back/swipe-back when there is in-app history to pop; only
+    // intercept when this screen is the deep-link root (nothing to pop) so we
+    // route into the app instead of exiting it.
+    final canPop = GoRouter.of(context).canPop();
+    return PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        GoRouter.of(context).go('/home');
+      },
+      child: child,
     );
   }
 }

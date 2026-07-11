@@ -184,6 +184,7 @@ class MaypoleChatService {
         double? senderLatitude,
         double? senderLongitude,
         String? placeType,
+        bool showLocationBadge = false,
       }) async {
     final now = DateTime.now();
     final message = MaypoleMessage(
@@ -194,8 +195,9 @@ class MaypoleChatService {
       body: body,
       taggedUser: '',
       taggedUserIds: taggedUserIds,
-      senderLatitude: senderLatitude,
-      senderLongitude: senderLongitude,
+      senderLatitude: showLocationBadge ? senderLatitude : null,
+      senderLongitude: showLocationBadge ? senderLongitude : null,
+      showLocationBadge: showLocationBadge,
     );
 
     final maypoleRef = _firestore.collection('maypoles').doc(threadId);

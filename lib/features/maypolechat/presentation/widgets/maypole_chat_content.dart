@@ -11,6 +11,7 @@ import 'package:maypole/core/app_theme.dart';
 import 'package:maypole/core/services/location_provider.dart';
 import 'package:maypole/core/utils/place_geofence_utils.dart';
 import 'package:maypole/core/utils/screen_utils.dart';
+import 'package:maypole/core/utils/share_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/core/widgets/report_content_dialog.dart';
@@ -87,10 +88,6 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     _scrollController.addListener(_onScroll);
     _updateCurrentPosition();
 
-    if (widget.placeType != null) {
-      final radius = PlaceGeofenceUtils.getRadiusForPlaceType(widget.placeType);
-    } else {}
-
     // Auto-focus if requested
     if (widget.autoFocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -140,10 +137,15 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     return isNearby ?? false;
   }
 
-  /// Check if user is within range of the place based on its type
-  /// Uses dynamic geofencing: countries (500km), states (200km), cities (15km),
-  /// neighborhoods (5km), establishments (500m), buildings (200m)
-  bool get _isWithinPlaceRange {
+  /// Check if the next outgoing message should include the location badge.
+  /// This is intentionally decided at send time so disabling the setting stops
+  /// new badges without hiding badges on messages that were already sent.
+  bool get _shouldBadgeNextMessage {
+    final locationState = ref.read(locationSettingsViewModelProvider);
+    if (!locationState.preferences.showWhenAtLocation) {
+      return false;
+    }
+
     if (widget.latitude == null || widget.longitude == null) {
       return false;
     }
@@ -152,24 +154,13 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       return false;
     }
 
-    final locationService = ref.read(locationServiceProvider);
-    final isInRange = locationService.isPositionInRangeOfPlace(
+    return PlaceGeofenceUtils.isUserInRange(
+      userLatitude: _currentPosition!.latitude,
+      userLongitude: _currentPosition!.longitude,
       placeLatitude: widget.latitude!,
       placeLongitude: widget.longitude!,
-      position: _currentPosition,
       placeType: widget.placeType,
     );
-
-    if (isInRange != null) {
-      final radius = PlaceGeofenceUtils.getRadiusForPlaceType(widget.placeType);
-      final distance = PlaceGeofenceUtils.getDistanceToPlace(
-        position: _currentPosition,
-        placeLatitude: widget.latitude!,
-        placeLongitude: widget.longitude!,
-      );
-    }
-
-    return isInRange ?? false;
   }
 
   /// Check if image upload button should be enabled
@@ -217,14 +208,16 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
     );
   }
 
-  /// Check if a message was sent from within the place's geofence range
-  /// Uses dynamic range based on place type (e.g., 5km for cities, 500m for restaurants)
-  ///
-  /// This is based solely on the sender's location at the time the message was
-  /// sent (stored on the message). The viewer's own location and preferences are
-  /// intentionally irrelevant here.
-  bool _isMessageFromNearby(MaypoleMessage message) {
-    // If no coordinates for the place or message, can't determine
+  /// Check if a message should show the location badge.
+  /// New messages persist the sender's badge choice at send time. Older messages
+  /// without that field fall back to the legacy coordinate-based behavior so
+  /// existing badges remain visible.
+  bool _shouldShowLocationBadge(MaypoleMessage message) {
+    if (message.showLocationBadge != null) {
+      return message.showLocationBadge!;
+    }
+
+    // Legacy fallback for messages sent before showLocationBadge was persisted.
     if (widget.latitude == null || widget.longitude == null) {
       return false;
     }
@@ -233,16 +226,13 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       return false;
     }
 
-    // Use dynamic geofence range based on place type
-    final isInRange = PlaceGeofenceUtils.isUserInRange(
+    return PlaceGeofenceUtils.isUserInRange(
       userLatitude: message.senderLatitude!,
       userLongitude: message.senderLongitude!,
       placeLatitude: widget.latitude!,
       placeLongitude: widget.longitude!,
       placeType: widget.placeType,
     );
-
-    return isInRange;
   }
 
   @override
@@ -384,7 +374,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                                       message.senderProfilePictureUrl,
                                   body: message.body,
                                   timestamp: message.timestamp,
-                                  isNearby: _isMessageFromNearby(message),
+                                  isNearby: _shouldShowLocationBadge(message),
                                   isOwnMessage: isOwnMessage,
                                   onTagUser: !widget.readOnly && !isOwnMessage
                                       ? () => _tagUser(
@@ -427,15 +417,47 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       return Material(child: body);
     }
 
-    return Scaffold(
-      appBar: _buildChatAppBar(showAdAboveAppBar: showAdAboveAppBar),
-      body: body,
+    // When the user navigated here normally there is in-app history to pop, so
+    // we let the platform handle the back gesture/button natively — this keeps
+    // the iOS interactive swipe-back working (a `canPop: false` PopScope would
+    // disable it). Deep links open this chat as the only route, so there is
+    // nothing to pop; in that case we block the default pop and route the user
+    // into the app instead of letting the OS close it.
+    final canPop = GoRouter.of(context).canPop();
+    return PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        // Reached only when canPop is false (deep-link entry, no history).
+        GoRouter.of(context).go('/home');
+      },
+      child: Scaffold(
+        appBar: _buildChatAppBar(
+          showAdAboveAppBar: showAdAboveAppBar,
+          canPop: canPop,
+        ),
+        body: body,
+      ),
     );
   }
 
-  PreferredSizeWidget _buildChatAppBar({required bool showAdAboveAppBar}) {
+  PreferredSizeWidget _buildChatAppBar({
+    required bool showAdAboveAppBar,
+    required bool canPop,
+  }) {
+    final showBackButton = ScreenUtils.shouldShowAppBarBackButton();
     final appBar = AppBar(
-      automaticallyImplyLeading: ScreenUtils.shouldShowAppBarBackButton(),
+      automaticallyImplyLeading: showBackButton,
+      // When there is no route to pop (deep-link entry) the implicit back
+      // button won't render, so provide an explicit affordance on iOS that
+      // takes the user home instead of leaving them stranded on the screen.
+      leading: (showBackButton && !canPop)
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new),
+              onPressed: () => context.go('/home'),
+              tooltip: 'Back',
+            )
+          : null,
       title: Text(
         widget.maypoleName,
         maxLines: 1,
@@ -504,7 +526,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
         ),
         boxShadow: [
           BoxShadow(
-            color: brightTeal.withOpacity(0.2),
+            color: brightTeal.withValues(alpha: 0.2),
             blurRadius: 12,
             offset: const Offset(0, 2),
           ),
@@ -556,7 +578,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
                       Text(
                         'Sign up or log in to post messages',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
+                          color: Colors.white.withValues(alpha: 0.85),
                           fontSize: 13,
                         ),
                       ),
@@ -579,6 +601,8 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
             .read(mentionControllerProvider.notifier)
             .getMentionedUserIds();
 
+        final showLocationBadge = _shouldBadgeNextMessage;
+
         ref
             .read(maypoleChatViewModelProvider(widget.threadId).notifier)
             .sendMessage(
@@ -592,6 +616,7 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
               senderLatitude: _currentPosition?.latitude,
               senderLongitude: _currentPosition?.longitude,
               placeType: widget.placeType,
+              showLocationBadge: showLocationBadge,
             );
 
         _messageController.clear();
@@ -832,6 +857,14 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
           .semanticUri(baseUri: Uri.parse(AppConfig.appUrl))
           .toString();
 
+      debugPrint(
+        '🔗 [DeepLink] Share generated url="$shareUrl" '
+        '(appUrl=${AppConfig.appUrl} threadId=${widget.threadId} '
+        'googlePlaceId=${widget.googlePlaceId} '
+        'locationSlug=${widget.locationSlug} placeSlug=${widget.placeSlug} '
+        'name="${widget.maypoleName}" address="${widget.address}")',
+      );
+
       // Create share text with maypole name and address if available
       final locationInfo = widget.address != null
           ? ' at ${widget.address}'
@@ -840,8 +873,14 @@ class _MaypoleChatContentState extends ConsumerState<MaypoleChatContent> {
       final shareText =
           'Check out the conversation at ${widget.maypoleName}$locationInfo!\n\n$shareUrl';
 
-      // Use the native share dialog
-      await Share.share(shareText, subject: 'Join the conversation on Maypole');
+      // Use the native share dialog. `sharePositionOrigin` is required on iPad
+      // (the share sheet is a popover that must anchor to a source rect) and is
+      // harmless on other platforms, so we always provide it.
+      await Share.share(
+        shareText,
+        subject: 'Join the conversation on Maypole',
+        sharePositionOrigin: shareOriginFromContext(context),
+      );
     } catch (e) {
       if (context.mounted) {
         AppToast.showError(context, 'Failed to share conversation');

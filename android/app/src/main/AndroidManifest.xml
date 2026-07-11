@@ -28,6 +28,13 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- Enable Flutter's built-in deep linking so App Links/Universal Links
+                 are handed to go_router and open the matching screen in-app.
+                 This is the Android counterpart to FlutterDeepLinkingEnabled (iOS). -->
+            <meta-data
+              android:name="flutter_deeplinking_enabled"
+              android:value="true"
+              />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>

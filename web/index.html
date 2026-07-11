@@ -18,6 +18,11 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <!-- Match the device width so mobile browsers report their true (narrow)
+       viewport. Without this, mobile web renders at a desktop-width fallback
+       (~980px) and the adaptive layout shows the list + conversation
+       side-by-side instead of the single-panel mobile layout. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="description" content="Maypole is a place-based messaging app for live local conversations at campuses, venues, neighborhoods, and events.">
   <meta name="keywords" content="local chat, place-based messaging, live venue chat, campus chat, neighborhood conversations, event messaging">
   <meta property="og:title" content="Maypole - Live Local Chat for Real Places">

@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'utils/platform_info.dart';
 
@@ -276,35 +276,33 @@ class AppConfig {
       // Continue to fallback
     }
     
-    // Hardcoded fallbacks for web builds (where ..env is not available)
-    if (kIsWeb) {
-      // These are the default Cloud Run URLs based on function names
-      if (isProduction) {
-        switch (endpoint) {
-          case 'autocomplete':
-            return 'https://places-autocomplete-1069925301177.us-central1.run.app';
-          case 'placeDetails':
-            return 'https://places-place-details-1069925301177.us-central1.run.app';
-          case 'reverseGeocode':
-            return 'https://places-reverse-geocode-1069925301177.us-central1.run.app';
-          default:
-            return '';
-        }
-      } else {
-        switch (endpoint) {
-          case 'autocomplete':
-            return 'https://places-autocomplete-n7tnn27vga-uc.a.run.app';
-          case 'placeDetails':
-            return 'https://places-place-details-n7tnn27vga-uc.a.run.app';
-          case 'reverseGeocode':
-            return 'https://places-reverse-geocode-n7tnn27vga-uc.a.run.app';
-          default:
-            return '';
-        }
+    // Hardcoded fallbacks based on the deployed Cloud Run function names.
+    // Used on all platforms: web (where .env is not bundled) and mobile, which
+    // routes Places requests through these functions so the API key stays
+    // server-side (avoids per-platform API key restriction issues).
+    if (isProduction) {
+      switch (endpoint) {
+        case 'autocomplete':
+          return 'https://places-autocomplete-1069925301177.us-central1.run.app';
+        case 'placeDetails':
+          return 'https://places-place-details-1069925301177.us-central1.run.app';
+        case 'reverseGeocode':
+          return 'https://places-reverse-geocode-1069925301177.us-central1.run.app';
+        default:
+          return '';
+      }
+    } else {
+      switch (endpoint) {
+        case 'autocomplete':
+          return 'https://places-autocomplete-n7tnn27vga-uc.a.run.app';
+        case 'placeDetails':
+          return 'https://places-place-details-n7tnn27vga-uc.a.run.app';
+        case 'reverseGeocode':
+          return 'https://places-reverse-geocode-n7tnn27vga-uc.a.run.app';
+        default:
+          return '';
       }
     }
-    
-    return '';
   }
 
   /// Provides the app's base URL for sharing/deeplinks based on the environment.

@@ -24,6 +24,16 @@
       ]
     },
     {
+      "name": "maypole (ios-dev-profile)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": [
+        "--dart-define=ENVIRONMENT=dev",
+        "--profile"
+      ]
+    },
+    {
       "name": "maypole (dev-release)",
       "request": "launch",
       "type": "dart",
