@@ -112,5 +112,21 @@
   "registrationSuccessTitle": "¡Bienvenido a Maypole!",
   "registrationSuccessMessage": "¡Su cuenta ha sido creada exitosamente! Hemos enviado un correo de verificación a {email}. Por favor revise su bandeja de entrada y verifique su correo para desbloquear todas las funciones.",
   "gotIt": "Entendido",
-  "hasAddedAnImage": "ha añadido una imagen"
+  "hasAddedAnImage": "ha añadido una imagen",
+  "forgotPassword": "¿Olvidó su contraseña?",
+  "resetPasswordTitle": "Restablecer contraseña",
+  "resetPasswordDescription": "Ingrese su correo electrónico y le enviaremos un enlace para restablecer su contraseña.",
+  "sendResetLink": "Enviar enlace",
+  "passwordResetEmailSent": "Si existe una cuenta con ese correo, el enlace para restablecer la contraseña está en camino.",
+  "passwordResetSuccess": "¡Contraseña restablecida! Inicie sesión con su nueva contraseña.",
+  "changePassword": "Cambiar contraseña",
+  "currentPassword": "Contraseña actual",
+  "newPassword": "Nueva contraseña",
+  "confirmNewPassword": "Confirmar nueva contraseña",
+  "updatePassword": "Actualizar contraseña",
+  "passwordChangedSuccess": "Su contraseña ha sido actualizada.",
+  "currentPasswordIncorrect": "Su contraseña actual es incorrecta.",
+  "newPasswordMustDiffer": "La nueva contraseña debe ser diferente a su contraseña actual.",
+  "pleaseSignInAgainToChangePassword": "Por su seguridad, inicie sesión nuevamente antes de cambiar su contraseña.",
+  "somethingWentWrong": "Algo salió mal. Por favor, inténtelo de nuevo."
 }

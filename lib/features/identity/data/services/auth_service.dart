@@ -379,15 +379,17 @@ class AuthService {
         throw Exception('Email is already verified');
       }
 
-      // Send verification email with custom landing page
-      // The continueUrl is where users will be redirected after verifying their email
-      final projectId = AppConfig.isProduction
-          ? 'maypole-flutter-ce6c3'
-          : 'maypole-flutter-dev';
+      // After the user clicks the verification link, Firebase's default action
+      // handler applies the code and then forwards them to this continueUrl.
+      // We route them back to the account settings screen so the "Verified"
+      // status updates in place. On mobile this URL is a universal/app link,
+      // so it reopens the installed app on that screen.
+      final continueUrl = Uri.parse('${AppConfig.appUrl}/email-verified')
+          .replace(queryParameters: {'returnTo': '/settings/account'})
+          .toString();
 
       final actionCodeSettings = ActionCodeSettings(
-        // Users will land on this page after clicking the verification link in their email
-        url: 'https://$projectId.web.app/email-verified',
+        url: continueUrl,
         // For mobile apps, this ensures the link opens in the app if installed
         handleCodeInApp: false,
         // iOS app settings (optional - allows deep linking to app)
@@ -404,6 +406,60 @@ class AuthService {
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// Sends a password reset email. After the user resets their password via
+  /// Firebase's default action handler, they are forwarded to the login screen.
+  /// On web this is the web login page; on mobile the continueUrl is a
+  /// universal/app link that reopens the installed app on the login screen.
+  Future<void> sendPasswordResetEmail(String email) async {
+    final continueUrl = Uri.parse('${AppConfig.appUrl}/login')
+        .replace(queryParameters: {'passwordReset': 'success'})
+        .toString();
+
+    final actionCodeSettings = ActionCodeSettings(
+      url: continueUrl,
+      handleCodeInApp: false,
+      iOSBundleId: 'app.maypole.maypole',
+      androidPackageName: 'app.maypole.maypole',
+      androidInstallApp: false,
+      androidMinimumVersion: '1',
+    );
+
+    await _firebaseAuth.sendPasswordResetEmail(
+      email: email,
+      actionCodeSettings: actionCodeSettings,
+    );
+  }
+
+  /// Changes the password for a user who still knows their current password.
+  ///
+  /// Firebase requires a recent login to change a password, so we first
+  /// re-authenticate with the supplied current password. A wrong current
+  /// password surfaces as a `wrong-password` / `invalid-credential`
+  /// [FirebaseAuthException] that the UI can present cleanly.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null || user.email == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: 'No user is currently signed in.',
+      );
+    }
+
+    final credential = EmailAuthProvider.credential(
+      email: user.email!,
+      password: currentPassword,
+    );
+
+    // Verify the current password before changing it.
+    await user.reauthenticateWithCredential(credential);
+
+    // Apply the new password.
+    await user.updatePassword(newPassword);
   }
 
   Future<void> checkEmailVerificationStatus() async {

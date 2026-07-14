@@ -775,6 +775,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tap anywhere on the map to select a place'**
   String get selectPlaceOnMap;
+
+  /// Link on the login screen to start a password reset
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot password?'**
+  String get forgotPassword;
+
+  /// Title of the forgot-password dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Reset password'**
+  String get resetPasswordTitle;
+
+  /// Explanation shown in the forgot-password dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email address and we\'ll send you a link to reset your password.'**
+  String get resetPasswordDescription;
+
+  /// Button to send the password reset email
+  ///
+  /// In en, this message translates to:
+  /// **'Send link'**
+  String get sendResetLink;
+
+  /// Confirmation shown after requesting a password reset email
+  ///
+  /// In en, this message translates to:
+  /// **'If an account exists for that email, a password reset link is on its way.'**
+  String get passwordResetEmailSent;
+
+  /// Toast shown on the login screen after completing a password reset
+  ///
+  /// In en, this message translates to:
+  /// **'Password reset! Please sign in with your new password.'**
+  String get passwordResetSuccess;
+
+  /// Title and menu label for changing the account password
+  ///
+  /// In en, this message translates to:
+  /// **'Change Password'**
+  String get changePassword;
+
+  /// Label for the current password field
+  ///
+  /// In en, this message translates to:
+  /// **'Current password'**
+  String get currentPassword;
+
+  /// Label for the new password field
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get newPassword;
+
+  /// Label for the confirm new password field
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm new password'**
+  String get confirmNewPassword;
+
+  /// Button to submit a password change
+  ///
+  /// In en, this message translates to:
+  /// **'Update password'**
+  String get updatePassword;
+
+  /// Toast shown after a successful password change
+  ///
+  /// In en, this message translates to:
+  /// **'Your password has been updated.'**
+  String get passwordChangedSuccess;
+
+  /// Error shown when the current password is wrong
+  ///
+  /// In en, this message translates to:
+  /// **'Your current password is incorrect.'**
+  String get currentPasswordIncorrect;
+
+  /// Validation shown when the new password equals the current one
+  ///
+  /// In en, this message translates to:
+  /// **'New password must be different from your current password.'**
+  String get newPasswordMustDiffer;
+
+  /// Error shown when Firebase requires a recent login to change the password
+  ///
+  /// In en, this message translates to:
+  /// **'For your security, please sign in again before changing your password.'**
+  String get pleaseSignInAgainToChangePassword;
+
+  /// Generic error message
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get somethingWentWrong;
 }
 
 class _AppLocalizationsDelegate

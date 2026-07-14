@@ -56,6 +56,27 @@
     }
   </script>
   
+  <!--
+    Google Maps auth-failure hook. Google Maps JS calls window.gm_authFailure()
+    when the API key is rejected for the current domain (e.g. a
+    RefererNotAllowedMapError because the production domain is missing from the
+    key's HTTP-referrer allow-list). When this fires the map fails to
+    initialize, so POI click events never dispatch and the place bottom sheet
+    can never appear. Surfacing it here makes the "works on dev, not on prod"
+    difference obvious in the browser console.
+  -->
+  <script>
+    window.gm_authFailure = function () {
+      console.error(
+        '[Maypole] Google Maps JS auth failure (gm_authFailure). The Maps API ' +
+        'key is not authorized for this domain (' + window.location.origin +
+        '). Add this origin to the key\'s HTTP-referrer restrictions in the ' +
+        'Google Cloud console. Map + POI selection (place bottom sheet) will ' +
+        'not work until this is fixed.'
+      );
+    };
+  </script>
+
   <!-- Google Maps JavaScript API (required for google_maps_flutter_web) -->
   <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCZk6orOey1NyYBXW9PsM3AwE3bQHFbmlg&loading=async"></script>
 </head>

@@ -527,5 +527,69 @@
   "selectPlaceOnMap": "Tap anywhere on the map to select a place",
   "@selectPlaceOnMap": {
     "description": "Hint text for selecting places on the map"
+  },
+  "forgotPassword": "Forgot password?",
+  "@forgotPassword": {
+    "description": "Link on the login screen to start a password reset"
+  },
+  "resetPasswordTitle": "Reset password",
+  "@resetPasswordTitle": {
+    "description": "Title of the forgot-password dialog"
+  },
+  "resetPasswordDescription": "Enter your email address and we'll send you a link to reset your password.",
+  "@resetPasswordDescription": {
+    "description": "Explanation shown in the forgot-password dialog"
+  },
+  "sendResetLink": "Send link",
+  "@sendResetLink": {
+    "description": "Button to send the password reset email"
+  },
+  "passwordResetEmailSent": "If an account exists for that email, a password reset link is on its way.",
+  "@passwordResetEmailSent": {
+    "description": "Confirmation shown after requesting a password reset email"
+  },
+  "passwordResetSuccess": "Password reset! Please sign in with your new password.",
+  "@passwordResetSuccess": {
+    "description": "Toast shown on the login screen after completing a password reset"
+  },
+  "changePassword": "Change Password",
+  "@changePassword": {
+    "description": "Title and menu label for changing the account password"
+  },
+  "currentPassword": "Current password",
+  "@currentPassword": {
+    "description": "Label for the current password field"
+  },
+  "newPassword": "New password",
+  "@newPassword": {
+    "description": "Label for the new password field"
+  },
+  "confirmNewPassword": "Confirm new password",
+  "@confirmNewPassword": {
+    "description": "Label for the confirm new password field"
+  },
+  "updatePassword": "Update password",
+  "@updatePassword": {
+    "description": "Button to submit a password change"
+  },
+  "passwordChangedSuccess": "Your password has been updated.",
+  "@passwordChangedSuccess": {
+    "description": "Toast shown after a successful password change"
+  },
+  "currentPasswordIncorrect": "Your current password is incorrect.",
+  "@currentPasswordIncorrect": {
+    "description": "Error shown when the current password is wrong"
+  },
+  "newPasswordMustDiffer": "New password must be different from your current password.",
+  "@newPasswordMustDiffer": {
+    "description": "Validation shown when the new password equals the current one"
+  },
+  "pleaseSignInAgainToChangePassword": "For your security, please sign in again before changing your password.",
+  "@pleaseSignInAgainToChangePassword": {
+    "description": "Error shown when Firebase requires a recent login to change the password"
+  },
+  "somethingWentWrong": "Something went wrong. Please try again.",
+  "@somethingWentWrong": {
+    "description": "Generic error message"
   }
 }

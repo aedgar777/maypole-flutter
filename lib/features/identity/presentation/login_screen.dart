@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/utils/string_utils.dart';
+import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -14,7 +16,15 @@ import './widgets/auth_form_field.dart';
 class LoginScreen extends ConsumerStatefulWidget {
   final String? returnTo;
 
-  const LoginScreen({super.key, this.returnTo});
+  /// True when the user has just completed a password reset on the web action
+  /// handler and was routed back here. Shows a confirmation toast.
+  final bool passwordResetSuccess;
+
+  const LoginScreen({
+    super.key,
+    this.returnTo,
+    this.passwordResetSuccess = false,
+  });
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -24,6 +34,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.passwordResetSuccess) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        AppToast.showSuccess(
+          context,
+          AppLocalizations.of(context)!.passwordResetSuccess,
+        );
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -63,6 +87,108 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             _passwordController.text.trim(),
           );
     }
+  }
+
+  Future<void> _handleForgotPassword() async {
+    final l10n = AppLocalizations.of(context)!;
+    final resetEmailController = TextEditingController(
+      text: _emailController.text.trim(),
+    );
+    final resetFormKey = GlobalKey<FormState>();
+    var isSending = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> sendReset() async {
+              if (!resetFormKey.currentState!.validate()) return;
+              setDialogState(() => isSending = true);
+
+              final email = resetEmailController.text.trim();
+              try {
+                await ref
+                    .read(authServiceProvider)
+                    .sendPasswordResetEmail(email);
+                if (!dialogContext.mounted) return;
+                Navigator.of(dialogContext).pop();
+                if (!mounted) return;
+                AppToast.showSuccess(context, l10n.passwordResetEmailSent);
+              } on FirebaseAuthException catch (e) {
+                // Don't reveal whether an account exists for privacy — treat a
+                // missing account the same as success.
+                if (e.code == 'user-not-found') {
+                  if (!dialogContext.mounted) return;
+                  Navigator.of(dialogContext).pop();
+                  if (!mounted) return;
+                  AppToast.showSuccess(context, l10n.passwordResetEmailSent);
+                  return;
+                }
+                setDialogState(() => isSending = false);
+                if (!dialogContext.mounted) return;
+                AppToast.showError(
+                  dialogContext,
+                  e.code == 'invalid-email'
+                      ? l10n.pleaseEnterValidEmail
+                      : (e.message ?? l10n.somethingWentWrong),
+                );
+              } catch (_) {
+                setDialogState(() => isSending = false);
+                if (!dialogContext.mounted) return;
+                AppToast.showError(dialogContext, l10n.somethingWentWrong);
+              }
+            }
+
+            return AlertDialog(
+              title: Text(l10n.resetPasswordTitle),
+              content: Form(
+                key: resetFormKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      l10n.resetPasswordDescription,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 20),
+                    AuthFormField(
+                      controller: resetEmailController,
+                      labelText: l10n.email,
+                      keyboardType: TextInputType.emailAddress,
+                      maxLength: StringUtils.maxEmailLength,
+                      onFieldSubmitted: (_) => sendReset(),
+                      validator: (value) =>
+                          StringUtils.validateEmail(value, l10n),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSending
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: Text(l10n.cancel),
+                ),
+                ElevatedButton(
+                  onPressed: isSending ? null : sendReset,
+                  child: isSending
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(l10n.sendResetLink),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    resetEmailController.dispose();
   }
 
   void _openPrivacyPolicy() {
@@ -251,7 +377,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 style: const TextStyle(fontSize: 18),
                               ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 4),
+                            TextButton(
+                              onPressed: _handleForgotPassword,
+                              child: Text(l10n.forgotPassword),
+                            ),
+                            const SizedBox(height: 6),
                             TextButton(
                               onPressed: () => context.go(
                                 Uri(

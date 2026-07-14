@@ -386,4 +386,57 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get selectPlaceOnMap => 'Tap anywhere on the map to select a place';
+
+  @override
+  String get forgotPassword => 'Forgot password?';
+
+  @override
+  String get resetPasswordTitle => 'Reset password';
+
+  @override
+  String get resetPasswordDescription =>
+      'Enter your email address and we\'ll send you a link to reset your password.';
+
+  @override
+  String get sendResetLink => 'Send link';
+
+  @override
+  String get passwordResetEmailSent =>
+      'If an account exists for that email, a password reset link is on its way.';
+
+  @override
+  String get passwordResetSuccess =>
+      'Password reset! Please sign in with your new password.';
+
+  @override
+  String get changePassword => 'Change Password';
+
+  @override
+  String get currentPassword => 'Current password';
+
+  @override
+  String get newPassword => 'New password';
+
+  @override
+  String get confirmNewPassword => 'Confirm new password';
+
+  @override
+  String get updatePassword => 'Update password';
+
+  @override
+  String get passwordChangedSuccess => 'Your password has been updated.';
+
+  @override
+  String get currentPasswordIncorrect => 'Your current password is incorrect.';
+
+  @override
+  String get newPasswordMustDiffer =>
+      'New password must be different from your current password.';
+
+  @override
+  String get pleaseSignInAgainToChangePassword =>
+      'For your security, please sign in again before changing your password.';
+
+  @override
+  String get somethingWentWrong => 'Something went wrong. Please try again.';
 }

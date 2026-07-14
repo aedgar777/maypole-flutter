@@ -170,8 +170,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', redirect: (context, state) => '/home'),
       GoRoute(
         path: '/login',
-        builder: (context, state) =>
-            LoginScreen(returnTo: state.uri.queryParameters['returnTo']),
+        builder: (context, state) => LoginScreen(
+          returnTo: state.uri.queryParameters['returnTo'],
+          passwordResetSuccess:
+              state.uri.queryParameters['passwordReset'] == 'success',
+        ),
       ),
       GoRoute(
         path: '/register',

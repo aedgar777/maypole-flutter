@@ -1,8 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/utils/screen_utils.dart';
+import 'package:maypole/core/utils/string_utils.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/features/identity/auth_providers.dart';
@@ -162,6 +164,174 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
     }
   }
 
+  Future<void> _handleChangePassword(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
+    final formKey = GlobalKey<FormState>();
+    final currentController = TextEditingController();
+    final newController = TextEditingController();
+    final confirmController = TextEditingController();
+
+    var obscureCurrent = true;
+    var obscureNew = true;
+    var obscureConfirm = true;
+    var isSaving = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Widget passwordField({
+              required TextEditingController controller,
+              required String label,
+              required bool obscure,
+              required VoidCallback onToggle,
+              String? Function(String?)? validator,
+              void Function(String)? onSubmitted,
+            }) {
+              return TextFormField(
+                controller: controller,
+                obscureText: obscure,
+                maxLength: StringUtils.maxPasswordLength,
+                onFieldSubmitted: onSubmitted,
+                decoration: InputDecoration(
+                  labelText: label,
+                  counterText: '',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscure ? Icons.visibility_off : Icons.visibility,
+                      size: 20,
+                    ),
+                    onPressed: onToggle,
+                  ),
+                ),
+                validator: validator,
+              );
+            }
+
+            Future<void> submit() async {
+              if (!formKey.currentState!.validate()) return;
+              setDialogState(() => isSaving = true);
+
+              try {
+                await ref.read(authServiceProvider).changePassword(
+                      currentPassword: currentController.text.trim(),
+                      newPassword: newController.text.trim(),
+                    );
+                if (!dialogContext.mounted) return;
+                Navigator.of(dialogContext).pop();
+                if (!mounted) return;
+                AppToast.showSuccess(context, l10n.passwordChangedSuccess);
+              } on FirebaseAuthException catch (e) {
+                setDialogState(() => isSaving = false);
+                if (!dialogContext.mounted) return;
+
+                final String message;
+                switch (e.code) {
+                  case 'wrong-password':
+                  case 'invalid-credential':
+                    message = l10n.currentPasswordIncorrect;
+                    break;
+                  case 'weak-password':
+                    message = l10n.passwordMinLength;
+                    break;
+                  case 'requires-recent-login':
+                    message = l10n.pleaseSignInAgainToChangePassword;
+                    break;
+                  default:
+                    message = e.message ?? l10n.somethingWentWrong;
+                }
+                AppToast.showError(dialogContext, message);
+              } catch (_) {
+                setDialogState(() => isSaving = false);
+                if (!dialogContext.mounted) return;
+                AppToast.showError(dialogContext, l10n.somethingWentWrong);
+              }
+            }
+
+            return AlertDialog(
+              title: Text(l10n.changePassword),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      passwordField(
+                        controller: currentController,
+                        label: l10n.currentPassword,
+                        obscure: obscureCurrent,
+                        onToggle: () => setDialogState(
+                            () => obscureCurrent = !obscureCurrent),
+                        validator: (value) =>
+                            (value == null || value.isEmpty)
+                                ? l10n.pleaseEnterPassword
+                                : null,
+                      ),
+                      const SizedBox(height: 12),
+                      passwordField(
+                        controller: newController,
+                        label: l10n.newPassword,
+                        obscure: obscureNew,
+                        onToggle: () =>
+                            setDialogState(() => obscureNew = !obscureNew),
+                        validator: (value) {
+                          final base =
+                              StringUtils.validatePassword(value, l10n);
+                          if (base != null) return base;
+                          if (value == currentController.text.trim()) {
+                            return l10n.newPasswordMustDiffer;
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      passwordField(
+                        controller: confirmController,
+                        label: l10n.confirmNewPassword,
+                        obscure: obscureConfirm,
+                        onToggle: () => setDialogState(
+                            () => obscureConfirm = !obscureConfirm),
+                        onSubmitted: (_) => submit(),
+                        validator: (value) =>
+                            StringUtils.validateConfirmPassword(
+                          value,
+                          newController.text.trim(),
+                          l10n,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed:
+                      isSaving ? null : () => Navigator.of(dialogContext).pop(),
+                  child: Text(l10n.cancel),
+                ),
+                ElevatedButton(
+                  onPressed: isSaving ? null : submit,
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(l10n.updatePassword),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    currentController.dispose();
+    newController.dispose();
+    confirmController.dispose();
+  }
+
   Widget _buildEmailVerificationStatus(
       BuildContext context, bool isVerified) {
     final l10n = AppLocalizations.of(context)!;
@@ -245,6 +415,13 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
                 onTap: (user.emailVerified || _isResendingEmail)
                     ? null
                     : () => _handleResendVerification(context, ref),
+              ),
+              Divider(color: Colors.white.withValues(alpha: 0.1)),
+              ListTile(
+                leading: const Icon(Icons.lock_outline),
+                title: Text(l10n.changePassword),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _handleChangePassword(context, ref),
               ),
               Divider(color: Colors.white.withValues(alpha: 0.1)),
               const SizedBox(height: 16),
