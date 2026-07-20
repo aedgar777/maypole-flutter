@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../features/maypolesearch/presentation/screens/maypole_search_screen.dart';
 import '../features/maypolechat/presentation/screens/maypole_chat_screen.dart';
 import '../features/maypolechat/presentation/screens/maypole_chat_loader.dart';
@@ -55,6 +57,40 @@ bool _isPublicMaypoleChatRoute({
   return !reservedTopLevelRoutes.contains(uri.pathSegments.first);
 }
 
+/// Firebase auth-action links (password reset, email verification, etc.)
+/// are served by the static `auth-action.html` page on our web hosting.
+/// When such a link is opened on mobile via App Links / Universal Links, the
+/// path is captured by the Flutter app instead of the browser. Since the
+/// Flutter app can't process these action codes (that's the web page's job),
+/// we forward the user out to their default browser so the reset flow can
+/// complete there.
+bool _isAuthActionPath(String path) {
+  return path == '/auth-action' || path == '/auth-action.html';
+}
+
+/// Guards against launching the external browser multiple times if
+/// `redirect` fires repeatedly for the same incoming link.
+String? _lastLaunchedAuthActionUrl;
+
+void _forwardAuthActionToBrowser(Uri uri) {
+  final target = uri.toString();
+  if (_lastLaunchedAuthActionUrl == target) {
+    return;
+  }
+  _lastLaunchedAuthActionUrl = target;
+  // Fire-and-forget: `redirect` must remain synchronous.
+  unawaited(
+    // `inAppBrowserView` opens a Chrome Custom Tab / SFSafariViewController,
+    // which — unlike `externalApplication` — does not re-trigger our Android
+    // App Link / iOS Universal Link intent filter, so we won't bounce the
+    // user right back into the app.
+    launchUrl(uri, mode: LaunchMode.inAppBrowserView).catchError((error) {
+      debugPrint('🧭 [DeepLink] failed to forward auth-action to browser: $error');
+      return false;
+    }),
+  );
+}
+
 /// Builds the login redirect target, preserving the originally requested
 /// location (path + query) as a `returnTo` parameter.
 ///
@@ -104,6 +140,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         'query=${uri.queryParameters} authLoading=${authState.isLoading} '
         'authed=${authState.value != null}',
       );
+
+      // Firebase auth-action links (password reset, email verification) are
+      // handled exclusively by the static web page. On mobile the App Link
+      // intercepts the URL and lands here — bounce it out to the browser so
+      // the user can complete the flow instead of getting stranded on login.
+      if (!kIsWeb && _isAuthActionPath(uri.path)) {
+        debugPrint(
+          '🧭 [DeepLink] redirect DECISION: forward auth-action to browser '
+          '(uri="$uri")',
+        );
+        _forwardAuthActionToBrowser(uri);
+        return '/login';
+      }
 
       // Define public routes that don't require authentication
       final publicRoutes = [

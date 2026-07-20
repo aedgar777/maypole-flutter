@@ -17,9 +17,48 @@ class AccountSettingsScreen extends ConsumerStatefulWidget {
   ConsumerState<AccountSettingsScreen> createState() => _AccountSettingsScreenState();
 }
 
-class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
+class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen>
+    with WidgetsBindingObserver {
   bool _isResendingEmail = false;
+  bool _isDeletingAccount = false;
   DateTime? _lastEmailSentTime;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Refresh verification status when the screen first opens, in case the
+    // user verified their email in an external browser during a previous
+    // session and the Firestore mirror flag hasn't caught up yet.
+    _refreshEmailVerificationStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // When the user returns to the app (e.g. after clicking the verification
+    // link in their email/browser), re-check their verification status so the
+    // "Verified" badge updates in place without requiring a re-login.
+    if (state == AppLifecycleState.resumed) {
+      _refreshEmailVerificationStatus();
+    }
+  }
+
+  /// Reloads the Firebase user and syncs the `emailVerified` flag to Firestore.
+  /// If it flips to true, the `authStateProvider` stream emits the updated user
+  /// and the badge rebuilds as "Verified" automatically.
+  Future<void> _refreshEmailVerificationStatus() async {
+    try {
+      await ref.read(authServiceProvider).checkEmailVerificationStatus();
+    } catch (_) {
+      // Non-fatal: the status will refresh on next sign-in.
+    }
+  }
 
   Future<void> _confirmDeleteAccount(BuildContext context,
       WidgetRef ref,) async {
@@ -70,40 +109,25 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
 
     if (confirmed != true) return;
 
-    try {
-      // Show loading indicator
-      if (!context.mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) =>
-        const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+    // Use an in-widget loading overlay (not a dialog route). Deleting the
+    // account clears the auth state, which can navigate this screen away
+    // before the delete future completes. An in-widget overlay simply
+    // disappears with the screen, so it can never be left stranded on top of
+    // the login screen (a full-screen dialog loader would).
+    setState(() => _isDeletingAccount = true);
 
-      // Delete the account
+    try {
       await ref.read(authServiceProvider).deleteAccount();
 
-      // Close loading indicator
-      if (!context.mounted) return;
-      Navigator.pop(context);
-
-      // Show success message
+      // On success the auth-state stream emits null and the router redirects to
+      // /login; this screen is often already unmounted by now, in which case
+      // there is nothing left to do (the app is already back at login).
       if (!context.mounted) return;
       AppToast.showSuccess(context, l10n.accountDeleted);
-
-      // Invalidate the auth state provider to force router to see the change
       ref.invalidate(authStateProvider);
-      
-      // Router's refreshListenable will automatically redirect to /login
     } catch (e) {
-      // Close loading indicator if open
-      if (context.mounted) {
-        Navigator.pop(context);
-      }
-
       if (!context.mounted) return;
+      setState(() => _isDeletingAccount = false);
       ErrorDialog.show(context, e);
     }
   }
@@ -133,6 +157,17 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
     });
 
     try {
+      // First re-check status: the user may have already verified in an
+      // external browser. If so, the stream flips the badge to "Verified" and
+      // we skip sending a redundant email.
+      final alreadyVerified =
+          await ref.read(authServiceProvider).checkEmailVerificationStatus();
+      if (alreadyVerified) {
+        if (!context.mounted) return;
+        AppToast.showSuccess(context, l10n.validated);
+        return;
+      }
+
       await ref.read(authServiceProvider).sendEmailVerification();
       
       setState(() {
@@ -393,7 +428,9 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
             : null,
         automaticallyImplyLeading: !AppConfig.isWideScreen && ScreenUtils.shouldShowAppBarBackButton()
       ),
-      body: authState.when(
+      body: Stack(
+        children: [
+          authState.when(
         data: (user) {
           if (user == null) return const SizedBox.shrink();
 
@@ -447,6 +484,15 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
+      ),
+          if (_isDeletingAccount)
+            const Positioned.fill(
+              child: ColoredBox(
+                color: Color(0x99000000),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ),
+        ],
       ),
     );
   }

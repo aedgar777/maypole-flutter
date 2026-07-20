@@ -29,7 +29,8 @@ flutter build web \
   --dart-define=FIREBASE_DEV_STORAGE_BUCKET="${FIREBASE_DEV_STORAGE_BUCKET}" \
   --dart-define=FIREBASE_DEV_WEB_MEASUREMENT_ID="${FIREBASE_DEV_WEB_MEASUREMENT_ID}" \
   --dart-define=GOOGLE_PLACES_API_KEY="${GOOGLE_PLACES_DEV_API_KEY}" \
-  --dart-define=CLOUD_FUNCTIONS_URL="${CLOUD_FUNCTIONS_DEV_URL}"
+  --dart-define=CLOUD_FUNCTIONS_URL="${CLOUD_FUNCTIONS_DEV_URL}" \
+  --dart-define=APP_URL=https://maypole-flutter-dev.web.app
 
 echo "✅ Build complete!"
 echo ""

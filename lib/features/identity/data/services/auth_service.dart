@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
@@ -35,26 +36,66 @@ class AuthService {
           // 2. User was created in Firebase Auth but Firestore write failed
           // 3. User document was manually deleted
           // 4. Old test data exists
+          //
+          // We only want to grant a grace period (polling) when a *brand-new*
+          // account is mid-registration and the document write hasn't landed
+          // yet. In every other case — account deletion, an orphaned/older
+          // account, or the document otherwise disappearing — we must resolve
+          // to null immediately so the app returns to the login screen cleanly
+          // rather than showing a spinner for ~15s (which also keeps a doomed
+          // Firestore listener alive on the missing document).
+          final hadDocumentPreviously =
+              _session.currentUser?.firebaseID == firebaseUser.uid;
 
-          // Wait a moment to allow registration to complete
-          // If the user was just created, the Firestore document should appear within 2-3 seconds
+          final creationTime = firebaseUser.metadata.creationTime;
+          final isNewlyCreatedAccount = creationTime != null &&
+              DateTime.now().difference(creationTime) <
+                  const Duration(seconds: 30);
 
-          await Future.delayed(const Duration(seconds: 3));
-
-          // Check again if document exists now
-          final recheckSnapshot = await _firestore
-              .collection('users')
-              .doc(firebaseUser.uid)
-              .get();
-
-          if (recheckSnapshot.exists) {
-            final userData = recheckSnapshot.data() as Map<String, dynamic>;
-            final user = DomainUser.fromMap(userData);
-            _session.currentUser = user;
-            return user;
+          if (hadDocumentPreviously || !isNewlyCreatedAccount) {
+            // NOTE: We intentionally do NOT sign out here. During account
+            // deletion the document is removed *before* the auth user is
+            // deleted; signing out mid-deletion would abort `user.delete()`.
+            // Returning null is enough to route back to login.
+            _session.currentUser = null;
+            return null;
           }
 
-          // Document still doesn't exist after waiting - sign out the user
+          // The auth state change can fire *before* registration finishes
+          // writing the user document, and Firestore writes complete against
+          // the local cache before they sync to the server. A single short
+          // recheck can therefore race ahead of the write and wrongly conclude
+          // the account is orphaned — signing a brand-new user out
+          // mid-registration. Instead, poll for the document over a longer
+          // window before giving up, so a slow write can never sign the user
+          // out.
+          const maxRecheckAttempts = 10;
+          const recheckDelay = Duration(milliseconds: 1500);
+
+          for (var attempt = 0; attempt < maxRecheckAttempts; attempt++) {
+            await Future.delayed(recheckDelay);
+
+            // If the user signed out (or switched) while we were waiting, stop.
+            if (_firebaseAuth.currentUser?.uid != firebaseUser.uid) {
+              _session.currentUser = null;
+              return null;
+            }
+
+            final recheckSnapshot = await _firestore
+                .collection('users')
+                .doc(firebaseUser.uid)
+                .get();
+
+            if (recheckSnapshot.exists) {
+              final userData = recheckSnapshot.data() as Map<String, dynamic>;
+              final user = DomainUser.fromMap(userData);
+              _session.currentUser = user;
+              return user;
+            }
+          }
+
+          // Document still doesn't exist after polling for ~15s - treat the
+          // account as genuinely orphaned and sign out.
           await signOut();
 
           _session.currentUser = null;
@@ -366,6 +407,13 @@ class AuthService {
     }
   }
 
+  /// Sends a verification email via our Cloud Function, which uses our own
+  /// SMTP server (Google Workspace) to deliver a branded email. This bypasses
+  /// Firebase's email-template / action-URL settings entirely.
+  ///
+  /// The Cloud Function calls the Admin SDK's generateEmailVerificationLink,
+  /// extracts the oobCode + apiKey, builds a URL pointing at our custom
+  /// auth-action.html page (hosted on the web domain), and sends the email.
   Future<void> sendEmailVerification() async {
     try {
       final user = _firebaseAuth.currentUser;
@@ -379,57 +427,39 @@ class AuthService {
         throw Exception('Email is already verified');
       }
 
-      // After the user clicks the verification link, Firebase's default action
-      // handler applies the code and then forwards them to this continueUrl.
-      // We route them back to the account settings screen so the "Verified"
-      // status updates in place. On mobile this URL is a universal/app link,
-      // so it reopens the installed app on that screen.
       final continueUrl = Uri.parse('${AppConfig.appUrl}/email-verified')
           .replace(queryParameters: {'returnTo': '/settings/account'})
           .toString();
 
-      final actionCodeSettings = ActionCodeSettings(
-        url: continueUrl,
-        // For mobile apps, this ensures the link opens in the app if installed
-        handleCodeInApp: false,
-        // iOS app settings (optional - allows deep linking to app)
-        iOSBundleId: 'app.maypole.maypole',
-        // Android app settings (optional - allows deep linking to app)
-        androidPackageName: 'app.maypole.maypole',
-        androidInstallApp: false,
-        androidMinimumVersion: '1',
-      );
-
-      await user.sendEmailVerification(actionCodeSettings);
-    } on FirebaseAuthException {
+      final functions = FirebaseFunctions.instance;
+      // Use the default region (us-central1) — the function is deployed
+      // alongside the rest of the auth-functions codebase.
+      final callable = functions.httpsCallable('sendCustomVerificationEmail');
+      await callable.call(<String, dynamic>{
+        'continueUrl': continueUrl,
+      });
+    } on FirebaseFunctionsException {
       rethrow;
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Sends a password reset email. After the user resets their password via
-  /// Firebase's default action handler, they are forwarded to the login screen.
-  /// On web this is the web login page; on mobile the continueUrl is a
-  /// universal/app link that reopens the installed app on the login screen.
+  /// Sends a password-reset email via our Cloud Function, which uses our own
+  /// SMTP server (Google Workspace). Same approach as sendEmailVerification —
+  /// the Admin SDK generates the link, we repoint it at auth-action.html, and
+  /// send it via SMTP.
   Future<void> sendPasswordResetEmail(String email) async {
     final continueUrl = Uri.parse('${AppConfig.appUrl}/login')
         .replace(queryParameters: {'passwordReset': 'success'})
         .toString();
 
-    final actionCodeSettings = ActionCodeSettings(
-      url: continueUrl,
-      handleCodeInApp: false,
-      iOSBundleId: 'app.maypole.maypole',
-      androidPackageName: 'app.maypole.maypole',
-      androidInstallApp: false,
-      androidMinimumVersion: '1',
-    );
-
-    await _firebaseAuth.sendPasswordResetEmail(
-      email: email,
-      actionCodeSettings: actionCodeSettings,
-    );
+    final functions = FirebaseFunctions.instance;
+    final callable = functions.httpsCallable('sendCustomPasswordResetEmail');
+    await callable.call(<String, dynamic>{
+      'email': email,
+      'continueUrl': continueUrl,
+    });
   }
 
   /// Changes the password for a user who still knows their current password.
@@ -462,20 +492,48 @@ class AuthService {
     await user.updatePassword(newPassword);
   }
 
-  Future<void> checkEmailVerificationStatus() async {
+  /// Reloads the current user from the server and, if their email is now
+  /// verified, mirrors that to Firestore. Returns whether the email is verified.
+  ///
+  /// Verification frequently happens *out of band* — the user clicks the link
+  /// in an external browser, so the locally-cached auth token still reports
+  /// `emailVerified == false`. Calling [User.reload] refreshes the account
+  /// info, and forcing a fresh ID token guarantees the updated verification
+  /// state is picked up immediately when the user returns to the app.
+  Future<bool> checkEmailVerificationStatus() async {
     try {
-      final user = _firebaseAuth.currentUser;
-      if (user == null) return;
+      var user = _firebaseAuth.currentUser;
+      if (user == null) return false;
 
-      // Reload user to get latest verification status
-      await user.reload();
-      final reloadedUser = _firebaseAuth.currentUser;
-
-      if (reloadedUser != null && reloadedUser.emailVerified) {
-        // Update Firestore with verification status
+      if (user.emailVerified) {
         await _updateEmailVerificationStatus(true);
+        return true;
       }
-    } catch (e) {}
+
+      // Reload user to get latest verification status.
+      await user.reload();
+
+      // Force a token refresh so a verification performed elsewhere is
+      // reflected right away rather than on the next token rotation.
+      try {
+        await user.getIdToken(true);
+      } catch (_) {
+        // Token refresh is best-effort; reload above is the primary signal.
+      }
+
+      user = _firebaseAuth.currentUser;
+
+      if (user != null && user.emailVerified) {
+        // Update Firestore with verification status. The account settings
+        // screen streams this field and flips the badge to "Verified".
+        await _updateEmailVerificationStatus(true);
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      return false;
+    }
   }
 
   Future<void> _updateEmailVerificationStatus(bool isVerified) async {

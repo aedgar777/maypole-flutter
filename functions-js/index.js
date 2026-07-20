@@ -7,6 +7,8 @@
 
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
+const nodemailer = require('nodemailer');
+const { JWT } = require('google-auth-library');
 
 // Initialize Firebase Admin if not already initialized
 if (!admin.apps.length) {
@@ -14,6 +16,301 @@ if (!admin.apps.length) {
 }
 
 const db = admin.firestore();
+
+// ============================================================================
+// SMTP transport — Gmail API via OAuth2 (service account + domain-wide delegation)
+// ============================================================================
+//
+// We authenticate to smtp.gmail.com using XOAUTH2. The token comes from a
+// Google Cloud service account that has been granted *domain-wide delegation*
+// in the Google Workspace admin console, allowing it to impersonate the
+// sending mailbox (e.g. info@maypole.app).
+//
+// Why this and not App Passwords: Google Workspace admins can no longer
+// reliably enable App Passwords for their users (the setting shows
+// "not available"). OAuth2 with DWD is the officially-supported path and
+// is not deprecated.
+//
+// SECRETS
+//   GMAIL_SA_KEY  — JSON key file contents for the sender service account,
+//                   stored via `firebase functions:secrets:set GMAIL_SA_KEY`.
+//   GMAIL_SENDER  — mailbox to send from, e.g. `info@maypole.app`. This
+//                   mailbox must exist in the Workspace domain and the
+//                   service account must be authorized to impersonate it.
+
+const SENDER_ADDRESS = () => process.env.GMAIL_SENDER || 'info@maypole.app';
+
+let _transporter = null;
+
+async function getAccessToken() {
+  const rawKey = process.env.GMAIL_SA_KEY;
+  if (!rawKey) {
+    throw new Error(
+      'GMAIL_SA_KEY secret is not set. Run: '
+      + 'firebase functions:secrets:set GMAIL_SA_KEY'
+    );
+  }
+  const creds = JSON.parse(rawKey);
+  const jwt = new JWT({
+    email: creds.client_email,
+    key: creds.private_key,
+    scopes: ['https://mail.google.com/'],
+    subject: SENDER_ADDRESS(), // impersonate this mailbox via DWD
+  });
+  const { access_token: accessToken } = await jwt.authorize();
+  return accessToken;
+}
+
+async function getTransporter() {
+  // Access tokens live for ~1h; recreate on each send for simplicity.
+  const accessToken = await getAccessToken();
+
+  _transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+      type: 'OAuth2',
+      user: SENDER_ADDRESS(),
+      accessToken,
+    },
+  });
+
+  return _transporter;
+}
+
+// ============================================================================
+// Custom Auth Emails (bypasses Firebase's email-template action-URL restriction)
+// ============================================================================
+//
+// These callable functions generate Firebase action links via the Admin SDK,
+// extract the oobCode and apiKey, and build links pointing at our custom
+// auth-action.html page (served on the hosting domain). They then send the
+// email through our own SMTP server (Google Workspace).
+//
+// This completely bypasses the Firebase console's email-template / action-URL
+// settings — we never touch notification.sendEmail.callbackUri.
+
+/**
+ * Builds a custom action URL pointing at our auth-action.html page.
+ *
+ * Firebase's generated links point at the default handler
+ * (…/__/auth/action?mode=…&oobCode=…&apiKey=…). We copy oobCode + apiKey
+ * into a URL that points at our stylized auth-action.html instead.
+ */
+function buildCustomActionUrl(firebaseLink, mode, continueUrl) {
+  const url = new URL(firebaseLink);
+  const oobCode = url.searchParams.get('oobCode');
+  const apiKey = url.searchParams.get('apiKey');
+
+  // auth-action.html is deployed alongside the Flutter app on the hosting
+  // domain. We derive the hosting origin from the client-supplied
+  // continueUrl so a request initiated from dev routes back to dev, and a
+  // request initiated from prod routes back to prod — no env config needed.
+  let hostingOrigin;
+  try {
+    hostingOrigin = new URL(continueUrl).origin;
+  } catch (_) {
+    hostingOrigin = 'https://maypole.app';
+  }
+
+  const custom = new URL(`${hostingOrigin}/auth-action.html`);
+  custom.searchParams.set('mode', mode);
+  custom.searchParams.set('oobCode', oobCode);
+  custom.searchParams.set('apiKey', apiKey);
+  if (continueUrl) {
+    custom.searchParams.set('continueUrl', continueUrl);
+  }
+
+  return custom.toString();
+}
+
+/**
+ * Sends a verification email to the currently-authenticated user.
+ *
+ * Called by the Flutter app after registration or when the user taps
+ * "resend verification" in account settings.
+ *
+ * The caller must be authenticated. The function reads the caller's uid
+ * and email from the auth context — the client only passes the continueUrl.
+ */
+exports.sendCustomVerificationEmail = functions
+  .runWith({ secrets: ['GMAIL_SA_KEY', 'GMAIL_SENDER'] })
+  .https.onCall(async (data, context) => {
+    // Verify the caller is authenticated.
+    if (!context.auth || !context.auth.uid) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'You must be signed in to send a verification email.'
+      );
+    }
+
+    const uid = context.auth.uid;
+    // The client passes the environment-correct base URL. We only fall back
+    // to prod if the client omitted it entirely (should never happen).
+    const continueUrl = data.continueUrl || 'https://maypole.app/email-verified?returnTo=/settings/account';
+
+    try {
+      const user = await admin.auth().getUser(uid);
+
+      if (!user.email) {
+        throw new functions.https.HttpsError(
+          'failed-precondition',
+          'User has no email address.'
+        );
+      }
+
+      if (user.emailVerified) {
+        console.log(`[verify] User ${uid} already verified — skipping.`);
+        return { status: 'already-verified' };
+      }
+
+      // Generate the verification link via Admin SDK. This link points at
+      // Firebase's default handler; we extract oobCode + apiKey from it.
+      const firebaseLink = await admin.auth().generateEmailVerificationLink(
+        user.email,
+        { url: continueUrl }
+      );
+
+      const customLink = buildCustomActionUrl(
+        firebaseLink,
+        'verifyEmail',
+        continueUrl
+      );
+
+      console.log(`[verify] Sending verification email to ${user.email}`);
+
+      const transporter = await getTransporter();
+      await transporter.sendMail({
+        from: `"Maypole" <${SENDER_ADDRESS()}>`,
+        to: user.email,
+        subject: 'Verify your email for Maypole',
+        html: buildVerificationEmail(user.displayName || user.email, customLink),
+      });
+
+      console.log(`[verify] ✓ Sent to ${user.email}`);
+      return { status: 'sent' };
+    } catch (err) {
+      console.error(`[verify] ✗ Error for user ${uid}:`, err.message);
+      throw new functions.https.HttpsError('internal', err.message);
+    }
+  }
+);
+
+/**
+ * Sends a password-reset email. Does not require authentication (the user
+ * has forgotten their password and can't sign in).
+ */
+exports.sendCustomPasswordResetEmail = functions
+  .runWith({ secrets: ['GMAIL_SA_KEY', 'GMAIL_SENDER'] })
+  .https.onCall(async (data) => {
+    const email = (data.email || '').trim();
+    const continueUrl = data.continueUrl || 'https://maypole.app/login?passwordReset=success';
+
+    if (!email) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Email is required.'
+      );
+    }
+
+    try {
+      // Generate the reset link via Admin SDK.
+      const firebaseLink = await admin.auth().generatePasswordResetLink(
+        email,
+        { url: continueUrl }
+      );
+
+      const customLink = buildCustomActionUrl(
+        firebaseLink,
+        'resetPassword',
+        continueUrl
+      );
+
+      console.log(`[reset] Sending password-reset email to ${email}`);
+
+      const transporter = await getTransporter();
+      await transporter.sendMail({
+        from: `"Maypole" <${SENDER_ADDRESS()}>`,
+        to: email,
+        subject: 'Reset your Maypole password',
+        html: buildPasswordResetEmail(email, customLink),
+      });
+
+      console.log(`[reset] ✓ Sent to ${email}`);
+      return { status: 'sent' };
+    } catch (err) {
+      // If the user doesn't exist, we still return 'sent' to avoid leaking
+      // account existence (matches Firebase's email-enumeration protection).
+      if (err.code === 'auth/user-not-found') {
+        console.log(`[reset] User not found (${email}) — silently OK`);
+        return { status: 'sent' };
+      }
+      console.error(`[reset] ✗ Error for ${email}:`, err.message);
+      throw new functions.https.HttpsError('internal', err.message);
+    }
+  }
+);
+
+// ---- Email templates --------------------------------------------------------
+function brandStyles() {
+  return `
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #1A1A2E; margin: 0; padding: 0; }
+    .container { max-width: 480px; margin: 0 auto; padding: 40px 20px; }
+    .card { background-color: #2D2D44; border-radius: 16px; padding: 40px 32px; text-align: center; }
+    .logo { width: 80px; height: 80px; margin: 0 auto 24px; display: block; }
+    h1 { color: #FFFFFF; font-size: 22px; font-weight: 700; margin: 0 0 12px; }
+    p { color: #B8B8C8; font-size: 15px; line-height: 1.5; margin: 0 0 24px; }
+    .button { display: inline-block; padding: 14px 40px; background-color: #6CB4E8; color: #1A1A2E; font-size: 16px; font-weight: 700; text-decoration: none; border-radius: 12px; }
+    .footer { color: #6B6B80; font-size: 12px; margin-top: 32px; }
+  `;
+}
+
+function buildVerificationEmail(name, link) {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"><style>${brandStyles()}</style></head>
+    <body>
+      <div class="container">
+        <div class="card">
+          <img class="logo" src="https://maypole.app/icons/ic_logo_splash.png" alt="Maypole">
+          <h1>Verify your email</h1>
+          <p>Hi ${escapeHtml(name)},<br>Thanks for joining Maypole! Click below to verify your email address and get started.</p>
+          <a class="button" href="${escapeAttr(link)}">Verify Email</a>
+          <p class="footer">If you didn't create a Maypole account, you can safely ignore this email.</p>
+        </div>
+      </div>
+    </body>
+    </html>`;
+}
+
+function buildPasswordResetEmail(email, link) {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"><style>${brandStyles()}</style></head>
+    <body>
+      <div class="container">
+        <div class="card">
+          <img class="logo" src="https://maypole.app/icons/ic_logo_splash.png" alt="Maypole">
+          <h1>Reset your password</h1>
+          <p>We received a request to reset the password for<br><strong>${escapeHtml(email)}</strong>.<br>Click below to choose a new one.</p>
+          <a class="button" href="${escapeAttr(link)}">Reset Password</a>
+          <p class="footer">If you didn't request this, you can safely ignore this email. The link expires in 1 hour.</p>
+        </div>
+      </div>
+    </body>
+    </html>`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function escapeAttr(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
 // ============================================================================
 // AdSense ads.txt serving and verification
