@@ -272,7 +272,12 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
           .watch(authStateProvider)
           .when(
             data: (user) {
-              if (user != null) {
+              // A non-null user alongside an error means the Firebase account
+              // was created but a later step (display name, Firestore write,
+              // username reservation) threw. `errorMessage` only renders
+              // inside the form, so falling through to the spinner here would
+              // strand the user on it with the failure invisible.
+              if (user != null && registrationState.errorMessage == null) {
                 _showSuccessDialogAndNavigate(context);
                 return const Center(child: CircularProgressIndicator());
               }

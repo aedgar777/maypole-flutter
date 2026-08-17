@@ -1,0 +1,60 @@
+appId: app.maypole.maypole
+name: Registration shows success feedback and lands on home
+---
+# Covers bug #1: after a successful registration the user must get visible
+# feedback (the success dialog) and then be routed to the home screen. The
+# failure mode this guards against is an endless CircularProgressIndicator with
+# the error swallowed — see registration_screen.dart, the `user != null` branch.
+#
+# Parameters (passed with -e):
+#   REG_EMAIL, REG_PASSWORD, REG_USERNAME
+
+- launchApp:
+    clearState: true
+
+# Login screen -> registration screen.
+- extendedWaitUntil:
+    visible: "Register"
+    timeout: 30000
+- tapOn: "Register"
+
+- extendedWaitUntil:
+    visible: "Username"
+    timeout: 15000
+
+- tapOn: "Username"
+- inputText: ${REG_USERNAME}
+- tapOn: "Email"
+- inputText: ${REG_EMAIL}
+- tapOn: "Password"
+- inputText: ${REG_PASSWORD}
+- tapOn: "Confirm Password"
+- inputText: ${REG_PASSWORD}
+- hideKeyboard
+
+# Both consent boxes gate the Register button (onPressed is null until each is
+# ticked), so the tap below would silently no-op if either were missed.
+- tapOn: "I confirm that I am 13 years of age or older"
+- tapOn: "I agree to the"
+- waitForAnimationToEnd
+
+- tapOn:
+    text: "Register"
+    index: 1
+
+# --- The actual assertion for bug #1 -----------------------------------------
+# If registration succeeds but feedback is broken, this times out on the
+# spinner instead of finding the dialog.
+- extendedWaitUntil:
+    visible: "Welcome to Maypole!"
+    timeout: 45000
+
+- assertVisible:
+    text: ".*verification email.*"
+
+- tapOn: "Got it"
+
+# Dismissing the dialog must route to home, not leave us on the form.
+- extendedWaitUntil:
+    visible: "Search Places"
+    timeout: 30000

@@ -1,0 +1,57 @@
+appId: com.google.Gmail
+name: Email verification link returns the user to the native app
+---
+# Covers bug #2: tapping the verification link in the Gmail app opens
+# auth-action.html in Safari, and the "Continue to Maypole" button must hand
+# off to the *native* app rather than leaving the user on the mobile web build.
+#
+# The handoff relies on the maypole:// custom scheme, because iOS does not fire
+# Universal Links for same-origin navigations (auth-action.html is served from
+# the same domain as the https continueUrl).
+#
+# Assumes the Gmail app is already signed in to the receiving account.
+# Parameters (passed with -e):
+#   REG_EMAIL  - used only to disambiguate when several verification mails exist
+
+- launchApp:
+    appId: com.google.Gmail
+    clearState: false
+
+- extendedWaitUntil:
+    visible: "Search in mail"
+    timeout: 30000
+
+# Newest verification mail first. Pull-to-refresh in case it is still in flight.
+- swipe:
+    start: 50%, 30%
+    end: 50%, 70%
+- extendedWaitUntil:
+    visible: ".*[Vv]erify.*"
+    timeout: 60000
+
+- tapOn:
+    text: ".*[Vv]erify.*"
+
+# Open the action link from inside the message body.
+- extendedWaitUntil:
+    visible: ".*[Vv]erify.*[Ee]mail.*"
+    timeout: 20000
+- tapOn:
+    text: ".*[Vv]erify.*[Ee]mail.*"
+
+# Safari (or an in-app web view) loads auth-action.html, which applies the
+# oobCode and then reveals the continue button.
+- extendedWaitUntil:
+    visible: "Email verified!"
+    timeout: 45000
+
+- tapOn: "Continue to Maypole"
+
+# --- The actual assertion for bug #2 -----------------------------------------
+# If the custom-scheme handoff fails we stay in the browser and see the Flutter
+# *web* build; the native app never foregrounds and this times out.
+- extendedWaitUntil:
+    visible: "Search Places"
+    timeout: 45000
+
+- assertVisible: "Search Places"
