@@ -371,7 +371,7 @@ jobs:
 
       - name: Build iOS IPA with Flutter
         run: |
-          BUILD_NAME="1.2.9"
+          BUILD_NAME=$(grep '^version:' pubspec.yaml | sed 's/^version:[[:space:]]*//' | cut -d'+' -f1)
           BUILD_NUMBER=$((100000 + GITHUB_RUN_NUMBER))
           echo "Using CI build name: $BUILD_NAME"
           echo "Using CI build number: $BUILD_NUMBER"
