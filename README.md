@@ -250,18 +250,6 @@ maypole-flutter/
 
 ---
 
-## 🤝 Contributing
-
-This is a private project, but contributions are welcome from team members. Please follow these guidelines:
-
-1. Create a feature branch from `develop`
-2. Follow the existing code style and architecture patterns
-3. Write tests for new features
-4. Update documentation as needed
-5. Submit a pull request for review
-
----
-
 ## 📄 License
 
 Copyright © 2026 Maypole. All rights reserved.
@@ -283,6 +271,7 @@ Built with ❤️ using:
 - [Firebase](https://firebase.google.com) by Google
 - [Riverpod](https://riverpod.dev) by Remi Rousselet
 - [GoRouter](https://pub.dev/packages/go_router) by the Flutter team
+- [Hive](https://thehive.ai) by Hive
 
 ---
 
