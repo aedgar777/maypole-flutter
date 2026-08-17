@@ -392,4 +392,58 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get selectPlaceOnMap =>
       'Toca cualquier lugar en el mapa para seleccionar un lugar';
+
+  @override
+  String get forgotPassword => '¿Olvidó su contraseña?';
+
+  @override
+  String get resetPasswordTitle => 'Restablecer contraseña';
+
+  @override
+  String get resetPasswordDescription =>
+      'Ingrese su correo electrónico y le enviaremos un enlace para restablecer su contraseña.';
+
+  @override
+  String get sendResetLink => 'Enviar enlace';
+
+  @override
+  String get passwordResetEmailSent =>
+      'Si existe una cuenta con ese correo, el enlace para restablecer la contraseña está en camino.';
+
+  @override
+  String get passwordResetSuccess =>
+      '¡Contraseña restablecida! Inicie sesión con su nueva contraseña.';
+
+  @override
+  String get changePassword => 'Cambiar contraseña';
+
+  @override
+  String get currentPassword => 'Contraseña actual';
+
+  @override
+  String get newPassword => 'Nueva contraseña';
+
+  @override
+  String get confirmNewPassword => 'Confirmar nueva contraseña';
+
+  @override
+  String get updatePassword => 'Actualizar contraseña';
+
+  @override
+  String get passwordChangedSuccess => 'Su contraseña ha sido actualizada.';
+
+  @override
+  String get currentPasswordIncorrect => 'Su contraseña actual es incorrecta.';
+
+  @override
+  String get newPasswordMustDiffer =>
+      'La nueva contraseña debe ser diferente a su contraseña actual.';
+
+  @override
+  String get pleaseSignInAgainToChangePassword =>
+      'Por su seguridad, inicie sesión nuevamente antes de cambiar su contraseña.';
+
+  @override
+  String get somethingWentWrong =>
+      'Algo salió mal. Por favor, inténtelo de nuevo.';
 }

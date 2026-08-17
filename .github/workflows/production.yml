@@ -119,7 +119,8 @@ jobs:
             --dart-define=FIREBASE_PROD_AUTH_DOMAIN=${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }} \
             --dart-define=FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }} \
             --dart-define=FIREBASE_PROD_WEB_MEASUREMENT_ID=${{ secrets.FIREBASE_PROD_WEB_MEASUREMENT_ID }} \
-            --dart-define=GOOGLE_PLACES_API_KEY=${{ secrets.GOOGLE_PLACES_PROD_API_KEY }}
+            --dart-define=GOOGLE_PLACES_API_KEY=${{ secrets.GOOGLE_PLACES_PROD_API_KEY }} \
+            --dart-define=APP_URL=https://maypole.app
           echo "✅ Build complete!"
 
       - name: Copy deeplink verification files

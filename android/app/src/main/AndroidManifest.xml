@@ -41,25 +41,61 @@
             </intent-filter>
             
             <!-- App Links for Production (maypole.app) -->
+            <!-- Auth-action links (/auth-action.html) are handled by the browser,
+                 never the Flutter app. We enumerate the app routes instead of a
+                 catch-all so the OS doesn't open the app for password reset /
+                 email verification URLs. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                
-                <data
-                    android:scheme="https"
-                    android:host="maypole.app" />
+
+                <!-- Single-segment app routes -->
+                <data android:scheme="https" android:host="maypole.app" android:path="/" />
+                <data android:scheme="https" android:host="maypole.app" android:pathPrefix="/login" />
+                <data android:scheme="https" android:host="maypole.app" android:pathPrefix="/register" />
+                <data android:scheme="https" android:host="maypole.app" android:pathPrefix="/email-verified" />
+                <data android:scheme="https" android:host="maypole.app" android:pathPrefix="/home" />
+                <data android:scheme="https" android:host="maypole.app" android:pathPrefix="/search" />
+                <data android:scheme="https" android:host="maypole.app" android:pathPrefix="/settings" />
+                <data android:scheme="https" android:host="maypole.app" android:pathPrefix="/privacy-policy" />
+                <data android:scheme="https" android:host="maypole.app" android:pathPrefix="/child-safety-standards" />
+                <data android:scheme="https" android:host="maypole.app" android:pathPrefix="/help" />
+
+                <!-- Multi-segment app routes -->
+                <data android:scheme="https" android:host="maypole.app" android:pathPrefix="/chat/" />
+                <data android:scheme="https" android:host="maypole.app" android:pathPrefix="/dm/" />
+                <data android:scheme="https" android:host="maypole.app" android:pathPrefix="/user-profile/" />
+
+                <!-- Semantic share links: /:locationSlug/:placeSlug -->
+                <data android:scheme="https" android:host="maypole.app" android:pathPattern="/.*/.*" />
             </intent-filter>
-            
+
             <!-- App Links for Dev (maypole-flutter-dev.web.app) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                
-                <data
-                    android:scheme="https"
-                    android:host="maypole-flutter-dev.web.app" />
+
+                <!-- Single-segment app routes -->
+                <data android:scheme="https" android:host="maypole-flutter-dev.web.app" android:path="/" />
+                <data android:scheme="https" android:host="maypole-flutter-dev.web.app" android:pathPrefix="/login" />
+                <data android:scheme="https" android:host="maypole-flutter-dev.web.app" android:pathPrefix="/register" />
+                <data android:scheme="https" android:host="maypole-flutter-dev.web.app" android:pathPrefix="/email-verified" />
+                <data android:scheme="https" android:host="maypole-flutter-dev.web.app" android:pathPrefix="/home" />
+                <data android:scheme="https" android:host="maypole-flutter-dev.web.app" android:pathPrefix="/search" />
+                <data android:scheme="https" android:host="maypole-flutter-dev.web.app" android:pathPrefix="/settings" />
+                <data android:scheme="https" android:host="maypole-flutter-dev.web.app" android:pathPrefix="/privacy-policy" />
+                <data android:scheme="https" android:host="maypole-flutter-dev.web.app" android:pathPrefix="/child-safety-standards" />
+                <data android:scheme="https" android:host="maypole-flutter-dev.web.app" android:pathPrefix="/help" />
+
+                <!-- Multi-segment app routes -->
+                <data android:scheme="https" android:host="maypole-flutter-dev.web.app" android:pathPrefix="/chat/" />
+                <data android:scheme="https" android:host="maypole-flutter-dev.web.app" android:pathPrefix="/dm/" />
+                <data android:scheme="https" android:host="maypole-flutter-dev.web.app" android:pathPrefix="/user-profile/" />
+
+                <!-- Semantic share links: /:locationSlug/:placeSlug -->
+                <data android:scheme="https" android:host="maypole-flutter-dev.web.app" android:pathPattern="/.*/.*" />
             </intent-filter>
             
             <!-- Custom URL scheme (fallback) -->

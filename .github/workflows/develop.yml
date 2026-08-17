@@ -214,7 +214,8 @@ jobs:
             --release \
             --flavor dev \
             --build-number="$BUILD_NUMBER" \
-            --dart-define=ENVIRONMENT=dev
+            --dart-define=ENVIRONMENT=dev \
+            --dart-define=APP_URL=https://maypole-flutter-dev.web.app
           echo "✅ Build complete!"
 
       - name: Setup Ruby for Fastlane
@@ -379,6 +380,7 @@ jobs:
             --build-name="$BUILD_NAME" \
             --build-number="$BUILD_NUMBER" \
             --dart-define=ENVIRONMENT=dev \
+            --dart-define=APP_URL=https://maypole-flutter-dev.web.app \
             --export-options-plist=ios/ExportOptions.ci.plist
 
       - name: Deploy to TestFlight Internal Testing with Fastlane
@@ -484,7 +486,8 @@ jobs:
             --dart-define=FIREBASE_DEV_AUTH_DOMAIN="$FIREBASE_DEV_AUTH_DOMAIN" \
             --dart-define=FIREBASE_DEV_STORAGE_BUCKET="$FIREBASE_DEV_STORAGE_BUCKET" \
             --dart-define=FIREBASE_DEV_WEB_MEASUREMENT_ID="$FIREBASE_DEV_WEB_MEASUREMENT_ID" \
-            --dart-define=GOOGLE_PLACES_API_KEY="$GOOGLE_PLACES_DEV_API_KEY"
+            --dart-define=GOOGLE_PLACES_API_KEY="$GOOGLE_PLACES_DEV_API_KEY" \
+            --dart-define=APP_URL=https://maypole-flutter-dev.web.app
           echo "✅ Build complete!"
 
       - name: Copy deeplink verification files
