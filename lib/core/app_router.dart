@@ -91,6 +91,28 @@ void _forwardAuthActionToBrowser(Uri uri) {
   );
 }
 
+/// Dismisses the in-app browser we opened for an auth-action link.
+///
+/// `auth-action.html` hands back to the native app with a `maypole://` URL.
+/// iOS delivers that to the app *underneath* the SFSafariViewController we
+/// presented — the browser sheet is not dismissed automatically, so without
+/// this the user keeps staring at the web page even though the app already
+/// routed correctly. Worse, the page's own "app didn't open" fallback then
+/// fires and navigates that still-visible sheet to the mobile web app, which
+/// looks exactly like the deep link having failed.
+///
+/// Closing the sheet also lets the page observe `pagehide`/`visibilitychange`,
+/// which cancels that fallback at the source.
+void _dismissAuthActionBrowser() {
+  _lastLaunchedAuthActionUrl = null;
+  // Fire-and-forget: `redirect` must remain synchronous.
+  unawaited(
+    closeInAppWebView().catchError((error) {
+      debugPrint('🧭 [DeepLink] failed to close in-app browser: $error');
+    }),
+  );
+}
+
 /// Builds the login redirect target, preserving the originally requested
 /// location (path + query) as a `returnTo` parameter.
 ///
@@ -152,6 +174,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         );
         _forwardAuthActionToBrowser(uri);
         return '/login';
+      }
+
+      // The `maypole://` scheme is only ever used by auth-action.html handing
+      // control back to us, so its arrival means the in-app browser is still
+      // presented on top of the app. Dismiss it before routing onward.
+      if (!kIsWeb && uri.scheme == 'maypole') {
+        debugPrint(
+          '🧭 [DeepLink] redirect: app-scheme handoff received, '
+          'dismissing in-app browser (uri="$uri")',
+        );
+        _dismissAuthActionBrowser();
       }
 
       // Define public routes that don't require authentication
