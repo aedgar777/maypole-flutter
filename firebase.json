@@ -54,6 +54,15 @@
         ]
       },
       {
+        "source": "/auth-action.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
         "source": "/apple-app-site-association",
         "headers": [
           {

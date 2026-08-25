@@ -10,8 +10,16 @@ import GoogleMaps
   ) -> Bool {
     // Google Maps API Key
     GMSServices.provideAPIKey("AIzaSyA7kcPWjaVK3iC4qbmSO1vuTBEk11llq9A")
+
+    // Register plugins with the FlutterAppDelegate. A custom engine's
+    // registrarForPlugin: returns nil on this Flutter/iOS combination, which
+    // crashes Swift plugins (FirebaseFunctionsPlugin, FirebaseRemoteConfigPlugin)
+    // in register(with:) with EXC_BAD_ACCESS in swift_getObjectType.
     GeneratedPluginRegistrant.register(with: self)
+
     MaypoleInstallGoogleMapPoiBridge()
+
+    let launchResult = super.application(application, didFinishLaunchingWithOptions: launchOptions)
 
     if let url = launchOptions?[.url] as? URL {
       NSLog("Maypole DeepLink: app launched via URL \(url.absoluteString)")
@@ -23,7 +31,7 @@ import GoogleMaps
       NSLog("Maypole DeepLink: app launched via universal link \(webpageURL.absoluteString)")
     }
 
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    return launchResult
   }
 
   override func application(

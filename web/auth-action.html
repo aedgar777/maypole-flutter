@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maypole Account</title>
+  <link rel="icon" type="image/png" href="favicon.ico" />
+  <style>
+    :root {
+      --dark-purple: #1A1A2E;
+      --light-purple: #2D2D44;
+      --violet: #9370DB;
+      --sky-blue: #6CB4E8;
+      --teal: #00D9C0;
+      --error: #CF6679;
+      --text: #FFFFFF;
+      --text-muted: #B8B8C8;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+    }
+
+    body {
+      background-color: var(--dark-purple);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        Helvetica, Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .card {
+      background-color: var(--light-purple);
+      width: 100%;
+      max-width: 420px;
+      border-radius: 20px;
+      padding: 40px 32px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+      text-align: center;
+    }
+
+    .logo {
+      width: 120px;
+      height: 120px;
+      object-fit: contain;
+      margin: 0 auto 24px;
+      display: block;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0 0 12px;
+    }
+
+    p {
+      font-size: 15px;
+      line-height: 1.5;
+      color: var(--text-muted);
+      margin: 0 0 8px;
+    }
+
+    p.email {
+      color: var(--sky-blue);
+      font-weight: 600;
+      word-break: break-all;
+    }
+
+    .icon-circle {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 40px;
+    }
+
+    .icon-circle.success { background-color: rgba(0, 217, 192, 0.15); color: var(--teal); }
+    .icon-circle.error { background-color: rgba(207, 102, 121, 0.15); color: var(--error); }
+
+    /* Spinner */
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(255, 255, 255, 0.15);
+      border-top-color: var(--sky-blue);
+      border-radius: 50%;
+      margin: 0 auto 24px;
+      animation: spin 0.9s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Form */
+    .field {
+      position: relative;
+      margin: 16px 0;
+      text-align: left;
+    }
+
+    .field label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 14px 44px 14px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background-color: var(--dark-purple);
+      color: var(--text);
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    .field input:focus { border-color: var(--sky-blue); }
+
+    .toggle {
+      position: absolute;
+      right: 10px;
+      bottom: 8px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 6px;
+    }
+
+    .field-error {
+      color: var(--error);
+      font-size: 13px;
+      margin: 6px 2px 0;
+      text-align: left;
+      min-height: 16px;
+    }
+
+    button.primary {
+      width: 100%;
+      padding: 14px;
+      margin-top: 12px;
+      border: none;
+      border-radius: 12px;
+      background-color: var(--sky-blue);
+      color: var(--dark-purple);
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s ease, transform 0.05s ease;
+    }
+
+    button.primary:hover { opacity: 0.92; }
+    button.primary:active { transform: scale(0.99); }
+    button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img class="logo" src="icons/ic_logo_splash.png" alt="Maypole" />
+
+    <!-- Loading -->
+    <div id="loading">
+      <div class="spinner"></div>
+      <h1 id="loading-title">Working on it…</h1>
+      <p id="loading-text">Please wait a moment.</p>
+    </div>
+
+    <!-- Success -->
+    <div id="success" class="hidden">
+      <div class="icon-circle success">&#10003;</div>
+      <h1 id="success-title">All set!</h1>
+      <p id="success-text"></p>
+      <button class="primary" id="success-continue">Continue to Maypole</button>
+    </div>
+
+    <!-- Error -->
+    <div id="error" class="hidden">
+      <div class="icon-circle error">&#33;</div>
+      <h1 id="error-title">Something went wrong</h1>
+      <p id="error-text"></p>
+      <button class="primary" id="error-continue">Go to Maypole</button>
+    </div>
+
+    <!-- Reset password form -->
+    <div id="reset-form" class="hidden">
+      <h1>Reset your password</h1>
+      <p>Choose a new password for <span class="email" id="reset-email"></span></p>
+
+      <form id="reset-password-form" novalidate>
+        <div class="field">
+          <label for="new-password">New password</label>
+          <input id="new-password" type="password" autocomplete="new-password" />
+          <button type="button" class="toggle" data-target="new-password">Show</button>
+        </div>
+        <div class="field">
+          <label for="confirm-password">Confirm password</label>
+          <input id="confirm-password" type="password" autocomplete="new-password" />
+          <button type="button" class="toggle" data-target="confirm-password">Show</button>
+        </div>
+        <div class="field-error" id="reset-error"></div>
+        <button class="primary" id="reset-submit" type="submit">Update password</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Firebase (compat build so we can call the classic auth APIs directly) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      // ---- Helpers ---------------------------------------------------------
+      function qp(name) {
+        return new URLSearchParams(window.location.search).get(name);
+      }
+
+      function show(id) {
+        ["loading", "success", "error", "reset-form"].forEach(function (s) {
+          document.getElementById(s).classList.toggle("hidden", s !== id);
+        });
+      }
+
+      function showSuccess(title, text, buttonLabel) {
+        document.getElementById("success-title").textContent = title;
+        document.getElementById("success-text").textContent = text || "";
+        if (buttonLabel) {
+          document.getElementById("success-continue").textContent = buttonLabel;
+        }
+        show("success");
+      }
+
+      function showError(title, text) {
+        document.getElementById("error-title").textContent =
+          title || "Something went wrong";
+        document.getElementById("error-text").textContent = text || "";
+        show("error");
+      }
+
+      // ---- Read the action parameters Firebase appends to the link ---------
+      var mode = qp("mode");
+      var oobCode = qp("oobCode");
+      var apiKey = qp("apiKey");
+      // Where Firebase should send the user after the action succeeds. This is
+      // the ActionCodeSettings.url the app configured (e.g.
+      // /email-verified?returnTo=/settings/account or /login?passwordReset=success).
+      var continueUrl = qp("continueUrl") || "/";
+
+      // Wire up the "continue" buttons to return to the app.
+      //
+      // On mobile the https continueUrl cannot hand off to the native app:
+      // iOS does not fire Universal Links for same-origin navigations (this
+      // page is already served from the domain that owns the link), and
+      // script-initiated `location` changes are excluded from handoff too.
+      // So we try the app's custom scheme first and fall back to the web URL
+      // if nothing takes over (app not installed, or desktop browser).
+      function appSchemeUrlFor(url) {
+        try {
+          var parsed = new URL(url, window.location.origin);
+          // pathname keeps its leading slash, giving `maypole:///path` — an
+          // empty host, so Flutter/go_router matches on a real path.
+          return "maypole://" + parsed.pathname + parsed.search;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function returnToApp(url) {
+        var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        var schemeUrl = isMobile ? appSchemeUrlFor(url) : null;
+
+        if (!schemeUrl) {
+          window.location.href = url;
+          return;
+        }
+
+        // If the app takes over, this page is backgrounded before the timer
+        // fires, so we cancel the fallback and leave the browser alone.
+        var fallback = setTimeout(function () {
+          window.location.href = url;
+        }, 1200);
+
+        function cancelFallback() {
+          clearTimeout(fallback);
+        }
+        window.addEventListener("pagehide", cancelFallback, { once: true });
+        document.addEventListener(
+          "visibilitychange",
+          function () {
+            if (document.hidden) cancelFallback();
+          },
+          { once: true }
+        );
+
+        window.location.href = schemeUrl;
+      }
+
+      document.getElementById("success-continue").onclick = function () {
+        returnToApp(continueUrl);
+      };
+      document.getElementById("error-continue").onclick = function () {
+        window.location.href = "/";
+      };
+
+      // ---- Initialize Firebase with the project the link belongs to --------
+      // The apiKey travels in the URL, so this single page works for every
+      // environment (dev + prod) without a build step.
+      if (!apiKey) {
+        showError(
+          "Invalid link",
+          "This link is missing required information. Please open the most recent email from Maypole."
+        );
+        return;
+      }
+
+      try {
+        firebase.initializeApp({
+          apiKey: apiKey,
+          authDomain: window.location.hostname,
+        });
+      } catch (e) {
+        showError(
+          "Something went wrong",
+          "We couldn't process this link. Please try again from the email."
+        );
+        return;
+      }
+
+      var auth = firebase.auth();
+
+      function friendlyError(err) {
+        var code = err && err.code ? err.code : "";
+        switch (code) {
+          case "auth/expired-action-code":
+            return "This link has expired. Please request a new one from the app.";
+          case "auth/invalid-action-code":
+            return "This link is invalid or has already been used. Please request a new one.";
+          case "auth/user-disabled":
+            return "This account has been disabled. Please contact support.";
+          case "auth/user-not-found":
+            return "We couldn't find an account for this link.";
+          case "auth/weak-password":
+            return "Please choose a stronger password (at least 6 characters).";
+          default:
+            return "We couldn't complete this action. Please try again from the email.";
+        }
+      }
+
+      // ---- Handlers per action mode ---------------------------------------
+      function handleVerifyEmail() {
+        auth
+          .applyActionCode(oobCode)
+          .then(function () {
+            showSuccess(
+              "Email verified!",
+              "Your email address has been confirmed. You can now continue using Maypole.",
+              "Continue to Maypole"
+            );
+          })
+          .catch(function (err) {
+            showError("Verification failed", friendlyError(err));
+          });
+      }
+
+      function handleRecoverEmail() {
+        auth
+          .applyActionCode(oobCode)
+          .then(function () {
+            showSuccess(
+              "Email change reverted",
+              "Your account email has been restored. We recommend resetting your password to secure your account.",
+              "Continue to Maypole"
+            );
+          })
+          .catch(function (err) {
+            showError("Action failed", friendlyError(err));
+          });
+      }
+
+      function handleResetPassword() {
+        // Verify the code first so we can show which account it belongs to.
+        auth
+          .verifyPasswordResetCode(oobCode)
+          .then(function (email) {
+            document.getElementById("reset-email").textContent = email;
+            show("reset-form");
+          })
+          .catch(function (err) {
+            showError("Reset link invalid", friendlyError(err));
+          });
+
+        var form = document.getElementById("reset-password-form");
+        var submitBtn = document.getElementById("reset-submit");
+        var errorEl = document.getElementById("reset-error");
+
+        // Password show/hide toggles.
+        Array.prototype.forEach.call(
+          document.querySelectorAll(".toggle"),
+          function (btn) {
+            btn.addEventListener("click", function () {
+              var input = document.getElementById(btn.getAttribute("data-target"));
+              var isPw = input.type === "password";
+              input.type = isPw ? "text" : "password";
+              btn.textContent = isPw ? "Hide" : "Show";
+            });
+          }
+        );
+
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          errorEl.textContent = "";
+
+          var pw = document.getElementById("new-password").value;
+          var confirm = document.getElementById("confirm-password").value;
+
+          if (pw.length < 6) {
+            errorEl.textContent = "Password must be at least 6 characters.";
+            return;
+          }
+          if (pw !== confirm) {
+            errorEl.textContent = "Passwords do not match.";
+            return;
+          }
+
+          submitBtn.disabled = true;
+          submitBtn.textContent = "Updating…";
+
+          auth
+            .confirmPasswordReset(oobCode, pw)
+            .then(function () {
+              showSuccess(
+                "Password updated!",
+                "Your password has been changed. You can now sign in with your new password.",
+                "Continue to sign in"
+              );
+            })
+            .catch(function (err) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = "Update password";
+              errorEl.textContent = friendlyError(err);
+            });
+        });
+      }
+
+      // ---- Dispatch on the action mode Firebase set -----------------------
+      if (!oobCode) {
+        showError(
+          "Invalid link",
+          "This link is missing required information. Please open the most recent email from Maypole."
+        );
+        return;
+      }
+
+      switch (mode) {
+        case "verifyEmail":
+        case "verifyAndChangeEmail":
+          handleVerifyEmail();
+          break;
+        case "resetPassword":
+          handleResetPassword();
+          break;
+        case "recoverEmail":
+          handleRecoverEmail();
+          break;
+        default:
+          showError(
+            "Unsupported link",
+            "We don't recognize this link. Please open the most recent email from Maypole."
+          );
+      }
+    })();
+  </script>
+</body>
+</html>

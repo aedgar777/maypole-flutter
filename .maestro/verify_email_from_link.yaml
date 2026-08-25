@@ -1,0 +1,28 @@
+appId: app.maypole.maypole
+---
+# Opens the exact verification link from the account's email and asserts the
+# app foregrounds on the "Email Verified!" screen.
+#
+# This is the assertion that catches bug 2 (verification link opens web
+# instead of the app): before the fix, the link either 404'd (auth-action.html
+# didn't exist), got excluded from Universal Links by the AASA, or got bounced
+# straight back to /login by the router — none of which land here.
+#
+# The link itself is fetched out-of-band via the Gmail API rather than
+# automating the Gmail app's UI, which is far more reliable than guessing at
+# Gmail's on-device selectors.
+#
+# Required env vars:
+#   VERIFY_LINK - the full https://.../auth-action.html?mode=verifyEmail&... URL
+
+- openLink: "${VERIFY_LINK}"
+
+- tapOn:
+    text: "Open"
+    optional: true
+
+- extendedWaitUntil:
+    visible: "Email Verified!"
+    timeout: 20000
+
+- assertVisible: "Continue"

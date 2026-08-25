@@ -1,8 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/utils/string_utils.dart';
+import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -14,7 +17,15 @@ import './widgets/auth_form_field.dart';
 class LoginScreen extends ConsumerStatefulWidget {
   final String? returnTo;
 
-  const LoginScreen({super.key, this.returnTo});
+  /// True when the user has just completed a password reset on the web action
+  /// handler and was routed back here. Shows a confirmation toast.
+  final bool passwordResetSuccess;
+
+  const LoginScreen({
+    super.key,
+    this.returnTo,
+    this.passwordResetSuccess = false,
+  });
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -24,6 +35,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
+  /// Set while a reset confirmation is queued, so the two entry points below
+  /// can't both fire for the same arrival.
+  bool _showingPasswordResetToast = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // On web the route carries the result and the screen is built fresh, so the
+    // widget flag is the signal. On mobile the handoff arrives through
+    // [passwordResetSignalProvider] — read it here too, since the router may
+    // have set it before this screen's first build registered the listener.
+    final arrived = kIsWeb
+        ? widget.passwordResetSuccess
+        : ref.read(passwordResetSignalProvider) > 0;
+    if (arrived) _showPasswordResetToast();
+  }
+
+  /// Shows the reset confirmation and clears the signal, so a later rebuild
+  /// can't replay it.
+  void _showPasswordResetToast() {
+    if (_showingPasswordResetToast) return;
+    _showingPasswordResetToast = true;
+
+    Future.microtask(() {
+      if (!mounted) return;
+      if (ref.read(passwordResetSignalProvider) > 0) {
+        ref.read(passwordResetSignalProvider.notifier).clear();
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showingPasswordResetToast = false;
+      AppToast.showSuccess(
+        context,
+        AppLocalizations.of(context)!.passwordResetSuccess,
+      );
+    });
+  }
 
   @override
   void dispose() {
@@ -62,6 +113,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             _emailController.text.trim(),
             _passwordController.text.trim(),
           );
+    }
+  }
+
+  Future<void> _handleForgotPassword() async {
+    final result = await showDialog<_ForgotPasswordResult>(
+      context: context,
+      builder: (_) => _ForgotPasswordDialog(
+        initialEmail: _emailController.text.trim(),
+      ),
+    );
+
+    if (!mounted || result == null) return;
+    final l10n = AppLocalizations.of(context)!;
+    if (result.success) {
+      AppToast.showSuccess(context, l10n.passwordResetEmailSent);
+    } else if (result.errorMessage != null) {
+      AppToast.showError(context, result.errorMessage!);
     }
   }
 
@@ -251,7 +319,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 style: const TextStyle(fontSize: 18),
                               ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 4),
+                            TextButton(
+                              onPressed: _handleForgotPassword,
+                              child: Text(l10n.forgotPassword),
+                            ),
+                            const SizedBox(height: 6),
                             TextButton(
                               onPressed: () => context.go(
                                 Uri(
@@ -300,6 +373,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Fires when the router records a password-reset handoff while this screen
+    // is already on top — the common case, and the one the route cannot report.
+    ref.listen<int>(passwordResetSignalProvider, (previous, next) {
+      if (next > 0) _showPasswordResetToast();
+    });
+
     final loginState = ref.watch(loginViewModelProvider);
     final l10n = AppLocalizations.of(context)!;
 
@@ -339,6 +418,129 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               return const Center(child: CircularProgressIndicator());
             },
           ),
+    );
+  }
+}
+
+/// Result returned from the forgot-password dialog. The dialog handles its
+/// own lifecycle (controller, form key, sending state) and only reports the
+/// outcome so the parent screen can show a toast on its own context.
+class _ForgotPasswordResult {
+  final bool success;
+  final String? errorMessage;
+  const _ForgotPasswordResult({required this.success, this.errorMessage});
+}
+
+class _ForgotPasswordDialog extends ConsumerStatefulWidget {
+  final String initialEmail;
+
+  const _ForgotPasswordDialog({required this.initialEmail});
+
+  @override
+  ConsumerState<_ForgotPasswordDialog> createState() =>
+      _ForgotPasswordDialogState();
+}
+
+class _ForgotPasswordDialogState extends ConsumerState<_ForgotPasswordDialog> {
+  late final TextEditingController _emailController;
+  final _formKey = GlobalKey<FormState>();
+  bool _isSending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController = TextEditingController(text: widget.initialEmail);
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendReset() async {
+    if (_isSending) return;
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSending = true);
+
+    final l10n = AppLocalizations.of(context)!;
+    final email = _emailController.text.trim();
+
+    try {
+      await ref.read(authServiceProvider).sendPasswordResetEmail(email);
+      if (!mounted) return;
+      Navigator.of(context)
+          .pop(const _ForgotPasswordResult(success: true));
+    } on FirebaseAuthException catch (e) {
+      // Treat "user-not-found" as success to avoid leaking account existence.
+      if (e.code == 'user-not-found') {
+        if (!mounted) return;
+        Navigator.of(context)
+            .pop(const _ForgotPasswordResult(success: true));
+        return;
+      }
+      if (!mounted) return;
+      Navigator.of(context).pop(_ForgotPasswordResult(
+        success: false,
+        errorMessage: e.code == 'invalid-email'
+            ? l10n.pleaseEnterValidEmail
+            : (e.message ?? l10n.somethingWentWrong),
+      ));
+    } catch (_) {
+      if (!mounted) return;
+      Navigator.of(context).pop(
+        _ForgotPasswordResult(
+          success: false,
+          errorMessage: l10n.somethingWentWrong,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AlertDialog(
+      title: Text(l10n.resetPasswordTitle),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l10n.resetPasswordDescription,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 20),
+            AuthFormField(
+              controller: _emailController,
+              labelText: l10n.email,
+              keyboardType: TextInputType.emailAddress,
+              maxLength: StringUtils.maxEmailLength,
+              onFieldSubmitted: (_) => _sendReset(),
+              validator: (value) => StringUtils.validateEmail(value, l10n),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed:
+              _isSending ? null : () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        ElevatedButton(
+          onPressed: _isSending ? null : _sendReset,
+          child: _isSending
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(l10n.sendResetLink),
+        ),
+      ],
     );
   }
 }
