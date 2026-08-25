@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -35,18 +36,44 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  /// Set while a reset confirmation is queued, so the two entry points below
+  /// can't both fire for the same arrival.
+  bool _showingPasswordResetToast = false;
+
   @override
   void initState() {
     super.initState();
-    if (widget.passwordResetSuccess) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        AppToast.showSuccess(
-          context,
-          AppLocalizations.of(context)!.passwordResetSuccess,
-        );
-      });
-    }
+    // On web the route carries the result and the screen is built fresh, so the
+    // widget flag is the signal. On mobile the handoff arrives through
+    // [passwordResetSignalProvider] — read it here too, since the router may
+    // have set it before this screen's first build registered the listener.
+    final arrived = kIsWeb
+        ? widget.passwordResetSuccess
+        : ref.read(passwordResetSignalProvider) > 0;
+    if (arrived) _showPasswordResetToast();
+  }
+
+  /// Shows the reset confirmation and clears the signal, so a later rebuild
+  /// can't replay it.
+  void _showPasswordResetToast() {
+    if (_showingPasswordResetToast) return;
+    _showingPasswordResetToast = true;
+
+    Future.microtask(() {
+      if (!mounted) return;
+      if (ref.read(passwordResetSignalProvider) > 0) {
+        ref.read(passwordResetSignalProvider.notifier).clear();
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showingPasswordResetToast = false;
+      AppToast.showSuccess(
+        context,
+        AppLocalizations.of(context)!.passwordResetSuccess,
+      );
+    });
   }
 
   @override
@@ -346,6 +373,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Fires when the router records a password-reset handoff while this screen
+    // is already on top — the common case, and the one the route cannot report.
+    ref.listen<int>(passwordResetSignalProvider, (previous, next) {
+      if (next > 0) _showPasswordResetToast();
+    });
+
     final loginState = ref.watch(loginViewModelProvider);
     final l10n = AppLocalizations.of(context)!;
 

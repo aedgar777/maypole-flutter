@@ -23,6 +23,16 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen>
   bool _isDeletingAccount = false;
   DateTime? _lastEmailSentTime;
 
+  // Owned by the screen rather than by `_handleChangePassword`, because
+  // `showDialog`'s future completes as soon as the route is popped while the
+  // dialog keeps rebuilding through its exit transition. Disposing them when
+  // that future returned left those rebuilds re-attaching listeners to freed
+  // controllers ("A TextEditingController was used after being disposed"),
+  // which then tripped a '_dependents.isEmpty' assertion and killed the app.
+  final _currentPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -36,6 +46,9 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -202,9 +215,15 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen>
   Future<void> _handleChangePassword(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context)!;
     final formKey = GlobalKey<FormState>();
-    final currentController = TextEditingController();
-    final newController = TextEditingController();
-    final confirmController = TextEditingController();
+    final currentController = _currentPasswordController;
+    final newController = _newPasswordController;
+    final confirmController = _confirmPasswordController;
+
+    // Reused across opens, so start from empty rather than the previous
+    // attempt's text.
+    currentController.clear();
+    newController.clear();
+    confirmController.clear();
 
     var obscureCurrent = true;
     var obscureNew = true;
@@ -362,9 +381,11 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen>
       },
     );
 
-    currentController.dispose();
-    newController.dispose();
-    confirmController.dispose();
+    // Not disposed here — see the field declarations. Clear instead, so the
+    // typed passwords are not retained in memory for the life of the screen.
+    currentController.clear();
+    newController.clear();
+    confirmController.clear();
   }
 
   Widget _buildEmailVerificationStatus(

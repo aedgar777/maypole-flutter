@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -219,10 +220,17 @@ class AuthService {
         // Don't fail registration if email sending fails
       }
 
-      // Setup FCM for new user
-      try {
-        await _fcmService.setupForUser(freshUser.uid);
-      } catch (e) {}
+      // Setup FCM for new user.
+      //
+      // Deliberately not awaited. On a fresh install this is what triggers the
+      // OS notification permission prompt, and `setupForUser` doesn't return
+      // until the user answers it and the token registration round-trips —
+      // ~37s on a first run. Awaiting it held `isLoading` true that whole time,
+      // so no frame was drawn, so the post-frame callback that shows the
+      // registration success dialog never ran. The account was created and the
+      // verification email sent, but the user sat on the registration form
+      // instead of advancing to home. Nothing below depends on the result.
+      unawaited(_fcmService.setupForUser(freshUser.uid).catchError((e) {}));
 
       // Prefetch user data in background (new users won't have much data yet)
       _prefetchService.prefetchUserData(freshUser.uid).catchError((e) {});

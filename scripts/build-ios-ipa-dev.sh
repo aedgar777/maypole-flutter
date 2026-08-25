@@ -10,6 +10,7 @@ export ENVIRONMENT=dev
 echo "📦 Building IPA..."
 flutter build ipa \
     --release \
+    --flavor dev \
     --dart-define=ENVIRONMENT=dev
 
 echo "✅ Build complete!"

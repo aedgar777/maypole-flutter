@@ -45,13 +45,13 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   flutter_riverpod: ^3.0.3
-  firebase_core: ^4.2.1
-  firebase_auth: ^6.1.2
-  cloud_firestore: ^6.1.0
-  cloud_functions: ^6.0.4
-  firebase_storage: ^13.0.4
-  firebase_messaging: ^16.0.4
-  firebase_remote_config: ^6.1.2
+  firebase_core: ^4.13.0
+  firebase_auth: ^6.5.7
+  cloud_firestore: ^6.8.0
+  cloud_functions: ^6.3.6
+  firebase_storage: ^13.4.6
+  firebase_messaging: ^16.5.0
+  firebase_remote_config: ^6.5.6
   flutter_dotenv: ^6.0.0
   google_places_api_flutter: ^2.0.0
   image_picker: ^1.0.7

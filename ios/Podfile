@@ -28,7 +28,10 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 flutter_ios_podfile_setup
 
 target 'Runner' do
-  use_frameworks!
+  # Static frameworks are required for the Firebase plugins to avoid a Swift
+  # metadata crash (swift_getObjectType / EXC_BAD_ACCESS) during plugin
+  # registration on iOS 26 / Xcode 26.
+  use_frameworks! :linkage => :static
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
@@ -39,5 +42,24 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+
+    # Force all pod Swift code to compile in Swift 5 mode. The plugins declare
+    # swift_version '5.0' but Xcode 26 / Swift 6 may otherwise apply Swift 6
+    # language mode, which changes metadata layout and causes
+    # swift_getObjectType to crash during plugin registration.
+    target.build_configurations.each do |config|
+      config.build_settings['SWIFT_VERSION'] = '5.0'
+      config.build_settings['SWIFT_TREAT_WARNINGS_AS_ERRORS'] = 'NO'
+    end
+
+    # Workaround: Swift 6.1 (Xcode 16.4+) compiler bug — async let teardown
+    # ordering is broken in optimized builds, causing SIGABRT in
+    # swift_task_dealloc. Disable optimization for affected Firebase pods.
+    # Tracking: swiftlang/swift#81771, firebase-ios-sdk#15974
+    if ['FirebaseAuth', 'FirebaseFunctions'].include?(target.name)
+      target.build_configurations.each do |config|
+        config.build_settings['SWIFT_OPTIMIZATION_LEVEL'] = '-Onone'
+      end
+    end
   end
 end

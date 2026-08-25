@@ -10,9 +10,10 @@ export ENVIRONMENT=dev
 echo "📦 Building iOS app..."
 flutter build ios \
     --debug \
+    --flavor dev \
     --dart-define=ENVIRONMENT=dev
 
 echo "✅ Build complete!"
 echo ""
 echo "To run on simulator/device:"
-echo "  flutter run -d <device-id> --debug --dart-define=ENVIRONMENT=dev"
+echo "  flutter run -d <device-id> --debug --flavor dev --dart-define=ENVIRONMENT=dev"
