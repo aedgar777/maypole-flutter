@@ -187,6 +187,23 @@ final routerProvider = Provider<GoRouter>((ref) {
         _dismissAuthActionBrowser();
       }
 
+      // A completed password reset hands back to `/login?passwordReset=success`,
+      // but the user is usually already sitting on `/login` — that is where
+      // they tapped "Forgot password?". go_router has already folded the query
+      // into its configuration by the time this redirect runs, so it considers
+      // itself up to date, skips the rebuild, and LoginScreen never sees the
+      // parameter. (Returning the location as a redirect does not help: it is
+      // the location the router is already on.) Carry the result out of band
+      // instead. Scheme-agnostic so it also covers the https fallback the page
+      // uses when the custom-scheme handoff doesn't take.
+      if (!kIsWeb && uri.queryParameters['passwordReset'] == 'success') {
+        // `redirect` must stay synchronous and must not mutate providers
+        // mid-build, so defer the write.
+        Future.microtask(
+          () => ref.read(passwordResetSignalProvider.notifier).signal(),
+        );
+      }
+
       // Define public routes that don't require authentication
       final publicRoutes = [
         '/login',

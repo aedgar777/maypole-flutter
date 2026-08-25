@@ -98,15 +98,20 @@
                 <data android:scheme="https" android:host="maypole-flutter-dev.web.app" android:pathPattern="/.*/.*" />
             </intent-filter>
             
-            <!-- Custom URL scheme (fallback) -->
+            <!-- Custom URL scheme.
+                 Two things arrive on this scheme, so it must match every
+                 maypole:// URI rather than a single host:
+                   - maypole://chat/<id>       — legacy share links
+                   - maypole:///email-verified — auth-action.html handing back
+                     to the app (an empty authority, so the path is what
+                     go_router matches on).
+                 Declaring `scheme` without `host` matches any authority. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                
-                <data
-                    android:scheme="maypole"
-                    android:host="chat" />
+
+                <data android:scheme="maypole" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
