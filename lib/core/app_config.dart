@@ -306,22 +306,37 @@ class AppConfig {
   }
 
   /// Provides the app's base URL for sharing/deeplinks based on the environment.
+  ///
+  /// Resolution order:
+  ///   1. `APP_URL` dart-define — highest priority (allows per-build override,
+  ///      e.g. Firebase preview channels).
+  ///   2. Environment-specific dotenv values (`APP_URL_DEV` / `APP_URL_PROD`),
+  ///      guarded because dotenv is not loaded on web builds.
+  ///   3. Environment-specific hard-coded fallback keyed off `isProduction`.
+  ///      Crucially, the fallback is `dev`-aware so a dev build never emits a
+  ///      prod URL (which would fail authorized-domain validation).
   static String get appUrl {
-    try {
-      // First check dart-define (used in builds)
-      const dartDefineUrl = String.fromEnvironment('APP_URL');
-      if (dartDefineUrl.isNotEmpty) {
-        return dartDefineUrl;
-      }
-
-      // Fall back to environment-specific dotenv values
-      if (isProduction) {
-        return dotenv.env['APP_URL_PROD'] ?? 'https://maypole.app';
-      } else {
-        return dotenv.env['APP_URL_DEV'] ?? 'https://maypole-flutter-dev.web.app';
-      }
-    } catch (e) {
-      return 'https://maypole.app';
+    const dartDefineUrl = String.fromEnvironment('APP_URL');
+    if (dartDefineUrl.isNotEmpty) {
+      return dartDefineUrl;
     }
+
+    // dotenv may throw NotInitializedError on web builds. Guard each read.
+    String? dotenvUrl;
+    try {
+      dotenvUrl = isProduction
+          ? dotenv.env['APP_URL_PROD']
+          : dotenv.env['APP_URL_DEV'];
+    } catch (_) {
+      dotenvUrl = null;
+    }
+    if (dotenvUrl != null && dotenvUrl.isNotEmpty) {
+      return dotenvUrl;
+    }
+
+    // Environment-aware fallback — never hard-defaults to prod for dev builds.
+    return isProduction
+        ? 'https://maypole.app'
+        : 'https://maypole-flutter-dev.web.app';
   }
 }
