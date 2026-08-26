@@ -181,7 +181,10 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen>
         return;
       }
 
-      await ref.read(authServiceProvider).sendEmailVerification();
+      // Resending from here, so send the user back here when they finish.
+      await ref
+          .read(authServiceProvider)
+          .sendEmailVerification(returnTo: '/settings/account');
       
       setState(() {
         _lastEmailSentTime = DateTime.now();

@@ -422,7 +422,11 @@ class AuthService {
   /// The Cloud Function calls the Admin SDK's generateEmailVerificationLink,
   /// extracts the oobCode + apiKey, builds a URL pointing at our custom
   /// auth-action.html page (hosted on the web domain), and sends the email.
-  Future<void> sendEmailVerification() async {
+  /// [returnTo] is where the user lands after tapping "Continue" on the
+  /// `/email-verified` screen. Registration leaves it null so a brand-new
+  /// user ends up on the home screen; the Account Settings resend passes
+  /// `/settings/account` to put the user back where they started.
+  Future<void> sendEmailVerification({String? returnTo}) async {
     try {
       final user = _firebaseAuth.currentUser;
       if (user == null) {
@@ -436,7 +440,9 @@ class AuthService {
       }
 
       final continueUrl = Uri.parse('${AppConfig.appUrl}/email-verified')
-          .replace(queryParameters: {'returnTo': '/settings/account'})
+          .replace(
+            queryParameters: returnTo == null ? null : {'returnTo': returnTo},
+          )
           .toString();
 
       final functions = FirebaseFunctions.instance;
