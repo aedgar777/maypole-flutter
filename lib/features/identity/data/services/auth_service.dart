@@ -4,9 +4,12 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/app_session.dart';
+import 'package:maypole/core/utils/string_utils.dart';
 import 'package:maypole/core/services/fcm_service.dart';
 import 'package:maypole/core/services/user_data_prefetch_service.dart';
 import 'package:maypole/features/identity/domain/domain_user.dart';
+import 'package:maypole/features/identity/data/services/google_sign_in_service.dart';
+import 'package:maypole/features/identity/domain/google_sign_in_result.dart';
 
 class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
@@ -14,6 +17,7 @@ class AuthService {
   final AppSession _session = AppSession();
   final FCMService _fcmService = FCMService();
   final UserDataPrefetchService _prefetchService = UserDataPrefetchService();
+  final GoogleSignInService _googleSignIn = GoogleSignInService();
 
   Stream<DomainUser?> get user {
     return _firebaseAuth.authStateChanges().asyncExpand((firebaseUser) {
@@ -45,6 +49,23 @@ class AuthService {
           // to null immediately so the app returns to the login screen cleanly
           // rather than showing a spinner for ~15s (which also keeps a doomed
           // Firestore listener alive on the missing document).
+          // A Google sign-up that has reached the username screen is
+          // *expected* to have no document yet. Leave the account alone: the
+          // user is still deciding, and neither the poll below nor the sign-out
+          // it ends in is wanted here.
+          //
+          // The same is true after the app is killed and relaunched mid-signup,
+          // where the in-memory flag is gone but the Firebase session is not.
+          // A Google-authenticated account with no password and no profile can
+          // only be an unfinished sign-up, so recognising it here lets the user
+          // pick up where they left off instead of silently losing the account.
+          if (_isUnfinishedGoogleSignUp(firebaseUser)) {
+            _googleProfileSetupPending = true;
+            _googleProfileSetupUid = firebaseUser.uid;
+            _session.currentUser = null;
+            return null;
+          }
+
           final hadDocumentPreviously =
               _session.currentUser?.firebaseID == firebaseUser.uid;
 
@@ -299,6 +320,12 @@ class AuthService {
         } catch (e) {}
       }
 
+      // Clear the native Google session as well. Firebase signing out does
+      // not touch it, and a lingering cached account makes the next sign-in
+      // skip the picker — so a user who signed out to switch accounts gets
+      // dropped straight back into the one they were leaving.
+      await _googleSignIn.signOut();
+
       await _firebaseAuth.signOut();
       _session.currentUser = null;
 
@@ -326,7 +353,17 @@ class AuthService {
     }
   }
 
+  /// True while [deleteAccount] is running.
+  ///
+  /// Deletion removes the Firestore document *before* the auth user, so for a
+  /// moment a deleting account looks exactly like an unfinished Google sign-up:
+  /// a Google-authenticated user with no profile. Without this flag the
+  /// resume-setup detection below would grab it and route the user to the
+  /// username screen halfway through deleting their account.
+  bool _deletionInProgress = false;
+
   Future<void> deleteAccount() async {
+    _deletionInProgress = true;
     try {
       final user = _firebaseAuth.currentUser;
       if (user == null) {
@@ -412,6 +449,8 @@ class AuthService {
       rethrow;
     } catch (e) {
       rethrow;
+    } finally {
+      _deletionInProgress = false;
     }
   }
 
@@ -576,4 +615,255 @@ class AuthService {
       rethrow;
     }
   }
+
+  // ---- Google Sign-In ------------------------------------------------------
+
+  /// True between a Google sign-in that found no Maypole profile and the user
+  /// either choosing a username or abandoning the flow.
+  ///
+  /// The [user] stream treats "Firebase user exists but the Firestore document
+  /// does not" as an orphaned account and signs out after a grace period. That
+  /// is exactly the state a half-finished Google sign-up is in, and the user
+  /// is sitting on the username screen thinking. This flag suppresses that
+  /// clean-up for the one case where the missing document is expected.
+  bool _googleProfileSetupPending = false;
+
+  /// The uid the pending setup belongs to, so a stale flag can never suppress
+  /// clean-up for a *different* account.
+  String? _googleProfileSetupUid;
+
+  bool get isGoogleProfileSetupPending => _googleProfileSetupPending;
+
+  /// Signs in with Google and reports whether a Maypole profile already exists.
+  ///
+  /// Deliberately does **not** create the user document for a first-time
+  /// account: Maypole requires a username that Google cannot supply, so the
+  /// caller routes the user to [GoogleUsernameScreen] and calls
+  /// [completeGoogleProfile] once they have picked one. Until then the account
+  /// exists in Firebase Auth but not in Firestore, which is the state
+  /// [_googleProfileSetupPending] protects.
+  Future<GoogleSignInResult> signInWithGoogle() async {
+    final credential = await _googleSignIn.signIn();
+    final firebaseUser = credential.user;
+
+    if (firebaseUser == null) {
+      throw FirebaseAuthException(
+        code: 'google-sign-in-failed',
+        message: 'Google sign-in returned no user.',
+      );
+    }
+
+    final docSnapshot =
+        await _firestore.collection('users').doc(firebaseUser.uid).get();
+
+    if (docSnapshot.exists) {
+      _googleProfileSetupPending = false;
+      _googleProfileSetupUid = null;
+
+      _session.currentUser =
+          DomainUser.fromMap(docSnapshot.data() as Map<String, dynamic>);
+
+      // A Google account's email is verified by Google, so mirror that rather
+      // than leaving the badge stale from before the account was linked.
+      if (firebaseUser.emailVerified) {
+        try {
+          await _updateEmailVerificationStatus(true);
+        } catch (_) {
+          // Cosmetic — never block sign-in on it.
+        }
+      }
+
+      try {
+        await _fcmService.setupForUser(firebaseUser.uid);
+      } catch (e) {}
+
+      _prefetchService.prefetchUserData(firebaseUser.uid).catchError((e) {});
+
+      return GoogleSignInResult.signedIn(uid: firebaseUser.uid);
+    }
+
+    _googleProfileSetupPending = true;
+    _googleProfileSetupUid = firebaseUser.uid;
+
+    return GoogleSignInResult.needsUsername(
+      uid: firebaseUser.uid,
+      email: firebaseUser.email ?? '',
+      suggestedUsername: StringUtils.suggestUsername(
+        displayName: firebaseUser.displayName,
+        email: firebaseUser.email,
+      ),
+      photoUrl: firebaseUser.photoURL ?? '',
+    );
+  }
+
+  /// Creates the Firestore profile for a Google account once the user has
+  /// chosen [username], completing the sign-up.
+  ///
+  /// Mirrors the tail of [registerWithEmailAndPassword], minus everything
+  /// specific to passwords and email verification — Google has already
+  /// verified the address.
+  Future<void> completeGoogleProfile(String username) async {
+    final firebaseUser = _firebaseAuth.currentUser;
+    if (firebaseUser == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: 'Google sign-in session was lost. Please sign in again.',
+      );
+    }
+
+    if (!await isUsernameAvailable(username)) {
+      throw FirebaseAuthException(
+        code: 'username-taken',
+        message: 'Username is already taken',
+      );
+    }
+
+    await firebaseUser.updateDisplayName(username);
+    await firebaseUser.reload();
+
+    final user = DomainUser(
+      username: username,
+      email: firebaseUser.email ?? '',
+      firebaseID: firebaseUser.uid,
+      profilePictureUrl: firebaseUser.photoURL ?? '',
+      // Google has verified the address; recording it here keeps Account
+      // Settings from offering a pointless "resend verification email".
+      emailVerified: firebaseUser.emailVerified,
+    );
+
+    await _firestore.collection('users').doc(firebaseUser.uid).set(user.toMap());
+    _session.currentUser = user;
+
+    await _firestore.collection('usernames').doc(username.toLowerCase()).set({
+      'taken': true,
+      'owner': firebaseUser.uid,
+    });
+
+    // Only lift the guard once the document is committed — the [user] stream
+    // may be mid-flight and would otherwise still see a missing document.
+    _googleProfileSetupPending = false;
+    _googleProfileSetupUid = null;
+
+    // Not awaited: on a fresh install this triggers the OS notification
+    // prompt, which does not return until the user answers it. See the note in
+    // [registerWithEmailAndPassword].
+    unawaited(_fcmService.setupForUser(firebaseUser.uid).catchError((e) {}));
+
+    _prefetchService.prefetchUserData(firebaseUser.uid).catchError((e) {});
+  }
+
+  /// Unwinds a Google sign-up the user walked away from.
+  ///
+  /// Leaving the Firebase Auth account in place would strand it: it owns the
+  /// email address, so a later email/password registration with that address
+  /// fails, yet it has no profile and cannot be used to sign in. Deleting is
+  /// the honest outcome — the user never finished creating an account.
+  ///
+  /// If deletion fails (a revoked token, no network) signing out is an
+  /// acceptable fallback: the account still has no Firestore document, so the
+  /// next Google sign-in lands back on the username screen rather than in a
+  /// broken session.
+  Future<void> abandonGoogleProfileSetup() async {
+    final firebaseUser = _firebaseAuth.currentUser;
+
+    _googleProfileSetupPending = false;
+    _googleProfileSetupUid = null;
+
+    if (firebaseUser == null) {
+      await _googleSignIn.signOut();
+      return;
+    }
+
+    try {
+      await _googleSignIn.signOut();
+      await firebaseUser.delete();
+      _session.currentUser = null;
+    } catch (_) {
+      await signOut();
+    }
+  }
+
+  /// Whether [firebaseUser] is a Google sign-up that never chose a username.
+  ///
+  /// Only called when the profile document is known to be missing. Requiring
+  /// Google *and* the absence of a password provider keeps this from claiming
+  /// an ordinary email/password account whose document failed to write — that
+  /// case still belongs to the orphan handling below, which can recover it.
+  bool _isUnfinishedGoogleSignUp(User firebaseUser) {
+    if (_deletionInProgress) return false;
+
+    if (_googleProfileSetupPending &&
+        _googleProfileSetupUid == firebaseUser.uid) {
+      return true;
+    }
+
+    final providers =
+        firebaseUser.providerData.map((info) => info.providerId).toSet();
+
+    return providers.contains(GoogleAuthProvider.PROVIDER_ID) &&
+        !providers.contains(EmailAuthProvider.PROVIDER_ID);
+  }
+
+  /// Rebuilds the pending-setup details from the current Firebase session.
+  ///
+  /// Used to restore the username screen after a relaunch, when the in-memory
+  /// state that normally carries them is gone. Returns null if there is no
+  /// unfinished sign-up to resume.
+  GoogleSignInResult? resumePendingGoogleProfile() {
+    final firebaseUser = _firebaseAuth.currentUser;
+    if (firebaseUser == null || !_googleProfileSetupPending) return null;
+    if (_googleProfileSetupUid != firebaseUser.uid) return null;
+
+    return GoogleSignInResult.needsUsername(
+      uid: firebaseUser.uid,
+      email: firebaseUser.email ?? '',
+      suggestedUsername: StringUtils.suggestUsername(
+        displayName: firebaseUser.displayName,
+        email: firebaseUser.email,
+      ),
+      photoUrl: firebaseUser.photoURL ?? '',
+    );
+  }
+
+  /// The sign-in methods currently attached to the signed-in account.
+  ///
+  /// Used by Account Settings to tell a Google-only user why there is no
+  /// password to change.
+  Set<String> get currentUserProviderIds {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) return const <String>{};
+    return user.providerData.map((info) => info.providerId).toSet();
+  }
+
+  /// Whether the signed-in user has a password they could change or reset.
+  ///
+  /// False for an account created purely through Google, which has no password
+  /// credential at all.
+  bool get hasPasswordProvider =>
+      currentUserProviderIds.contains(EmailAuthProvider.PROVIDER_ID);
+
+  /// Whether the signed-in user got here through Google.
+  bool get hasGoogleProvider =>
+      currentUserProviderIds.contains(GoogleAuthProvider.PROVIDER_ID);
+
+  /// Adds a password to an account that only has Google, so the user gains a
+  /// second way in.
+  ///
+  /// Firebase treats this as linking an email/password credential rather than
+  /// as a password change, which is why [changePassword] cannot be used: there
+  /// is no current password to re-authenticate with.
+  Future<void> setPasswordForGoogleAccount(String newPassword) async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null || user.email == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: 'No user is currently signed in.',
+      );
+    }
+
+    await user.linkWithCredential(
+      EmailAuthProvider.credential(email: user.email!, password: newPassword),
+    );
+  }
+
 }

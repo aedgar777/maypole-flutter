@@ -13,6 +13,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../domain/states/auth_state.dart';
 import '../auth_providers.dart';
 import './widgets/auth_form_field.dart';
+import './widgets/google_sign_in_button.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   final String? returnTo;
@@ -114,6 +115,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             _passwordController.text.trim(),
           );
     }
+  }
+
+  /// Runs the Google flow and, for a first-time account, hands off to the
+  /// username step. A completed sign-in needs no navigation here — the auth
+  /// stream drives it, same as an email sign-in.
+  Future<void> _handleGoogleSignIn() async {
+    final needsUsername =
+        await ref.read(loginViewModelProvider.notifier).signInWithGoogle();
+
+    if (!mounted || !needsUsername) return;
+
+    context.go(
+      Uri(
+        path: '/complete-profile',
+        queryParameters:
+            widget.returnTo == null ? null : {'returnTo': widget.returnTo},
+      ).toString(),
+    );
   }
 
   Future<void> _handleForgotPassword() async {
@@ -283,6 +302,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      // Above the email form: the fastest path should be the
+                      // first one the eye lands on.
+                      GoogleSignInButton(
+                        onPressed: _handleGoogleSignIn,
+                        isLoading: loginState.isLoading,
+                      ),
+                      const SizedBox(height: 20),
+                      const AuthDivider(),
+                      const SizedBox(height: 20),
                       AuthFormField(
                         controller: _emailController,
                         labelText: l10n.email,

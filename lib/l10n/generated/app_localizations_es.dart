@@ -446,4 +446,53 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get somethingWentWrong =>
       'Algo salió mal. Por favor, inténtelo de nuevo.';
+
+  @override
+  String get continueWithGoogle => 'Continuar con Google';
+
+  @override
+  String get orDivider => 'o';
+
+  @override
+  String get chooseUsernameTitle => 'Elige un nombre de usuario';
+
+  @override
+  String get chooseUsernameDescription =>
+      'Elige el nombre que verán los demás en tus mensajes. No podrás cambiarlo más adelante.';
+
+  @override
+  String get finishSignUp => 'Finalizar registro';
+
+  @override
+  String get cancelSignUpTitle => '¿Cancelar el registro?';
+
+  @override
+  String get cancelSignUpMessage =>
+      'No has terminado de crear tu cuenta. Si sales ahora no se guardará nada y tendrás que iniciar sesión con Google de nuevo.';
+
+  @override
+  String get cancelSignUpKeepGoing => 'Continuar';
+
+  @override
+  String get cancelSignUpConfirm => 'Cancelar el registro';
+
+  @override
+  String get googleAccountNoPassword =>
+      'Inicias sesión con Google, así que no hay ninguna contraseña que cambiar. Añade una si también quieres iniciar sesión con tu correo electrónico.';
+
+  @override
+  String get setPassword => 'Establecer una contraseña';
+
+  @override
+  String get setPasswordDescription =>
+      'Añade una contraseña para poder iniciar sesión con tu correo electrónico además de con Google.';
+
+  @override
+  String get passwordSetSuccess =>
+      'Contraseña establecida. Ya puedes iniciar sesión con tu correo electrónico.';
+
+  @override
+  String signedInAsGoogle(String email) {
+    return 'Sesión iniciada con Google como $email';
+  }
 }

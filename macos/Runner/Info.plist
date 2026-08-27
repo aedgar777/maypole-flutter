@@ -24,6 +24,37 @@
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>$(PRODUCT_COPYRIGHT)</string>
+	<key>CFBundleURLTypes</key>
+	<!--
+		Google Sign-In returns to the app through a custom URL scheme unique to
+		each OAuth client, so dev and prod differ. iOS picks the right one at
+		build time (see ios/Firebase/firebase-setup.sh), but macOS has no
+		per-environment Firebase config to derive it from, so both are declared
+		here. Claiming a scheme the running build never uses is harmless — only
+		the one matching the active Firebase project is ever called back on.
+	-->
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>GoogleSignIn-dev</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.902296622907-hv26ditgjaotm53ut6hq9468thuq0cft</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>GoogleSignIn-prod</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1069925301177-5mrbhfnct3l39g1vj6tlhvfmcug4vi11</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>

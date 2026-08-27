@@ -51,3 +51,28 @@ class RegistrationState extends AuthState {
     );
   }
 }
+
+/// State for the username step a first-time Google user has to clear.
+class GoogleUsernameState extends AuthState {
+  /// True once the profile has been written and the user can be sent onward.
+  final bool isComplete;
+
+  const GoogleUsernameState({
+    super.isLoading,
+    super.errorMessage,
+    this.isComplete = false,
+  });
+
+  GoogleUsernameState copyWith({
+    bool? isLoading,
+    String? errorMessage,
+    bool? isComplete,
+    bool clearError = false,
+  }) {
+    return GoogleUsernameState(
+      isLoading: isLoading ?? this.isLoading,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      isComplete: isComplete ?? this.isComplete,
+    );
+  }
+}

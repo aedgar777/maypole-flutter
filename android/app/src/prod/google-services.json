@@ -12,7 +12,16 @@
           "package_name": "app.maypole.maypole"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1069925301177-hh00lpg6nt30g9m2lgnb5ausjls509ia.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.maypole.maypole",
+            "certificate_hash": "1734c3f11e36840f3c7fae53fc50cd84dfd7b1d8"
+          }
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyC-PQzzGsoVRg1QSq6NtA1K0xZPs5NdWbM"
@@ -30,7 +39,8 @@
             }
           ]
         }
-      }
+      },
+      "admob_app_id": "ca-app-pub-9803674282352310~3165030367"
     }
   ],
   "configuration_version": "1"

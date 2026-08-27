@@ -413,4 +413,55 @@ class MockAppLocalizations extends AppLocalizations {
 
   @override
   String get somethingWentWrong => 'Something went wrong. Please try again.';
+  @override
+  String get continueWithGoogle => 'Continue with Google';
+
+  @override
+  String get orDivider => 'or';
+
+  @override
+  String get chooseUsernameTitle => 'Choose a username';
+
+  @override
+  String get chooseUsernameDescription =>
+      "Pick the name other people will see on your messages. You can't change "
+      'it later.';
+
+  @override
+  String get finishSignUp => 'Finish sign up';
+
+  @override
+  String get cancelSignUpTitle => 'Cancel sign up?';
+
+  @override
+  String get cancelSignUpMessage =>
+      "You haven't finished creating your account. If you leave now, nothing "
+      "will be saved and you'll need to sign in with Google again.";
+
+  @override
+  String get cancelSignUpKeepGoing => 'Keep going';
+
+  @override
+  String get cancelSignUpConfirm => 'Cancel sign up';
+
+  @override
+  String get googleAccountNoPassword =>
+      "You sign in with Google, so there's no password to change. Add one if "
+      "you'd also like to sign in with your email address.";
+
+  @override
+  String get setPassword => 'Set a password';
+
+  @override
+  String get setPasswordDescription =>
+      'Add a password so you can sign in with your email address as well as '
+      'with Google.';
+
+  @override
+  String get passwordSetSuccess =>
+      'Password set. You can now sign in with your email address.';
+
+
+  @override
+  String signedInAsGoogle(String email) => 'Signed in with Google as $email';
 }

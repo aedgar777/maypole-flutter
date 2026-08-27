@@ -6,6 +6,32 @@ class StringUtils {
   static const int maxEmailLength = 254; // RFC 5321 standard
   static const int maxPasswordLength = 128;
   
+  /// Derives a username suggestion from what an identity provider told us.
+  ///
+  /// Google gives us a display name and an email but no username, so this
+  /// produces a starting point for the field on the username screen. It is only
+  /// ever a suggestion: the user can replace it, and whatever they submit still
+  /// goes through [validateUsername] and the availability check.
+  ///
+  /// Returns an empty string when nothing usable survives — a name of only
+  /// spaces or accented characters, say — which simply leaves the field blank
+  /// rather than pre-filling it with something malformed.
+  static String suggestUsername({String? displayName, String? email}) {
+    final source = (displayName != null && displayName.trim().isNotEmpty)
+        ? displayName
+        : (email ?? '').split('@').first;
+
+    // Same character set [validateUsername] enforces, so a suggestion is never
+    // rejected the instant it appears.
+    final cleaned = source.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '');
+
+    if (cleaned.length < 3) return '';
+
+    return cleaned.length > maxUsernameLength
+        ? cleaned.substring(0, maxUsernameLength)
+        : cleaned;
+  }
+
   static String? validateUsername(String? value, AppLocalizations l10n) {
     if (value == null || value.isEmpty) {
       return l10n.pleaseEnterUsername;
