@@ -643,10 +643,6 @@
   "@passwordSetSuccess": {
     "description": "Confirmation after adding a password to a Google account"
   },
-  "signInWithGoogleInstead": "This account uses Google sign-in. Use the “Continue with Google” button above.",
-  "@signInWithGoogleInstead": {
-    "description": "Shown when a Google-only user tries to reset a password"
-  },
   "signedInAsGoogle": "Signed in with Google as {email}",
   "@signedInAsGoogle": {
     "description": "Shows which Google account is being used",

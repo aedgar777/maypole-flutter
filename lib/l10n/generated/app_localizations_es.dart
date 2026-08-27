@@ -492,10 +492,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'Contraseña establecida. Ya puedes iniciar sesión con tu correo electrónico.';
 
   @override
-  String get signInWithGoogleInstead =>
-      'Esta cuenta usa el inicio de sesión con Google. Utiliza el botón «Continuar con Google» de arriba.';
-
-  @override
   String signedInAsGoogle(String email) {
     return 'Sesión iniciada con Google como $email';
   }

@@ -950,12 +950,6 @@ abstract class AppLocalizations {
   /// **'Password set. You can now sign in with your email address.'**
   String get passwordSetSuccess;
 
-  /// Shown when a Google-only user tries to reset a password
-  ///
-  /// In en, this message translates to:
-  /// **'This account uses Google sign-in. Use the “Continue with Google” button above.'**
-  String get signInWithGoogleInstead;
-
   /// Shows which Google account is being used
   ///
   /// In en, this message translates to:

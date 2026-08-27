@@ -485,10 +485,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Password set. You can now sign in with your email address.';
 
   @override
-  String get signInWithGoogleInstead =>
-      'This account uses Google sign-in. Use the “Continue with Google” button above.';
-
-  @override
   String signedInAsGoogle(String email) {
     return 'Signed in with Google as $email';
   }

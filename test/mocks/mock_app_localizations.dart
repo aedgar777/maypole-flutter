@@ -461,10 +461,6 @@ class MockAppLocalizations extends AppLocalizations {
   String get passwordSetSuccess =>
       'Password set. You can now sign in with your email address.';
 
-  @override
-  String get signInWithGoogleInstead =>
-      'This account uses Google sign-in. Use the \u201CContinue with Google\u201D '
-      'button above.';
 
   @override
   String signedInAsGoogle(String email) => 'Signed in with Google as $email';
