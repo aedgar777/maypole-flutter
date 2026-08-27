@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../auth_providers.dart';
 import '../../data/services/auth_service.dart';
 import '../../domain/states/auth_state.dart';
 
@@ -32,6 +33,3 @@ class RegistrationViewModel extends Notifier<RegistrationState> {
   }
 }
 
-final authServiceProvider = Provider<AuthService>((ref) {
-  return AuthService();
-});

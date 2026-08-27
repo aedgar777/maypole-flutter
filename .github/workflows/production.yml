@@ -105,6 +105,13 @@ jobs:
           FIREBASE_PROD_AUTH_DOMAIN=${{ secrets.FIREBASE_PROD_AUTH_DOMAIN }}
           FIREBASE_PROD_STORAGE_BUCKET=${{ secrets.FIREBASE_PROD_STORAGE_BUCKET }}
           IOS_BUNDLE_ID=${{ secrets.IOS_BUNDLE_ID }}
+
+          # Google Sign-In OAuth client IDs. Literals rather than secrets: OAuth client
+          # IDs are public identifiers, and these exact values are already committed in
+          # google-services.json and GoogleService-Info.plist. The client *secret* is
+          # never needed here — the app only ever performs the public client flow.
+          GOOGLE_OAUTH_WEB_CLIENT_ID_PROD=1069925301177-9lo5bht5kis83tpcsnd8lsi10au52878.apps.googleusercontent.com
+          GOOGLE_OAUTH_IOS_CLIENT_ID_PROD=1069925301177-5mrbhfnct3l39g1vj6tlhvfmcug4vi11.apps.googleusercontent.com
           EOF
 
       - name: Build Web

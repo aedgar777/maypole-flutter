@@ -46,7 +46,6 @@
       }
     }
   },
-
   "signIn": "Sign In",
   "@signIn": {
     "description": "Sign in button text"
@@ -591,5 +590,70 @@
   "somethingWentWrong": "Something went wrong. Please try again.",
   "@somethingWentWrong": {
     "description": "Generic error message"
+  },
+  "continueWithGoogle": "Continue with Google",
+  "@continueWithGoogle": {
+    "description": "Label on the Google sign-in button"
+  },
+  "orDivider": "or",
+  "@orDivider": {
+    "description": "Separator between Google sign-in and the email form"
+  },
+  "chooseUsernameTitle": "Choose a username",
+  "@chooseUsernameTitle": {
+    "description": "Title of the screen where a new Google user picks a username"
+  },
+  "chooseUsernameDescription": "Pick the name other people will see on your messages. You can't change it later.",
+  "@chooseUsernameDescription": {
+    "description": "Explains what the username is for"
+  },
+  "finishSignUp": "Finish sign up",
+  "@finishSignUp": {
+    "description": "Button that creates the profile and completes Google sign-up"
+  },
+  "cancelSignUpTitle": "Cancel sign up?",
+  "@cancelSignUpTitle": {
+    "description": "Title of the dialog shown when leaving the username screen"
+  },
+  "cancelSignUpMessage": "You haven't finished creating your account. If you leave now, nothing will be saved and you'll need to sign in with Google again.",
+  "@cancelSignUpMessage": {
+    "description": "Body of the cancel sign-up dialog"
+  },
+  "cancelSignUpKeepGoing": "Keep going",
+  "@cancelSignUpKeepGoing": {
+    "description": "Dismisses the cancel sign-up dialog"
+  },
+  "cancelSignUpConfirm": "Cancel sign up",
+  "@cancelSignUpConfirm": {
+    "description": "Confirms abandoning the Google sign-up"
+  },
+  "googleAccountNoPassword": "You sign in with Google, so there's no password to change. Add one if you'd also like to sign in with your email address.",
+  "@googleAccountNoPassword": {
+    "description": "Explains why a Google-only account has no password"
+  },
+  "setPassword": "Set a password",
+  "@setPassword": {
+    "description": "Opens the dialog that adds a password to a Google account"
+  },
+  "setPasswordDescription": "Add a password so you can sign in with your email address as well as with Google.",
+  "@setPasswordDescription": {
+    "description": "Explains what setting a password does"
+  },
+  "passwordSetSuccess": "Password set. You can now sign in with your email address.",
+  "@passwordSetSuccess": {
+    "description": "Confirmation after adding a password to a Google account"
+  },
+  "signInWithGoogleInstead": "This account uses Google sign-in. Use the “Continue with Google” button above.",
+  "@signInWithGoogleInstead": {
+    "description": "Shown when a Google-only user tries to reset a password"
+  },
+  "signedInAsGoogle": "Signed in with Google as {email}",
+  "@signedInAsGoogle": {
+    "description": "Shows which Google account is being used",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
   }
 }

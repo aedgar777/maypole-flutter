@@ -128,5 +128,20 @@
   "currentPasswordIncorrect": "Su contraseña actual es incorrecta.",
   "newPasswordMustDiffer": "La nueva contraseña debe ser diferente a su contraseña actual.",
   "pleaseSignInAgainToChangePassword": "Por su seguridad, inicie sesión nuevamente antes de cambiar su contraseña.",
-  "somethingWentWrong": "Algo salió mal. Por favor, inténtelo de nuevo."
+  "somethingWentWrong": "Algo salió mal. Por favor, inténtelo de nuevo.",
+  "continueWithGoogle": "Continuar con Google",
+  "orDivider": "o",
+  "chooseUsernameTitle": "Elige un nombre de usuario",
+  "chooseUsernameDescription": "Elige el nombre que verán los demás en tus mensajes. No podrás cambiarlo más adelante.",
+  "finishSignUp": "Finalizar registro",
+  "cancelSignUpTitle": "¿Cancelar el registro?",
+  "cancelSignUpMessage": "No has terminado de crear tu cuenta. Si sales ahora no se guardará nada y tendrás que iniciar sesión con Google de nuevo.",
+  "cancelSignUpKeepGoing": "Continuar",
+  "cancelSignUpConfirm": "Cancelar el registro",
+  "googleAccountNoPassword": "Inicias sesión con Google, así que no hay ninguna contraseña que cambiar. Añade una si también quieres iniciar sesión con tu correo electrónico.",
+  "setPassword": "Establecer una contraseña",
+  "setPasswordDescription": "Añade una contraseña para poder iniciar sesión con tu correo electrónico además de con Google.",
+  "passwordSetSuccess": "Contraseña establecida. Ya puedes iniciar sesión con tu correo electrónico.",
+  "signInWithGoogleInstead": "Esta cuenta usa el inicio de sesión con Google. Utiliza el botón «Continuar con Google» de arriba.",
+  "signedInAsGoogle": "Sesión iniciada con Google como {email}"
 }

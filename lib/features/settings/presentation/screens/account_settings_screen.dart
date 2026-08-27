@@ -215,6 +215,167 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen>
     }
   }
 
+  /// Adds a password to a Google-only account.
+  ///
+  /// Distinct from [_handleChangePassword] in the one way that matters: there
+  /// is no current password to ask for or re-authenticate with, because the
+  /// account has never had one. Firebase treats this as linking a credential
+  /// rather than as a password change.
+  Future<void> _handleSetPassword(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
+    final formKey = GlobalKey<FormState>();
+    final newController = _newPasswordController;
+    final confirmController = _confirmPasswordController;
+
+    newController.clear();
+    confirmController.clear();
+
+    var obscureNew = true;
+    var obscureConfirm = true;
+    var isSaving = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> submit() async {
+              if (!formKey.currentState!.validate()) return;
+              setDialogState(() => isSaving = true);
+
+              try {
+                await ref
+                    .read(authServiceProvider)
+                    .setPasswordForGoogleAccount(newController.text.trim());
+                if (!dialogContext.mounted) return;
+                Navigator.of(dialogContext).pop();
+                if (!mounted) return;
+                // Rebuild so the tile becomes "Change password" now that there
+                // is one.
+                setState(() {});
+                AppToast.showSuccess(context, l10n.passwordSetSuccess);
+              } on FirebaseAuthException catch (e) {
+                setDialogState(() => isSaving = false);
+                if (!dialogContext.mounted) return;
+
+                final String message;
+                switch (e.code) {
+                  case 'weak-password':
+                    message = l10n.passwordMinLength;
+                    break;
+                  case 'requires-recent-login':
+                    message = l10n.pleaseSignInAgainToChangePassword;
+                    break;
+                  case 'provider-already-linked':
+                  case 'credential-already-in-use':
+                    // Another session added one first; nothing is broken.
+                    message = l10n.passwordSetSuccess;
+                    break;
+                  default:
+                    message = e.message ?? l10n.somethingWentWrong;
+                }
+                AppToast.showError(dialogContext, message);
+              } catch (_) {
+                setDialogState(() => isSaving = false);
+                if (!dialogContext.mounted) return;
+                AppToast.showError(dialogContext, l10n.somethingWentWrong);
+              }
+            }
+
+            Widget passwordField({
+              required TextEditingController controller,
+              required String label,
+              required bool obscure,
+              required VoidCallback onToggle,
+              String? Function(String?)? validator,
+              void Function(String)? onSubmitted,
+            }) {
+              return TextFormField(
+                controller: controller,
+                obscureText: obscure,
+                maxLength: StringUtils.maxPasswordLength,
+                onFieldSubmitted: onSubmitted,
+                decoration: InputDecoration(
+                  labelText: label,
+                  counterText: '',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscure ? Icons.visibility_off : Icons.visibility,
+                      size: 20,
+                    ),
+                    onPressed: onToggle,
+                  ),
+                ),
+                validator: validator,
+              );
+            }
+
+            return AlertDialog(
+              title: Text(l10n.setPassword),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.setPasswordDescription,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 16),
+                      passwordField(
+                        controller: newController,
+                        label: l10n.newPassword,
+                        obscure: obscureNew,
+                        onToggle: () =>
+                            setDialogState(() => obscureNew = !obscureNew),
+                        validator: (value) =>
+                            StringUtils.validatePassword(value, l10n),
+                      ),
+                      const SizedBox(height: 12),
+                      passwordField(
+                        controller: confirmController,
+                        label: l10n.confirmNewPassword,
+                        obscure: obscureConfirm,
+                        onToggle: () => setDialogState(
+                            () => obscureConfirm = !obscureConfirm),
+                        onSubmitted: (_) => submit(),
+                        validator: (value) =>
+                            StringUtils.validateConfirmPassword(
+                          value,
+                          newController.text.trim(),
+                          l10n,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed:
+                      isSaving ? null : () => Navigator.of(dialogContext).pop(),
+                  child: Text(l10n.cancel),
+                ),
+                ElevatedButton(
+                  onPressed: isSaving ? null : submit,
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(l10n.setPassword),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _handleChangePassword(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context)!;
     final formKey = GlobalKey<FormState>();
@@ -458,6 +619,8 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen>
         data: (user) {
           if (user == null) return const SizedBox.shrink();
 
+          final hasPassword = ref.read(authServiceProvider).hasPasswordProvider;
+
           return Column(
             children: [
               const SizedBox(height: 16),
@@ -478,12 +641,32 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen>
                     : () => _handleResendVerification(context, ref),
               ),
               Divider(color: Colors.white.withValues(alpha: 0.1)),
-              ListTile(
-                leading: const Icon(Icons.lock_outline),
-                title: Text(l10n.changePassword),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _handleChangePassword(context, ref),
-              ),
+              // An account created through Google has no password credential,
+              // so "change password" has nothing to change and the
+              // re-authentication it does would fail. Offer to add one instead,
+              // which is the useful action and also gives the user a way back
+              // in if they ever lose access to their Google account.
+              if (hasPassword)
+                ListTile(
+                  leading: const Icon(Icons.lock_outline),
+                  title: Text(l10n.changePassword),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _handleChangePassword(context, ref),
+                )
+              else
+                ListTile(
+                  leading: const Icon(Icons.lock_outline),
+                  title: Text(l10n.setPassword),
+                  subtitle: Text(
+                    l10n.googleAccountNoPassword,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.6),
+                        ),
+                  ),
+                  isThreeLine: true,
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _handleSetPassword(context, ref),
+                ),
               Divider(color: Colors.white.withValues(alpha: 0.1)),
               const SizedBox(height: 16),
               ListTile(

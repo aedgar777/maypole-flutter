@@ -871,6 +871,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Something went wrong. Please try again.'**
   String get somethingWentWrong;
+
+  /// Label on the Google sign-in button
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get continueWithGoogle;
+
+  /// Separator between Google sign-in and the email form
+  ///
+  /// In en, this message translates to:
+  /// **'or'**
+  String get orDivider;
+
+  /// Title of the screen where a new Google user picks a username
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a username'**
+  String get chooseUsernameTitle;
+
+  /// Explains what the username is for
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the name other people will see on your messages. You can\'t change it later.'**
+  String get chooseUsernameDescription;
+
+  /// Button that creates the profile and completes Google sign-up
+  ///
+  /// In en, this message translates to:
+  /// **'Finish sign up'**
+  String get finishSignUp;
+
+  /// Title of the dialog shown when leaving the username screen
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel sign up?'**
+  String get cancelSignUpTitle;
+
+  /// Body of the cancel sign-up dialog
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t finished creating your account. If you leave now, nothing will be saved and you\'ll need to sign in with Google again.'**
+  String get cancelSignUpMessage;
+
+  /// Dismisses the cancel sign-up dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Keep going'**
+  String get cancelSignUpKeepGoing;
+
+  /// Confirms abandoning the Google sign-up
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel sign up'**
+  String get cancelSignUpConfirm;
+
+  /// Explains why a Google-only account has no password
+  ///
+  /// In en, this message translates to:
+  /// **'You sign in with Google, so there\'s no password to change. Add one if you\'d also like to sign in with your email address.'**
+  String get googleAccountNoPassword;
+
+  /// Opens the dialog that adds a password to a Google account
+  ///
+  /// In en, this message translates to:
+  /// **'Set a password'**
+  String get setPassword;
+
+  /// Explains what setting a password does
+  ///
+  /// In en, this message translates to:
+  /// **'Add a password so you can sign in with your email address as well as with Google.'**
+  String get setPasswordDescription;
+
+  /// Confirmation after adding a password to a Google account
+  ///
+  /// In en, this message translates to:
+  /// **'Password set. You can now sign in with your email address.'**
+  String get passwordSetSuccess;
+
+  /// Shown when a Google-only user tries to reset a password
+  ///
+  /// In en, this message translates to:
+  /// **'This account uses Google sign-in. Use the “Continue with Google” button above.'**
+  String get signInWithGoogleInstead;
+
+  /// Shows which Google account is being used
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in with Google as {email}'**
+  String signedInAsGoogle(String email);
 }
 
 class _AppLocalizationsDelegate

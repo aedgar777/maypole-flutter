@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'domain/google_sign_in_result.dart';
 import 'domain/states/auth_state.dart';
+import 'presentation/viewmodels/google_username_viewmodel.dart';
 import 'presentation/viewmodels/login_viewmodel.dart';
 import 'presentation/viewmodels/registration_viewmodel.dart';
 import 'data/services/auth_service.dart';
@@ -42,3 +44,34 @@ class PasswordResetSignal extends Notifier<int> {
 
 final passwordResetSignalProvider =
     NotifierProvider<PasswordResetSignal, int>(PasswordResetSignal.new);
+
+
+/// Holds the half-finished Google sign-up between authenticating with Google
+/// and choosing a Maypole username.
+///
+/// The router keys off this rather than off the auth stream, because during
+/// this window the two disagree on purpose: Firebase has a signed-in user, but
+/// [authStateProvider] emits null since no profile document exists yet. Left to
+/// itself the router would read that as "signed out" and bounce the user to
+/// login, losing the account they just created. A non-null value here means
+/// "authenticated, but not finished" and pins them to `/complete-profile`.
+class GoogleProfileSetup extends Notifier<GoogleSignInResult?> {
+  @override
+  GoogleSignInResult? build() => null;
+
+  /// Records that a first-time Google user needs a username.
+  void start(GoogleSignInResult result) => state = result;
+
+  /// Clears the pending state once the user has finished — or walked away.
+  void clear() => state = null;
+}
+
+final googleProfileSetupProvider =
+    NotifierProvider<GoogleProfileSetup, GoogleSignInResult?>(
+  GoogleProfileSetup.new,
+);
+
+final googleUsernameViewModelProvider =
+    NotifierProvider<GoogleUsernameViewModel, GoogleUsernameState>(
+  GoogleUsernameViewModel.new,
+);
