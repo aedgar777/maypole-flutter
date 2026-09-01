@@ -273,9 +273,18 @@ jobs:
           # on. It needs the Firebase App Distribution Admin role in addition
           # to whatever it already has.
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.MAYPOLE_FIREBASE_SERVICE_ACCOUNT_DEV }}
-          FIREBASE_DEV_ANDROID_APP_ID: ${{ secrets.FIREBASE_DEV_ANDROID_APP_ID }}
         run: |
           echo "☁️  Uploading dev APK to Firebase App Distribution..."
+
+          # Read the app ID from google-services.json rather than from a
+          # secret. The value is not sensitive, it already has to be correct
+          # for the app to build, and keeping a second hand-maintained copy in
+          # a secret only creates somewhere for the two to drift apart — which
+          # is exactly what happened: App Distribution reported "could not find
+          # your app" while the app was present and onboarded the whole time.
+          FIREBASE_DEV_ANDROID_APP_ID=$(python3 -c "import json;print(json.load(open('android/app/src/dev/google-services.json'))['client'][0]['client_info']['mobilesdk_app_id'])")
+          test -n "$FIREBASE_DEV_ANDROID_APP_ID" || { echo "❌ Could not read app id"; exit 1; }
+          echo "App ID: $FIREBASE_DEV_ANDROID_APP_ID"
 
           echo "$FIREBASE_SERVICE_ACCOUNT" > "$HOME/firebase-service-account.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$HOME/firebase-service-account.json"
