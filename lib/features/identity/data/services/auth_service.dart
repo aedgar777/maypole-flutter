@@ -731,13 +731,17 @@ class AuthService {
       emailVerified: firebaseUser.emailVerified,
     );
 
-    await _firestore.collection('users').doc(firebaseUser.uid).set(user.toMap());
+    await _applyWrite(
+      _firestore.collection('users').doc(firebaseUser.uid).set(user.toMap()),
+    );
     _session.currentUser = user;
 
-    await _firestore.collection('usernames').doc(username.toLowerCase()).set({
-      'taken': true,
-      'owner': firebaseUser.uid,
-    });
+    await _applyWrite(
+      _firestore.collection('usernames').doc(username.toLowerCase()).set({
+        'taken': true,
+        'owner': firebaseUser.uid,
+      }),
+    );
 
     // Only lift the guard once the document is committed — the [user] stream
     // may be mid-flight and would otherwise still see a missing document.
@@ -750,6 +754,30 @@ class AuthService {
     unawaited(_fcmService.setupForUser(firebaseUser.uid).catchError((e) {}));
 
     _prefetchService.prefetchUserData(firebaseUser.uid).catchError((e) {});
+  }
+
+  /// How long to wait for the server to acknowledge a profile write before
+  /// letting the user move on.
+  ///
+  /// Long enough that a real rejection — permission denied, a failed rule —
+  /// still surfaces as an error, since those come back promptly.
+  static const _writeAckTimeout = Duration(seconds: 5);
+
+  /// Awaits [write] without letting a slow network strand the user.
+  ///
+  /// Firestore applies a write to the local cache immediately but only
+  /// completes its future once the *server* acknowledges it. Awaiting that
+  /// outright turns a brief connectivity blip into an indefinite spinner: the
+  /// document already exists locally, the [user] stream has already emitted it,
+  /// and Firestore retries the write in the background — across app restarts.
+  /// That is exactly how a signed-up account could appear created and working
+  /// on relaunch while the screen that created it hung forever.
+  Future<void> _applyWrite(Future<void> write) {
+    // A rejection arriving after the timeout would otherwise be an unhandled
+    // async error, since nothing is listening to the original future by then.
+    unawaited(write.catchError((Object _) {}));
+
+    return write.timeout(_writeAckTimeout, onTimeout: () {});
   }
 
   /// Unwinds a Google sign-up the user walked away from.
