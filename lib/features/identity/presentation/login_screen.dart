@@ -121,16 +121,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   /// username step. A completed sign-in needs no navigation here — the auth
   /// stream drives it, same as an email sign-in.
   Future<void> _handleGoogleSignIn() async {
-    final needsUsername =
-        await ref.read(loginViewModelProvider.notifier).signInWithGoogle();
+    final needsUsername = await ref
+        .read(loginViewModelProvider.notifier)
+        .signInWithGoogle();
 
     if (!mounted || !needsUsername) return;
 
     context.go(
       Uri(
         path: '/complete-profile',
-        queryParameters:
-            widget.returnTo == null ? null : {'returnTo': widget.returnTo},
+        queryParameters: widget.returnTo == null
+            ? null
+            : {'returnTo': widget.returnTo},
       ).toString(),
     );
   }
@@ -138,9 +140,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _handleForgotPassword() async {
     final result = await showDialog<_ForgotPasswordResult>(
       context: context,
-      builder: (_) => _ForgotPasswordDialog(
-        initialEmail: _emailController.text.trim(),
-      ),
+      builder: (_) =>
+          _ForgotPasswordDialog(initialEmail: _emailController.text.trim()),
     );
 
     if (!mounted || result == null) return;
@@ -289,112 +290,130 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Column(
       children: [
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-            child: Center(
+          // Centre the content in whatever space is left, but keep it
+          // scrollable: forcing the scroll view's child to be at least as tall
+          // as the viewport lets Center do its job when everything fits, while
+          // taller content (a small screen, or the keyboard open) simply grows
+          // past it and scrolls instead of being clipped or overflowing.
+          child: LayoutBuilder(
+            builder: (context, viewport) => SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxWidth: AppConfig.isWideScreen
-                      ? MediaQuery.of(context).size.width / 3
-                      : double.infinity,
+                  // The scroll view's own vertical padding is inside the
+                  // viewport, so leave room for it or the content is always
+                  // fractionally too tall and scrolls by a few pixels.
+                  minHeight: viewport.maxHeight - 48,
                 ),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // The asset is square but the wordmark inside it is
-                      // roughly 3:1, so a 300-square box padded it with a large
-                      // band of empty space above the form. Constrain the
-                      // height instead and let BoxFit.contain size to width.
-                      Image.asset(
-                        'assets/icons/ic_logo_main.png',
-                        width: 300,
-                        height: 170,
-                        fit: BoxFit.contain,
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Email and password lead. A third-party button above the
-                      // primary form reads as the main path, which it is not.
-                      AuthFormField(
-                        controller: _emailController,
-                        labelText: l10n.email,
-                        keyboardType: TextInputType.emailAddress,
-                        maxLength: StringUtils.maxEmailLength,
-                        onFieldSubmitted: AppConfig.isWideScreen
-                            ? (_) => _handleSignIn()
-                            : null,
-                        validator: (value) =>
-                            StringUtils.validateEmail(value, l10n),
-                      ),
-                      const SizedBox(height: 20),
-                      AuthFormField(
-                        controller: _passwordController,
-                        labelText: l10n.password,
-                        obscureText: true,
-                        maxLength: StringUtils.maxPasswordLength,
-                        onFieldSubmitted: AppConfig.isWideScreen
-                            ? (_) => _handleSignIn()
-                            : null,
-                        validator: (value) =>
-                            StringUtils.validatePassword(value, l10n),
-                      ),
-                      const SizedBox(height: 24),
-
-                      if (loginState.isLoading)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                          child: CircularProgressIndicator(),
-                        )
-                      else ...[
-                        ElevatedButton(
-                          onPressed: _handleSignIn,
-                          child: Text(
-                            l10n.signIn,
-                            style: const TextStyle(fontSize: 18),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: AppConfig.isWideScreen
+                          ? MediaQuery.of(context).size.width / 3
+                          : double.infinity,
+                    ),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // The asset is square but the wordmark inside it is
+                          // roughly 3:1, so a 300-square box padded it with a large
+                          // band of empty space above the form. Constrain the
+                          // height instead and let BoxFit.contain size to width.
+                          Image.asset(
+                            'assets/icons/ic_logo_main.png',
+                            width: 300,
+                            height: 170,
+                            fit: BoxFit.contain,
                           ),
-                        ),
-                        TextButton(
-                          onPressed: _handleForgotPassword,
-                          child: Text(l10n.forgotPassword),
-                        ),
+                          const SizedBox(height: 24),
 
-                        const SizedBox(height: 12),
-                        const AuthDivider(),
-                        const SizedBox(height: 16),
-
-                        GoogleSignInButton(
-                          onPressed: _handleGoogleSignIn,
-                          isLoading: loginState.isLoading,
-                        ),
-
-                        const SizedBox(height: 20),
-                        TextButton(
-                          onPressed: () => context.go(
-                            Uri(
-                              path: '/register',
-                              queryParameters: widget.returnTo == null
-                                  ? null
-                                  : {'returnTo': widget.returnTo},
-                            ).toString(),
+                          // Email and password lead. A third-party button above the
+                          // primary form reads as the main path, which it is not.
+                          AuthFormField(
+                            controller: _emailController,
+                            labelText: l10n.email,
+                            keyboardType: TextInputType.emailAddress,
+                            maxLength: StringUtils.maxEmailLength,
+                            onFieldSubmitted: AppConfig.isWideScreen
+                                ? (_) => _handleSignIn()
+                                : null,
+                            validator: (value) =>
+                                StringUtils.validateEmail(value, l10n),
                           ),
-                          child: Text(l10n.register),
-                        ),
-                      ],
+                          const SizedBox(height: 20),
+                          AuthFormField(
+                            controller: _passwordController,
+                            labelText: l10n.password,
+                            obscureText: true,
+                            maxLength: StringUtils.maxPasswordLength,
+                            onFieldSubmitted: AppConfig.isWideScreen
+                                ? (_) => _handleSignIn()
+                                : null,
+                            validator: (value) =>
+                                StringUtils.validatePassword(value, l10n),
+                          ),
+                          const SizedBox(height: 24),
 
-                      if (loginState.errorMessage != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 16),
-                          child: Text(
-                            loginState.errorMessage!,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
+                          if (loginState.isLoading)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              child: CircularProgressIndicator(),
+                            )
+                          else ...[
+                            ElevatedButton(
+                              onPressed: _handleSignIn,
+                              child: Text(
+                                l10n.signIn,
+                                style: const TextStyle(fontSize: 18),
+                              ),
                             ),
-                          ),
-                        ),
-                    ],
+                            TextButton(
+                              onPressed: _handleForgotPassword,
+                              child: Text(l10n.forgotPassword),
+                            ),
+                            // Grouped with the other email actions rather than
+                            // after the Google button, and named for the method it
+                            // starts — signing in with Google registers too, so an
+                            // unqualified "Register" reads as the only way to make
+                            // an account.
+                            TextButton(
+                              onPressed: () => context.go(
+                                Uri(
+                                  path: '/register',
+                                  queryParameters: widget.returnTo == null
+                                      ? null
+                                      : {'returnTo': widget.returnTo},
+                                ).toString(),
+                              ),
+                              child: Text(l10n.registerWithEmail),
+                            ),
+
+                            const SizedBox(height: 12),
+                            const AuthDivider(),
+                            const SizedBox(height: 16),
+
+                            GoogleSignInButton(
+                              onPressed: _handleGoogleSignIn,
+                              isLoading: loginState.isLoading,
+                            ),
+                          ],
+
+                          if (loginState.errorMessage != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 16),
+                              child: Text(
+                                loginState.errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -516,23 +535,23 @@ class _ForgotPasswordDialogState extends ConsumerState<_ForgotPasswordDialog> {
     try {
       await ref.read(authServiceProvider).sendPasswordResetEmail(email);
       if (!mounted) return;
-      Navigator.of(context)
-          .pop(const _ForgotPasswordResult(success: true));
+      Navigator.of(context).pop(const _ForgotPasswordResult(success: true));
     } on FirebaseAuthException catch (e) {
       // Treat "user-not-found" as success to avoid leaking account existence.
       if (e.code == 'user-not-found') {
         if (!mounted) return;
-        Navigator.of(context)
-            .pop(const _ForgotPasswordResult(success: true));
+        Navigator.of(context).pop(const _ForgotPasswordResult(success: true));
         return;
       }
       if (!mounted) return;
-      Navigator.of(context).pop(_ForgotPasswordResult(
-        success: false,
-        errorMessage: e.code == 'invalid-email'
-            ? l10n.pleaseEnterValidEmail
-            : (e.message ?? l10n.somethingWentWrong),
-      ));
+      Navigator.of(context).pop(
+        _ForgotPasswordResult(
+          success: false,
+          errorMessage: e.code == 'invalid-email'
+              ? l10n.pleaseEnterValidEmail
+              : (e.message ?? l10n.somethingWentWrong),
+        ),
+      );
     } catch (_) {
       if (!mounted) return;
       Navigator.of(context).pop(
@@ -572,8 +591,7 @@ class _ForgotPasswordDialogState extends ConsumerState<_ForgotPasswordDialog> {
       ),
       actions: [
         TextButton(
-          onPressed:
-              _isSending ? null : () => Navigator.of(context).pop(),
+          onPressed: _isSending ? null : () => Navigator.of(context).pop(),
           child: Text(l10n.cancel),
         ),
         ElevatedButton(

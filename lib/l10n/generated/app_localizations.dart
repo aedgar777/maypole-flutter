@@ -955,6 +955,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Signed in with Google as {email}'**
   String signedInAsGoogle(String email);
+
+  /// Button that opens email/password registration from the login screen
+  ///
+  /// In en, this message translates to:
+  /// **'Register with email'**
+  String get registerWithEmail;
 }
 
 class _AppLocalizationsDelegate
