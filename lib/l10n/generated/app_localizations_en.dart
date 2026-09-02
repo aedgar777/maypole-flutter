@@ -488,7 +488,4 @@ class AppLocalizationsEn extends AppLocalizations {
   String signedInAsGoogle(String email) {
     return 'Signed in with Google as $email';
   }
-
-  @override
-  String get registerWithEmail => 'Register with email';
 }

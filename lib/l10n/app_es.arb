@@ -142,6 +142,5 @@
   "setPassword": "Establecer una contraseña",
   "setPasswordDescription": "Añade una contraseña para poder iniciar sesión con tu correo electrónico además de con Google.",
   "passwordSetSuccess": "Contraseña establecida. Ya puedes iniciar sesión con tu correo electrónico.",
-  "signedInAsGoogle": "Sesión iniciada con Google como {email}",
-  "registerWithEmail": "Registrarse con correo electrónico"
+  "signedInAsGoogle": "Sesión iniciada con Google como {email}"
 }

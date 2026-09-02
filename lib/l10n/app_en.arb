@@ -651,9 +651,5 @@
         "type": "String"
       }
     }
-  },
-  "registerWithEmail": "Register with email",
-  "@registerWithEmail": {
-    "description": "Button that opens email/password registration from the login screen"
   }
 }

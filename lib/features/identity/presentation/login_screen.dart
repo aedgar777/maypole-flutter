@@ -369,16 +369,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 style: const TextStyle(fontSize: 18),
                               ),
                             ),
+                            // Grouped with the other email actions rather than after the
+                            // Google button. Compact density on both so they read as one
+                            // pair: at the default, each button's 48dp minimum tap target
+                            // leaves a gap wide enough that they look unrelated.
                             TextButton(
-                              onPressed: _handleForgotPassword,
-                              child: Text(l10n.forgotPassword),
-                            ),
-                            // Grouped with the other email actions rather than
-                            // after the Google button, and named for the method it
-                            // starts — signing in with Google registers too, so an
-                            // unqualified "Register" reads as the only way to make
-                            // an account.
-                            TextButton(
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                              ),
                               onPressed: () => context.go(
                                 Uri(
                                   path: '/register',
@@ -387,7 +385,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       : {'returnTo': widget.returnTo},
                                 ).toString(),
                               ),
-                              child: Text(l10n.registerWithEmail),
+                              child: Text(l10n.register),
+                            ),
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              onPressed: _handleForgotPassword,
+                              child: Text(l10n.forgotPassword),
                             ),
 
                             const SizedBox(height: 12),
