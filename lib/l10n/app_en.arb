@@ -651,5 +651,9 @@
         "type": "String"
       }
     }
+  },
+  "dontHaveAccount": "Don't have an account? Register",
+  "@dontHaveAccount": {
+    "description": "Bottom-of-screen prompt on the login screen that opens registration"
   }
 }

@@ -362,40 +362,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               child: CircularProgressIndicator(),
                             )
                           else ...[
-                            ElevatedButton(
-                              onPressed: _handleSignIn,
-                              child: Text(
-                                l10n.signIn,
-                                style: const TextStyle(fontSize: 18),
+                            // Full width, matching the fields, so the primary action reads as
+                            // the solid base of the form rather than a small island inside it.
+                            SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: ElevatedButton(
+                                onPressed: _handleSignIn,
+                                child: Text(
+                                  l10n.signIn,
+                                  style: const TextStyle(fontSize: 18),
+                                ),
                               ),
                             ),
-                            // Grouped with the other email actions rather than after the
-                            // Google button. Compact density on both so they read as one
-                            // pair: at the default, each button's 48dp minimum tap target
-                            // leaves a gap wide enough that they look unrelated.
+                            // Quiet and close to the action it relates to. Kept blue to stay
+                            // legible as a control, but smaller so it does not compete with
+                            // Sign In for attention.
                             TextButton(
                               style: TextButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
-                              ),
-                              onPressed: () => context.go(
-                                Uri(
-                                  path: '/register',
-                                  queryParameters: widget.returnTo == null
-                                      ? null
-                                      : {'returnTo': widget.returnTo},
-                                ).toString(),
-                              ),
-                              child: Text(l10n.register),
-                            ),
-                            TextButton(
-                              style: TextButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
+                                textStyle: const TextStyle(fontSize: 14),
                               ),
                               onPressed: _handleForgotPassword,
                               child: Text(l10n.forgotPassword),
                             ),
 
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 16),
                             const AuthDivider(),
                             const SizedBox(height: 16),
 
@@ -423,6 +415,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
               ),
             ),
+          ),
+        ),
+        // Pinned to the bottom of the screen, outside the scrolling form.
+        // Creating an account is a different intent from signing in, so it sits
+        // apart rather than competing with the sign-in actions — the pattern
+        // most social apps settle on.
+        SafeArea(
+          // Bottom inset only — the scroll view above handles its own top
+          // spacing. Without this the prompt sits flush against the gesture
+          // bar on devices that have one.
+          top: false,
+          child: TextButton(
+            onPressed: () => context.go(
+              Uri(
+                path: '/register',
+                queryParameters: widget.returnTo == null
+                    ? null
+                    : {'returnTo': widget.returnTo},
+              ).toString(),
+            ),
+            child: Text(l10n.dontHaveAccount),
           ),
         ),
         // Web-only footer with app store badges and links
@@ -466,7 +479,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   _buildLoginForm(loginState, context),
                   if (!AppConfig.isProduction)
                     Positioned(
-                      bottom: 20,
+                      // Clear of the register prompt now pinned along the
+                      // bottom edge, which it used to sit level with.
+                      bottom: 64,
                       left: 16,
                       child: Text(
                         l10n.devEnvironment,

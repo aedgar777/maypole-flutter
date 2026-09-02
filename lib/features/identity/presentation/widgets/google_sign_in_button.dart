@@ -24,13 +24,12 @@ class GoogleSignInButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    // Height is fixed but width is left to the content, so the button hugs its
-    // label the way the neighbouring Sign In button does. The Row already sizes
-    // to its children; the parent Column supplies a bounded width, so the
-    // Flexible below still has something to shrink against on a narrow screen
-    // or with a longer translation.
+    // Full width, matching the fields and the Sign In button above it, so the
+    // column keeps one straight edge. Buttons of differing widths stacked on a
+    // shared centre line read as clutter however well spaced they are.
     return SizedBox(
       height: 48,
+      width: double.infinity,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
@@ -39,8 +38,10 @@ class GoogleSignInButton extends StatelessWidget {
           foregroundColor: const Color(0xFF1F1F1F),
           elevation: 1,
           padding: const EdgeInsets.symmetric(horizontal: 24),
+          // Matches the app's ElevatedButton theme rather than a pill, so it
+          // is the same shape as Sign In directly above it.
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(8),
           ),
         ),
         child: isLoading

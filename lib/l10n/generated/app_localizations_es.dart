@@ -495,4 +495,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String signedInAsGoogle(String email) {
     return 'Sesión iniciada con Google como $email';
   }
+
+  @override
+  String get dontHaveAccount => '¿No tienes una cuenta? Regístrate';
 }

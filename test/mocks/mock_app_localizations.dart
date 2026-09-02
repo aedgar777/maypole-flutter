@@ -464,4 +464,7 @@ class MockAppLocalizations extends AppLocalizations {
 
   @override
   String signedInAsGoogle(String email) => 'Signed in with Google as $email';
+
+  @override
+  String get dontHaveAccount => "Don't have an account? Register";
 }
