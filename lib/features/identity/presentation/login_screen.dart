@@ -281,15 +281,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _buildLoginForm(AuthState loginState, BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
+    // Logo and form share one scroll view rather than sitting in separate
+    // boxes. Previously the form had its own Expanded/SingleChildScrollView
+    // below a fixed-height logo, so on shorter screens the first element of
+    // the form was clipped at the top of its own viewport with no way to
+    // reveal it — scrolling the form moved it further away, not closer.
     return Column(
       children: [
-        const Spacer(flex: 1),
-        Image.asset('assets/icons/ic_logo_main.png', width: 300, height: 300),
-        const Spacer(flex: 1),
         Expanded(
-          flex: 4,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
             child: Center(
               child: ConstrainedBox(
                 constraints: BoxConstraints(
@@ -300,17 +301,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Form(
                   key: _formKey,
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Above the email form: the fastest path should be the
-                      // first one the eye lands on.
-                      GoogleSignInButton(
-                        onPressed: _handleGoogleSignIn,
-                        isLoading: loginState.isLoading,
+                      // The asset is square but the wordmark inside it is
+                      // roughly 3:1, so a 300-square box padded it with a large
+                      // band of empty space above the form. Constrain the
+                      // height instead and let BoxFit.contain size to width.
+                      Image.asset(
+                        'assets/icons/ic_logo_main.png',
+                        width: 300,
+                        height: 170,
+                        fit: BoxFit.contain,
                       ),
-                      const SizedBox(height: 20),
-                      const AuthDivider(),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 24),
+
+                      // Email and password lead. A third-party button above the
+                      // primary form reads as the main path, which it is not.
                       AuthFormField(
                         controller: _emailController,
                         labelText: l10n.email,
@@ -334,47 +340,59 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         validator: (value) =>
                             StringUtils.validatePassword(value, l10n),
                       ),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 24),
+
                       if (loginState.isLoading)
-                        const CircularProgressIndicator()
-                      else
-                        Column(
-                          children: [
-                            ElevatedButton(
-                              onPressed: _handleSignIn,
-                              child: Text(
-                                l10n.signIn,
-                                style: const TextStyle(fontSize: 18),
-                              ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: CircularProgressIndicator(),
+                        )
+                      else ...[
+                        ElevatedButton(
+                          onPressed: _handleSignIn,
+                          child: Text(
+                            l10n.signIn,
+                            style: const TextStyle(fontSize: 18),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _handleForgotPassword,
+                          child: Text(l10n.forgotPassword),
+                        ),
+
+                        const SizedBox(height: 12),
+                        const AuthDivider(),
+                        const SizedBox(height: 16),
+
+                        GoogleSignInButton(
+                          onPressed: _handleGoogleSignIn,
+                          isLoading: loginState.isLoading,
+                        ),
+
+                        const SizedBox(height: 20),
+                        TextButton(
+                          onPressed: () => context.go(
+                            Uri(
+                              path: '/register',
+                              queryParameters: widget.returnTo == null
+                                  ? null
+                                  : {'returnTo': widget.returnTo},
+                            ).toString(),
+                          ),
+                          child: Text(l10n.register),
+                        ),
+                      ],
+
+                      if (loginState.errorMessage != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: Text(
+                            loginState.errorMessage!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
                             ),
-                            const SizedBox(height: 4),
-                            TextButton(
-                              onPressed: _handleForgotPassword,
-                              child: Text(l10n.forgotPassword),
-                            ),
-                            const SizedBox(height: 6),
-                            TextButton(
-                              onPressed: () => context.go(
-                                Uri(
-                                  path: '/register',
-                                  queryParameters: widget.returnTo == null
-                                      ? null
-                                      : {'returnTo': widget.returnTo},
-                                ).toString(),
-                              ),
-                              child: Text(l10n.register),
-                            ),
-                            if (loginState.errorMessage != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 16),
-                                child: Text(
-                                  loginState.errorMessage!,
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.error,
-                                  ),
-                                ),
-                              ),
-                          ],
+                          ),
                         ),
                     ],
                   ),

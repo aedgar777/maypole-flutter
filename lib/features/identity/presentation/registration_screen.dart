@@ -104,13 +104,6 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  GoogleSignInButton(
-                    onPressed: _handleGoogleSignIn,
-                    isLoading: ref.watch(loginViewModelProvider).isLoading,
-                  ),
-                  const SizedBox(height: 20),
-                  const AuthDivider(),
-                  const SizedBox(height: 20),
                   AuthFormField(
                     controller: _usernameController,
                     labelText: l10n.username,
@@ -226,6 +219,19 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                               : null,
                           child: Text(l10n.register),
                         ),
+
+                        // Below the form, matching the login screen: the
+                        // third-party route is an alternative to filling this
+                        // in, not the headline action.
+                        const SizedBox(height: 16),
+                        const AuthDivider(),
+                        const SizedBox(height: 16),
+                        GoogleSignInButton(
+                          onPressed: _handleGoogleSignIn,
+                          isLoading: ref.watch(loginViewModelProvider).isLoading,
+                        ),
+                        const SizedBox(height: 8),
+
                         TextButton(
                           onPressed: () => context.go(
                             Uri(
