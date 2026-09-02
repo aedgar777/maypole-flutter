@@ -78,32 +78,26 @@ class GoogleSignInButton extends StatelessWidget {
   }
 }
 
-/// A labelled rule that separates the Google button from the email form.
+/// Separates the email form from the third-party button.
+///
+/// Just the word, with no rules either side — now that the Google button is
+/// sized to its label rather than spanning the form, full-width lines would be
+/// the widest thing on the screen and would read as a heavier division than
+/// this is.
 class AuthDivider extends StatelessWidget {
   const AuthDivider({super.key});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final line = Expanded(
-      child: Divider(color: Colors.white.withValues(alpha: 0.2), height: 1),
-    );
 
-    return Row(
-      children: [
-        line,
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            l10n.orDivider,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.5),
-              fontSize: 13,
-            ),
-          ),
-        ),
-        line,
-      ],
+    return Text(
+      l10n.orDivider,
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        color: Colors.white.withValues(alpha: 0.5),
+        fontSize: 13,
+      ),
     );
   }
 }
