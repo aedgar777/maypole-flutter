@@ -1,5 +1,6 @@
 // Configuration settings for Dev Debug builds
 #include "Debug.xcconfig"
 
-// Override settings for dev environment
-PRODUCT_BUNDLE_IDENTIFIER = app.maypole.maypole.dev
+// One bundle identifier for every flavor: dev and prod are the same app on
+// different tracks, and Firebase/Google Sign-In register only this one.
+PRODUCT_BUNDLE_IDENTIFIER = app.maypole.maypole

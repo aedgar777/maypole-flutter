@@ -65,6 +65,11 @@ fi
 # Also mirror CLIENT_ID into GIDClientID: the Google Sign-In SDK looks there
 # when no client ID is supplied programmatically, which keeps the native side
 # working even if the Dart-level configuration is missing.
+#
+# This build phase MUST stay after "Copy Bundle Resources", which is where Xcode
+# writes Info.plist into the app. Run it earlier and the patch below is silently
+# overwritten, and the only symptom is a runtime PlatformException from
+# google_sign_in about a missing URL scheme.
 PLIST_BUDDY="/usr/libexec/PlistBuddy"
 APP_INFO_PLIST="${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Info.plist"
 
@@ -118,3 +123,4 @@ else
             || "${PLIST_BUDDY}" -c "Add :GIDClientID string ${GOOGLE_CLIENT_ID}" "${APP_INFO_PLIST}"
     fi
 fi
+
