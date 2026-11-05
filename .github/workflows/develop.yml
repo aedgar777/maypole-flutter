@@ -47,6 +47,12 @@ jobs:
           FIREBASE_DEV_AUTH_DOMAIN=test
           FIREBASE_DEV_STORAGE_BUCKET=test
           IOS_BUNDLE_ID=test
+
+          # Google Maps SDK keys. Restricted to the Maps SDK and bound to the iOS
+          # bundle id / Android package + signing certs. Secrets, unlike the OAuth
+          # client ids above: a Maps key is billable if it escapes its restrictions.
+          GOOGLE_MAPS_IOS_API_KEY=${{ secrets.GOOGLE_MAPS_IOS_API_KEY }}
+          GOOGLE_MAPS_ANDROID_API_KEY=${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY }}
           EOF
 
       - name: Run unit tests
@@ -202,6 +208,12 @@ jobs:
           # never needed here — the app only ever performs the public client flow.
           GOOGLE_OAUTH_WEB_CLIENT_ID_DEV=902296622907-7rhi6rpu63l08mtd77q3cim5sice4bte.apps.googleusercontent.com
           GOOGLE_OAUTH_IOS_CLIENT_ID_DEV=902296622907-hv26ditgjaotm53ut6hq9468thuq0cft.apps.googleusercontent.com
+
+          # Google Maps SDK keys. Restricted to the Maps SDK and bound to the iOS
+          # bundle id / Android package + signing certs. Secrets, unlike the OAuth
+          # client ids above: a Maps key is billable if it escapes its restrictions.
+          GOOGLE_MAPS_IOS_API_KEY=${{ secrets.GOOGLE_MAPS_IOS_API_KEY }}
+          GOOGLE_MAPS_ANDROID_API_KEY=${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY }}
           EOF
 
       - name: Create google-services.json for dev flavor
@@ -404,6 +416,12 @@ jobs:
           # never needed here — the app only ever performs the public client flow.
           GOOGLE_OAUTH_WEB_CLIENT_ID_DEV=902296622907-7rhi6rpu63l08mtd77q3cim5sice4bte.apps.googleusercontent.com
           GOOGLE_OAUTH_IOS_CLIENT_ID_DEV=902296622907-hv26ditgjaotm53ut6hq9468thuq0cft.apps.googleusercontent.com
+
+          # Google Maps SDK keys. Restricted to the Maps SDK and bound to the iOS
+          # bundle id / Android package + signing certs. Secrets, unlike the OAuth
+          # client ids above: a Maps key is billable if it escapes its restrictions.
+          GOOGLE_MAPS_IOS_API_KEY=${{ secrets.GOOGLE_MAPS_IOS_API_KEY }}
+          GOOGLE_MAPS_ANDROID_API_KEY=${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY }}
           EOF
 
       - name: Create GoogleService-Info.plist for dev
@@ -569,6 +587,12 @@ jobs:
           # never needed here — the app only ever performs the public client flow.
           GOOGLE_OAUTH_WEB_CLIENT_ID_DEV=902296622907-7rhi6rpu63l08mtd77q3cim5sice4bte.apps.googleusercontent.com
           GOOGLE_OAUTH_IOS_CLIENT_ID_DEV=902296622907-hv26ditgjaotm53ut6hq9468thuq0cft.apps.googleusercontent.com
+
+          # Google Maps SDK keys. Restricted to the Maps SDK and bound to the iOS
+          # bundle id / Android package + signing certs. Secrets, unlike the OAuth
+          # client ids above: a Maps key is billable if it escapes its restrictions.
+          GOOGLE_MAPS_IOS_API_KEY=${{ secrets.GOOGLE_MAPS_IOS_API_KEY }}
+          GOOGLE_MAPS_ANDROID_API_KEY=${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY }}
           EOF
 
       - name: Build Web

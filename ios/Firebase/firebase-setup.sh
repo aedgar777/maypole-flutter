@@ -124,3 +124,27 @@ else
     fi
 fi
 
+# ---- Google Maps SDK key ----------------------------------------------------
+#
+# GMSServices.provideAPIKey runs before any Dart executes, so this key cannot
+# come from --dart-define the way the Places key does. Injecting it here keeps
+# it out of tracked source: hardcoding it in AppDelegate.swift is what leaked
+# the previous key, which sat in a public repo for nine months.
+#
+# .env is gitignored and already written by every CI job before the build.
+MAPS_KEY="${GOOGLE_MAPS_IOS_API_KEY}"
+if [ -z "${MAPS_KEY}" ] && [ -f "${SRCROOT}/../.env" ]; then
+    MAPS_KEY=$(grep -m1 '^GOOGLE_MAPS_IOS_API_KEY=' "${SRCROOT}/../.env" | cut -d= -f2- | tr -d '"'"'"' \r')
+fi
+
+if [ -z "${MAPS_KEY}" ]; then
+    # Not fatal: everything except map rendering still works, and a hard failure
+    # here would block builds that never open a map.
+    echo "warning: GOOGLE_MAPS_IOS_API_KEY not set in the environment or .env; Google Maps will not render."
+elif [ ! -f "${APP_INFO_PLIST}" ]; then
+    echo "warning: ${APP_INFO_PLIST} not found; skipping Google Maps key setup."
+else
+    "${PLIST_BUDDY}" -c "Set :GMSApiKey ${MAPS_KEY}" "${APP_INFO_PLIST}" 2>/dev/null \
+        || "${PLIST_BUDDY}" -c "Add :GMSApiKey string ${MAPS_KEY}" "${APP_INFO_PLIST}"
+    echo "Google Maps API key injected into Info.plist"
+fi

@@ -120,6 +120,12 @@ jobs:
           # never needed here — the app only ever performs the public client flow.
           GOOGLE_OAUTH_WEB_CLIENT_ID_PROD=1069925301177-9lo5bht5kis83tpcsnd8lsi10au52878.apps.googleusercontent.com
           GOOGLE_OAUTH_IOS_CLIENT_ID_PROD=1069925301177-5mrbhfnct3l39g1vj6tlhvfmcug4vi11.apps.googleusercontent.com
+
+          # Google Maps SDK keys. Restricted to the Maps SDK and bound to the iOS
+          # bundle id / Android package + signing certs. Secrets, unlike the OAuth
+          # client ids above: a Maps key is billable if it escapes its restrictions.
+          GOOGLE_MAPS_IOS_API_KEY=${{ secrets.GOOGLE_MAPS_IOS_API_KEY }}
+          GOOGLE_MAPS_ANDROID_API_KEY=${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY }}
           EOF
 
       - name: Build Web
