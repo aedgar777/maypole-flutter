@@ -90,8 +90,16 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.7'
+          flutter-version: '3.47.9'
           channel: 'stable'
+
+      # Flutter 3.47 enables Swift Package Manager by default, which stops
+      # SPM-migrated plugins from being declared as pods. google_mobile_ads
+      # still declares webview_flutter_wkwebview as a podspec dependency, so
+      # pod install then fails to resolve it. Lift this once google_mobile_ads
+      # is upgraded and the project moves to SPM.
+      - name: Disable Swift Package Manager
+        run: flutter config --no-enable-swift-package-manager
 
       - name: Get dependencies
         run: flutter pub get
@@ -227,8 +235,16 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.7'
+          flutter-version: '3.47.9'
           channel: 'stable'
+
+      # Flutter 3.47 enables Swift Package Manager by default, which stops
+      # SPM-migrated plugins from being declared as pods. google_mobile_ads
+      # still declares webview_flutter_wkwebview as a podspec dependency, so
+      # pod install then fails to resolve it. Lift this once google_mobile_ads
+      # is upgraded and the project moves to SPM.
+      - name: Disable Swift Package Manager
+        run: flutter config --no-enable-swift-package-manager
 
       - name: Get dependencies
         run: flutter pub get
@@ -349,8 +365,16 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.7'
+          flutter-version: '3.47.9'
           channel: 'stable'
+
+      # Flutter 3.47 enables Swift Package Manager by default, which stops
+      # SPM-migrated plugins from being declared as pods. google_mobile_ads
+      # still declares webview_flutter_wkwebview as a podspec dependency, so
+      # pod install then fails to resolve it. Lift this once google_mobile_ads
+      # is upgraded and the project moves to SPM.
+      - name: Disable Swift Package Manager
+        run: flutter config --no-enable-swift-package-manager
 
       - name: Flutter pub get
         run: flutter pub get
