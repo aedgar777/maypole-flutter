@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -19,12 +20,61 @@ class AuthService {
   final UserDataPrefetchService _prefetchService = UserDataPrefetchService();
   final GoogleSignInService _googleSignIn = GoogleSignInService();
 
+  /// Like [Stream.asyncExpand], but abandons the previous inner stream when a
+  /// new source event arrives instead of waiting for it to finish.
+  ///
+  /// [Stream.asyncExpand] pauses its source until each inner stream completes.
+  /// A Firestore `snapshots()` never completes, so the first signed-in account
+  /// would pin the listener for the life of the subscription: every later
+  /// `authStateChanges` event sat buffered and unread, and the stream went on
+  /// watching the *previous* user's document. Signing out and back in as
+  /// someone else, or any sign-in that follows an earlier one without an app
+  /// restart, then left the app watching a document that would never change —
+  /// a profile write would land and nothing would ever emit.
+  static Stream<T> _switchMap<S, T>(
+    Stream<S> source,
+    Stream<T> Function(S) convert,
+  ) {
+    StreamSubscription<S>? sourceSub;
+    StreamSubscription<T>? innerSub;
+    late StreamController<T> controller;
+
+    controller = StreamController<T>(
+      onListen: () {
+        sourceSub = source.listen(
+          (event) {
+            // Drop the old listener before attaching the new one. Not awaited:
+            // cancel() can only complete asynchronously, and holding the event
+            // until it does would reintroduce the stall this exists to avoid.
+            unawaited(innerSub?.cancel());
+            innerSub = convert(event).listen(
+              controller.add,
+              onError: controller.addError,
+            );
+          },
+          onError: controller.addError,
+          onDone: () {
+            unawaited(innerSub?.cancel());
+            if (!controller.isClosed) controller.close();
+          },
+        );
+      },
+      onCancel: () async {
+        await innerSub?.cancel();
+        await sourceSub?.cancel();
+      },
+    );
+
+    return controller.stream;
+  }
+
   Stream<DomainUser?> get user {
-    return _firebaseAuth.authStateChanges().asyncExpand((firebaseUser) {
+    return _switchMap(_firebaseAuth.authStateChanges(), (User? firebaseUser) {
       if (firebaseUser == null) {
         _session.currentUser = null;
         return Stream.value(null);
       }
+      debugPrint('🔑 [Auth] authStateChanges uid=${firebaseUser.uid}');
       // Listen to real-time Firestore updates
       return _firestore.collection('users').doc(firebaseUser.uid).snapshots().asyncMap((
         docSnapshot,
