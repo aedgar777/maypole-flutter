@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "1069925301177-a1baglhbd1a5fgglusp0f6aa60o7p0rq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.maypole.maypole",
+            "certificate_hash": "aff79135d7e82a1f93fb9a5f66c54e8ba47d59d3"
+          }
+        },
+        {
           "client_id": "1069925301177-hh00lpg6nt30g9m2lgnb5ausjls509ia.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
