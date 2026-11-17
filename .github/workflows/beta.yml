@@ -7,7 +7,7 @@ on:
 
 jobs:
   bump_version:
-    name: Bump Patch Version
+    name: Bump Build Number
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -20,7 +20,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - name: Bump patch version
+      - name: Bump build number
         id: bump
         run: |
           chmod +x scripts/auto-bump-version.sh scripts/get-version.sh
@@ -29,7 +29,7 @@ jobs:
           git pull --rebase origin beta || echo "⚠️ Pull failed, but continuing..."
           echo "📱 Current version:"
           ./scripts/get-version.sh
-          ./scripts/auto-bump-version.sh patch
+          ./scripts/auto-bump-version.sh build
           echo "✅ New version:"
           ./scripts/get-version.sh
           if git diff --quiet pubspec.yaml; then

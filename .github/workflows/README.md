@@ -40,7 +40,8 @@ This directory contains CI/CD workflows for automated deployment of the Maypole 
 
 **Flow**:
 1. **Version Bump**
-   - Auto-bumps patch version (`1.0.0+20` → `1.0.1+21`)
+   - Auto-bumps build number only (`1.3.0+20` → `1.3.0+21`)
+   - The version name is set on `develop` and carried through unchanged
    - Commits and pushes version bump
 
 2. **Build & Deploy Android** (parallel)
@@ -85,10 +86,14 @@ This ensures the exact tested beta builds go to production.
 | Workflow | Version Bump | Example |
 |----------|-------------|---------|
 | **Development** | Build number only | `1.0.0+20` → `1.0.0+21` |
-| **Beta** | Patch version | `1.0.0+20` → `1.0.1+21` |
+| **Beta** | Build number only | `1.3.0+20` → `1.3.0+21` |
 | **Production** | None (promotes from beta) | `1.0.1+21` → `1.0.1+21` |
 
 Version bumps happen **before** building to ensure all platforms use the same version.
+
+The version *name* (`MAJOR.MINOR.PATCH`) is owned by `develop`: bump it there when a
+release warrants it, and beta will carry that name through, incrementing only the
+build number for each beta build.
 
 ---
 
