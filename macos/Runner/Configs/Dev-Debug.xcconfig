@@ -2,8 +2,9 @@
 #include "Debug.xcconfig"
 #include "AppInfo.xcconfig"
 
-// Override bundle identifier for dev
-PRODUCT_BUNDLE_IDENTIFIER = app.maypole.maypole.dev
+// One bundle identifier for every flavor: dev and prod are the same app on
+// different tracks, and Firebase/Google Sign-In register only this one.
+PRODUCT_BUNDLE_IDENTIFIER = app.maypole.maypole
 PRODUCT_NAME = maypole-dev
 
 // App name shown to users

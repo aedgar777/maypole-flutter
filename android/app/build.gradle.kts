@@ -18,6 +18,24 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+// The Maps SDK key is read by the platform before any Dart runs, so it cannot
+// come from --dart-define like the Places key does. It is injected into the
+// manifest from .env, which is gitignored and already written by every CI job.
+// Hardcoding it in AndroidManifest.xml is what leaked the previous key.
+val dotenvFile = rootProject.file("../.env")
+val dotenv = Properties()
+if (dotenvFile.exists()) {
+    dotenvFile.inputStream().use { dotenv.load(it) }
+}
+val mapsApiKey: String = (System.getenv("GOOGLE_MAPS_ANDROID_API_KEY")
+    ?: dotenv.getProperty("GOOGLE_MAPS_ANDROID_API_KEY")
+    ?: "").trim()
+if (mapsApiKey.isEmpty()) {
+    // Not fatal: every other part of the app builds and runs. Maps tiles render
+    // grey, which is otherwise a confusing thing to debug at runtime.
+    logger.warn("warning: GOOGLE_MAPS_ANDROID_API_KEY is not set in the environment or .env; Google Maps will not render.")
+}
+
 android {
     namespace = "app.maypole.maypole"
     compileSdk = flutter.compileSdkVersion
@@ -40,6 +58,8 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        manifestPlaceholders["mapsApiKey"] = mapsApiKey
     }
 
     // Define signing configs

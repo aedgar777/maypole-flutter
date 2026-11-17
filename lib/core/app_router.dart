@@ -9,6 +9,7 @@ import '../features/maypolechat/presentation/screens/maypole_chat_screen.dart';
 import '../features/maypolechat/presentation/screens/maypole_chat_loader.dart';
 import '../features/identity/presentation/login_screen.dart';
 import '../features/identity/presentation/registration_screen.dart';
+import '../features/identity/presentation/google_username_screen.dart';
 import '../features/identity/presentation/email_verified_screen.dart';
 import '../features/identity/presentation/screens/user_profile_screen.dart';
 import '../features/home/presentation/screens/home_screen.dart';
@@ -113,6 +114,19 @@ void _dismissAuthActionBrowser() {
   );
 }
 
+/// Whether [uri] is somewhere worth returning to after finishing sign-up.
+///
+/// The auth screens themselves are not: bouncing a newly-created user back to
+/// `/login` would undo the sign-up they just completed.
+bool _isRoutableReturnTarget(Uri uri) {
+  final target = uri.toString();
+  return target.isNotEmpty &&
+      target != '/' &&
+      !target.startsWith('/login') &&
+      !target.startsWith('/register') &&
+      !target.startsWith('/complete-profile');
+}
+
 /// Builds the login redirect target, preserving the originally requested
 /// location (path + query) as a `returnTo` parameter.
 ///
@@ -204,6 +218,49 @@ final routerProvider = Provider<GoRouter>((ref) {
         );
       }
 
+      // A Google sign-up that has authenticated but not yet chosen a username
+      // is in a state the auth stream cannot express: Firebase has a user, but
+      // [authStateProvider] emits null because no profile document exists. The
+      // checks below would read that as "signed out" and send them to login,
+      // abandoning the account they just created. Hold them on the username
+      // screen until they either finish or explicitly cancel.
+      // Two sources, because the two can disagree after a relaunch: the
+      // provider holds the flow started in this session, while the service
+      // recognises one left unfinished in a previous one. Either means the
+      // user still owes us a username.
+      final pendingGoogleProfile = ref.read(googleProfileSetupProvider);
+      final hasPendingGoogleProfile =
+          pendingGoogleProfile != null || authService.isGoogleProfileSetupPending;
+
+      if (hasPendingGoogleProfile) {
+        // Restore the details the username screen shows (the Google address,
+        // the suggested name) when this is a resumed flow. `redirect` must stay
+        // synchronous and must not write to providers mid-build, so defer it.
+        if (pendingGoogleProfile == null) {
+          final resumed = authService.resumePendingGoogleProfile();
+          if (resumed != null) {
+            Future.microtask(
+              () => ref.read(googleProfileSetupProvider.notifier).start(resumed),
+            );
+          }
+        }
+
+        if (currentPath == '/complete-profile') {
+          debugPrint('🧭 [DeepLink] redirect DECISION: allow (completing profile)');
+          return null;
+        }
+        // Preserve the deep link they were originally headed for, so finishing
+        // sign-up still lands them where they meant to go.
+        final returnTo = uri.queryParameters['returnTo'] ??
+            (_isRoutableReturnTarget(uri) ? uri.toString() : null);
+        final target = Uri(
+          path: '/complete-profile',
+          queryParameters: returnTo == null ? null : {'returnTo': returnTo},
+        ).toString();
+        debugPrint('🧭 [DeepLink] redirect DECISION: -> "$target" (profile incomplete)');
+        return target;
+      }
+
       // Define public routes that don't require authentication
       final publicRoutes = [
         '/login',
@@ -279,6 +336,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/register',
         builder: (context, state) =>
             RegistrationScreen(returnTo: state.uri.queryParameters['returnTo']),
+      ),
+      GoRoute(
+        path: '/complete-profile',
+        builder: (context, state) => GoogleUsernameScreen(
+          returnTo: state.uri.queryParameters['returnTo'],
+        ),
       ),
       GoRoute(
         path: '/email-verified',

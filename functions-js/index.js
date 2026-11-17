@@ -215,6 +215,33 @@ exports.sendCustomPasswordResetEmail = functions
     }
 
     try {
+      // A Google-only account has no password to reset. Admin SDK will happily
+      // mint a reset link for it anyway — completing that link silently *adds*
+      // a password credential — so the user is left with a working link, a
+      // password they did not know they had, and no explanation of why "forgot
+      // password" behaved oddly for an account they only ever signed into with
+      // Google. Send them a pointer to the right button instead.
+      //
+      // Note this still returns 'sent' either way: which email went out must
+      // not reveal whether the address has an account, or how it signs in.
+      const providers = await getSignInProviders(email);
+
+      if (providers && !providers.includes('password') &&
+          providers.includes('google.com')) {
+        console.log(`[reset] ${email} is Google-only — sending guidance email`);
+
+        const transporter = await getTransporter();
+        await transporter.sendMail({
+          from: `"Maypole" <${SENDER_ADDRESS()}>`,
+          to: email,
+          subject: 'Signing in to Maypole',
+          html: buildGoogleSignInGuidanceEmail(email),
+        });
+
+        console.log(`[reset] ✓ Guidance sent to ${email}`);
+        return { status: 'sent' };
+      }
+
       // Generate the reset link via Admin SDK.
       const firebaseLink = await admin.auth().generatePasswordResetLink(
         email,
@@ -279,6 +306,47 @@ function buildVerificationEmail(name, link) {
           <p>Hi ${escapeHtml(name)},<br>Thanks for joining Maypole! Click below to verify your email address and get started.</p>
           <a class="button" href="${escapeAttr(link)}">Verify Email</a>
           <p class="footer">If you didn't create a Maypole account, you can safely ignore this email.</p>
+        </div>
+      </div>
+    </body>
+    </html>`;
+}
+
+/**
+ * The sign-in providers attached to [email], or null if there is no such user.
+ *
+ * Callers must treat null and "lookup failed" the same way they treat any
+ * other account: never surface the difference, or the endpoint becomes an
+ * account-existence oracle.
+ */
+async function getSignInProviders(email) {
+  try {
+    const user = await admin.auth().getUserByEmail(email);
+    return user.providerData.map((p) => p.providerId);
+  } catch (err) {
+    if (err.code === 'auth/user-not-found') {
+      return null;
+    }
+    // Fall back to the normal reset path rather than failing the request — a
+    // transient lookup error should not stop a legitimate reset.
+    console.warn(`[reset] Provider lookup failed for ${email}:`, err.message);
+    return null;
+  }
+}
+
+function buildGoogleSignInGuidanceEmail(email) {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"><style>${brandStyles()}</style></head>
+    <body>
+      <div class="container">
+        <div class="card">
+          <img class="logo" src="https://maypole.app/icons/ic_logo_splash.png" alt="Maypole">
+          <h1>You sign in with Google</h1>
+          <p>Someone asked to reset the password for<br><strong>${escapeHtml(email)}</strong>.<br>This account doesn't have a password — it signs in with Google.</p>
+          <p>Open Maypole and tap <strong>Continue with Google</strong> to get back in.</p>
+          <p class="footer">If you didn't request this, you can safely ignore this email. Your account has not been changed.</p>
         </div>
       </div>
     </body>

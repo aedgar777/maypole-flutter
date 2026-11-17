@@ -8,8 +8,15 @@ import GoogleMaps
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    // Google Maps API Key
-    GMSServices.provideAPIKey("AIzaSyA7kcPWjaVK3iC4qbmSO1vuTBEk11llq9A")
+    // Google Maps API Key, injected into Info.plist at build time by
+    // ios/Firebase/firebase-setup.sh. Not hardcoded: this file is tracked, and a
+    // hardcoded key here leaked publicly for nine months before being rotated.
+    if let mapsApiKey = Bundle.main.object(forInfoDictionaryKey: "GMSApiKey") as? String,
+       !mapsApiKey.isEmpty {
+      GMSServices.provideAPIKey(mapsApiKey)
+    } else {
+      NSLog("Maypole: GMSApiKey missing from Info.plist; Google Maps will not render.")
+    }
 
     // Register plugins with the FlutterAppDelegate. A custom engine's
     // registrarForPlugin: returns nil on this Flutter/iOS combination, which

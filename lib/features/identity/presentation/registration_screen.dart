@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:maypole/core/app_config.dart';
 import 'package:maypole/core/utils/string_utils.dart';
+import 'package:maypole/core/widgets/app_toast.dart';
 import 'package:maypole/core/widgets/error_dialog.dart';
 import 'package:maypole/l10n/generated/app_localizations.dart';
 import './widgets/auth_form_field.dart';
+import './widgets/google_sign_in_button.dart';
 import '../auth_providers.dart';
 import '../domain/states/auth_state.dart';
 
@@ -217,6 +219,19 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
                               : null,
                           child: Text(l10n.register),
                         ),
+
+                        // Below the form, matching the login screen: the
+                        // third-party route is an alternative to filling this
+                        // in, not the headline action.
+                        const SizedBox(height: 16),
+                        const AuthDivider(),
+                        const SizedBox(height: 16),
+                        GoogleSignInButton(
+                          onPressed: _handleGoogleSignIn,
+                          isLoading: ref.watch(loginViewModelProvider).isLoading,
+                        ),
+                        const SizedBox(height: 8),
+
                         TextButton(
                           onPressed: () => context.go(
                             Uri(
@@ -247,6 +262,35 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
         ),
       ),
     );
+  }
+
+  /// Same flow as the login screen's Google button. Offered here too because
+  /// "register" is where someone creating an account naturally goes, and making
+  /// them back out to login to find it would be a pointless detour.
+  Future<void> _handleGoogleSignIn() async {
+    final needsUsername =
+        await ref.read(loginViewModelProvider.notifier).signInWithGoogle();
+
+    if (!mounted) return;
+
+    if (needsUsername) {
+      context.go(
+        Uri(
+          path: '/complete-profile',
+          queryParameters:
+              widget.returnTo == null ? null : {'returnTo': widget.returnTo},
+        ).toString(),
+      );
+      return;
+    }
+
+    // Not a new account after all — they already had one, and the Google
+    // credential just signed them into it. Surface any failure; a success needs
+    // no action, as the auth stream routes them onward.
+    final error = ref.read(loginViewModelProvider).errorMessage;
+    if (error != null) {
+      AppToast.showError(context, error);
+    }
   }
 
   void _handleRegistration() {

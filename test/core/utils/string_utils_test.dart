@@ -173,4 +173,73 @@ void main() {
       expect(result, isNull);
     });
   });
+
+  group('StringUtils.suggestUsername', () {
+    test('uses the display name when there is one', () {
+      expect(
+        StringUtils.suggestUsername(
+          displayName: 'Ada Lovelace',
+          email: 'ada@example.com',
+        ),
+        'AdaLovelace',
+      );
+    });
+
+    test('falls back to the email local part when the display name is absent',
+        () {
+      expect(
+        StringUtils.suggestUsername(email: 'ada.lovelace@example.com'),
+        'adalovelace',
+      );
+    });
+
+    test('falls back to the email when the display name is only whitespace',
+        () {
+      expect(
+        StringUtils.suggestUsername(
+          displayName: '   ',
+          email: 'ada@example.com',
+        ),
+        'ada',
+      );
+    });
+
+    test('strips characters a username may not contain', () {
+      expect(
+        StringUtils.suggestUsername(displayName: "Ada-Lovelace O'Byron!"),
+        'AdaLovelaceOByron',
+      );
+    });
+
+    test('keeps underscores and digits', () {
+      expect(
+        StringUtils.suggestUsername(displayName: 'ada_99'),
+        'ada_99',
+      );
+    });
+
+    test('truncates to the maximum username length', () {
+      final result = StringUtils.suggestUsername(displayName: 'a' * 50);
+      expect(result.length, StringUtils.maxUsernameLength);
+    });
+
+    test('produces a suggestion that passes validation', () {
+      final result = StringUtils.suggestUsername(displayName: 'Ada Lovelace');
+      expect(StringUtils.validateUsername(result, mockL10n), isNull);
+    });
+
+    test('returns empty when too little survives to be a valid username', () {
+      // Two usable characters is below the three-character minimum, so
+      // suggesting it would pre-fill the field with something invalid.
+      expect(StringUtils.suggestUsername(displayName: 'A. B.'), '');
+    });
+
+    test('returns empty when nothing usable survives', () {
+      expect(StringUtils.suggestUsername(displayName: '???'), '');
+    });
+
+    test('returns empty when given nothing at all', () {
+      expect(StringUtils.suggestUsername(), '');
+    });
+  });
 }

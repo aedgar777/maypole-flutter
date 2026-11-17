@@ -200,6 +200,56 @@ class AppConfig {
     return dotenv.env['FIREBASE_PROD_WINDOWS_MEASUREMENT_ID'] ?? '';
   }
 
+  /// OAuth 2.0 **Web** client ID for Google Sign-In.
+  ///
+  /// This is the "Web client (auto created by Google Service)" entry in the
+  /// Google Cloud credentials list for the Firebase project. It is *not* the
+  /// Android client ID: Android has no client ID of its own to pass, it is
+  /// identified by its package name + SHA-1 certificate fingerprint, and the
+  /// web client ID is what it sends as `serverClientId` so the returned ID
+  /// token carries an audience Firebase Auth will accept.
+  ///
+  /// Also used as the client ID on web, where the Google Identity Services
+  /// library needs it to render the sign-in flow for our origin.
+  static String get googleWebClientId {
+    const prodId = String.fromEnvironment('GOOGLE_OAUTH_WEB_CLIENT_ID_PROD');
+    const devId = String.fromEnvironment('GOOGLE_OAUTH_WEB_CLIENT_ID_DEV');
+
+    if (isProduction && prodId.isNotEmpty) return prodId;
+    if (!isProduction && devId.isNotEmpty) return devId;
+
+    try {
+      return (isProduction
+              ? dotenv.env['GOOGLE_OAUTH_WEB_CLIENT_ID_PROD']
+              : dotenv.env['GOOGLE_OAUTH_WEB_CLIENT_ID_DEV']) ??
+          '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  /// OAuth 2.0 **iOS** client ID for Google Sign-In, shared by iOS and macOS.
+  ///
+  /// Apple platforms can also pick this up from `GIDClientID` in Info.plist,
+  /// but reading it here keeps the dev/prod split in one place rather than
+  /// baking a single environment's value into the bundle.
+  static String get googleIosClientId {
+    const prodId = String.fromEnvironment('GOOGLE_OAUTH_IOS_CLIENT_ID_PROD');
+    const devId = String.fromEnvironment('GOOGLE_OAUTH_IOS_CLIENT_ID_DEV');
+
+    if (isProduction && prodId.isNotEmpty) return prodId;
+    if (!isProduction && devId.isNotEmpty) return devId;
+
+    try {
+      return (isProduction
+              ? dotenv.env['GOOGLE_OAUTH_IOS_CLIENT_ID_PROD']
+              : dotenv.env['GOOGLE_OAUTH_IOS_CLIENT_ID_DEV']) ??
+          '';
+    } catch (_) {
+      return '';
+    }
+  }
+
   /// Provides the iOS Bundle ID.
   static String get iosBundleId {
     return dotenv.env['IOS_BUNDLE_ID'] ?? 'app.maypole.maypole';
