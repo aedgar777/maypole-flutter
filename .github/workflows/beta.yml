@@ -172,6 +172,79 @@ jobs:
             exit 1
           fi
 
+      - name: Verify Google Sign-In configuration (Android)
+        run: |
+          python3 -I - <<'PY'
+          import json, re, sys
+
+          CONFIG = 'android/app/src/prod/google-services.json'
+          PACKAGE = 'app.maypole.maypole'
+          failed = False
+
+          with open(CONFIG) as fh:
+              data = json.load(fh)
+
+          project_number = data['project_info']['project_number']
+
+          client = next(
+              (c for c in data.get('client', [])
+               if c['client_info']['android_client_info']['package_name'] == PACKAGE),
+              None,
+          )
+          if client is None:
+              print(f'::error::No client entry for {PACKAGE} in {CONFIG}.')
+              sys.exit(1)
+
+          oauth = client.get('oauth_client', [])
+          android_clients = [
+              o for o in oauth
+              if o.get('client_type') == 1
+              and o.get('android_info', {}).get('certificate_hash')
+          ]
+          web_clients = [o for o in oauth if o.get('client_type') == 3]
+
+          if android_clients:
+              print('Registered Android signing certificates:')
+              for o in android_clients:
+                  print(f"  SHA-1 {o['android_info']['certificate_hash']}")
+              print('One of these must be the Play App Signing certificate. Play re-signs '
+                    'the bundle it serves to testers, and Google matches the certificate '
+                    'the installed app actually carries -- not the upload key.')
+          else:
+              print(f'::error::No Android OAuth client with a certificate hash in {CONFIG}. '
+                    "Google will return a null ID token and sign-in will fail with "
+                    "missing-google-id-token. Register this build's signing SHA-1 against "
+                    'the Firebase Android app.')
+              failed = True
+
+          if not web_clients:
+              print(f'::warning::No web OAuth client (client_type 3) in {CONFIG}. Not fatal '
+                    'while GOOGLE_OAUTH_WEB_CLIENT_ID_PROD supplies the serverClientId, but '
+                    'the two can then drift apart unnoticed.')
+
+          # The ID token audience the app asks for has to belong to the same Firebase
+          # project as this config, or Firebase rejects the credential.
+          env_text = open('.env').read()
+          for key in ('GOOGLE_OAUTH_WEB_CLIENT_ID_PROD', 'GOOGLE_OAUTH_IOS_CLIENT_ID_PROD'):
+              match = re.search(rf'^{key}=(\S+)$', env_text, re.M)
+              if match is None:
+                  print(f'::error::{key} is missing from .env, so GoogleSignInService '
+                        'would initialize without it.')
+                  failed = True
+                  continue
+              value = match.group(1)
+              if not value.startswith(f'{project_number}-'):
+                  print(f'::error::{key} belongs to project {value.split("-")[0]}, but '
+                        f'{CONFIG} is project {project_number}.')
+                  failed = True
+              else:
+                  print(f'{key} matches project {project_number}')
+
+          if failed:
+              sys.exit(1)
+          print('Google Sign-In configuration looks consistent.')
+          PY
+
       - name: Build Android App Bundle (prodRelease)
         env:
           # Disable the Gradle daemon and file-system watching on CI to reduce
@@ -294,6 +367,52 @@ jobs:
           echo "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_PROD }}" > ios/Firebase/prod/GoogleService-Info.plist
           plutil -lint ios/Firebase/prod/GoogleService-Info.plist
           echo "✅ GoogleService-Info.plist created"
+
+      - name: Verify Google Sign-In configuration (iOS)
+        run: |
+          PLIST=ios/Firebase/prod/GoogleService-Info.plist
+          failed=0
+
+          reversed_id=$(/usr/libexec/PlistBuddy -c "Print :REVERSED_CLIENT_ID" "$PLIST" 2>/dev/null || true)
+          client_id=$(/usr/libexec/PlistBuddy -c "Print :CLIENT_ID" "$PLIST" 2>/dev/null || true)
+
+          # firebase-setup.sh patches the callback URL scheme into the built
+          # Info.plist from REVERSED_CLIENT_ID. It only warns when the key is
+          # absent, and a warning is easy to lose in xcodebuild output -- the
+          # symptom reaches testers instead, as a picker that never comes back.
+          if [ -z "$reversed_id" ]; then
+            echo "::error::REVERSED_CLIENT_ID missing from $PLIST. No callback URL scheme will be added, so Google Sign-In will open and never return to the app. Enable Google as a sign-in provider on the Firebase project and re-download GoogleService-Info.plist."
+            failed=1
+          else
+            echo "REVERSED_CLIENT_ID present ($reversed_id)"
+          fi
+
+          if [ -z "$client_id" ]; then
+            echo "::error::CLIENT_ID missing from $PLIST, so GIDClientID cannot be set."
+            failed=1
+          else
+            echo "CLIENT_ID present"
+          fi
+
+          # The app passes AppConfig.googleIosClientId to GoogleSignIn.initialize,
+          # while firebase-setup.sh writes GIDClientID from this plist. If the two
+          # disagree the flow is authenticating against a different OAuth client
+          # than the bundle is configured for.
+          env_client_id=$(sed -n 's/^GOOGLE_OAUTH_IOS_CLIENT_ID_PROD=//p' .env)
+          if [ -z "$env_client_id" ]; then
+            echo "::error::GOOGLE_OAUTH_IOS_CLIENT_ID_PROD is missing from .env."
+            failed=1
+          elif [ -n "$client_id" ] && [ "$env_client_id" != "$client_id" ]; then
+            echo "::error::GOOGLE_OAUTH_IOS_CLIENT_ID_PROD ($env_client_id) does not match CLIENT_ID in $PLIST ($client_id)."
+            failed=1
+          elif [ -n "$client_id" ]; then
+            echo "GOOGLE_OAUTH_IOS_CLIENT_ID_PROD matches the plist CLIENT_ID"
+          fi
+
+          if [ "$failed" -ne 0 ]; then
+            exit 1
+          fi
+          echo "Google Sign-In configuration looks consistent."
 
       - name: Install CocoaPods dependencies
         working-directory: ios
