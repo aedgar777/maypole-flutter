@@ -172,6 +172,85 @@ jobs:
             exit 1
           fi
 
+      - name: Compare google-services.json with the committed copy
+        run: |
+          python3 -I - <<'PY'
+          import json, subprocess, sys
+
+          CONFIG = 'android/app/src/prod/google-services.json'
+          PACKAGE = 'app.maypole.maypole'
+
+          def inventory(data):
+              """Project identity, plus the OAuth clients registered for our package."""
+              info = data['project_info']
+              clients = []
+              for c in data.get('client', []):
+                  if c['client_info']['android_client_info']['package_name'] != PACKAGE:
+                      continue
+                  for o in c.get('oauth_client', []):
+                      clients.append((
+                          o.get('client_type'),
+                          o.get('android_info', {}).get('certificate_hash', ''),
+                      ))
+              return info['project_id'], info['project_number'], sorted(clients)
+
+          def describe(clients):
+              if not clients:
+                  return 'none'
+              return ', '.join(
+                  f"type {t} {h or '(no hash)'}" for t, h in clients
+              )
+
+          # The working copy was just overwritten from GOOGLE_SERVICES_JSON_PROD, so the
+          # committed version has to come from git rather than from disk.
+          try:
+              tracked_raw = subprocess.run(
+                  ['git', 'show', f'HEAD:{CONFIG}'],
+                  capture_output=True, text=True, check=True,
+              ).stdout
+          except subprocess.CalledProcessError:
+              print(f'::warning::No committed copy of {CONFIG} at HEAD, so there is '
+                    'nothing to compare the secret against.')
+              sys.exit(0)
+
+          with open(CONFIG) as fh:
+              secret = json.load(fh)
+          tracked = json.loads(tracked_raw)
+
+          s_id, s_num, s_clients = inventory(secret)
+          t_id, t_num, t_clients = inventory(tracked)
+
+          print(f'committed: project {t_id} ({t_num}); OAuth clients: {describe(t_clients)}')
+          print(f'secret:    project {s_id} ({s_num}); OAuth clients: {describe(s_clients)}')
+
+          failed = False
+
+          # Different projects is never benign: local builds would talk to one Firebase
+          # backend and CI builds to another, under the same package name.
+          if (s_id, s_num) != (t_id, t_num):
+              print(f'::error::The committed {CONFIG} is project {t_id} ({t_num}) but '
+                    f'GOOGLE_SERVICES_JSON_PROD is project {s_id} ({s_num}).')
+              failed = True
+
+          if s_clients != t_clients:
+              only_committed = [c for c in t_clients if c not in s_clients]
+              only_secret = [c for c in s_clients if c not in t_clients]
+              parts = []
+              if only_committed:
+                  parts.append(f'committed only: {describe(only_committed)}')
+              if only_secret:
+                  parts.append(f'secret only: {describe(only_secret)}')
+              print(f'::warning::GOOGLE_SERVICES_JSON_PROD and the committed {CONFIG} '
+                    f'disagree about which OAuth clients are registered ({"; ".join(parts)}). '
+                    'The secret is what ships. If it lists fewer, it is likely an older '
+                    'download taken before the fingerprints were registered.')
+          else:
+              print('The committed copy and the secret agree.')
+
+          if failed:
+              sys.exit(1)
+          PY
+
       - name: Verify Google Sign-In configuration (Android)
         run: |
           python3 -I - <<'PY'
