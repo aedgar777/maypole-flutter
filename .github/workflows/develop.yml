@@ -347,7 +347,9 @@ jobs:
   build_ios:
     name: Build and Deploy iOS (Dev TestFlight)
     needs: deploy_firebase
-    runs-on: macos-26
+    # Preview image: the only GitHub-hosted runner carrying Xcode 27 / the iOS 27
+    # SDK, which App Store Connect requires for uploads from April 2027 (ITMS-90725).
+    runs-on: xcode-27
     environment: development
     steps:
       - name: Checkout repository
@@ -362,11 +364,11 @@ jobs:
           echo "📱 Current version after pull:"
           grep '^version:' pubspec.yaml
 
-      - name: Select Xcode 26
+      - name: Select Xcode 27
         run: |
-          XCODE_APP=$(find /Applications -maxdepth 1 -name 'Xcode_26*.app' | sort -Vr | head -n 1)
+          XCODE_APP=$(find /Applications -maxdepth 1 -name 'Xcode_27*.app' | sort -Vr | head -n 1)
           if [ -z "$XCODE_APP" ]; then
-            echo "❌ Xcode 26 is required for App Store uploads. Installed Xcode versions:"
+            echo "❌ Xcode 27 is required for App Store uploads. Installed Xcode versions:"
             ls /Applications | grep Xcode || true
             exit 1
           fi
