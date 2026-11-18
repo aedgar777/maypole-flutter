@@ -47,8 +47,17 @@ class GoogleSignInService {
       // and at worst rejected.
       clientId: _isApplePlatform ? _iosClientIdOrNull : null,
       // Android needs the *web* client ID as the audience for the ID token it
-      // mints, or Firebase will not accept it. Ignored on Apple platforms.
-      serverClientId: _webClientIdOrNull,
+      // mints: an Android OAuth client is identified by signing certificate
+      // and cannot itself be an audience, so without this Firebase has nothing
+      // it will accept.
+      //
+      // Apple platforms must NOT be given it. The ID token minted there is
+      // already addressed to the iOS client, which belongs to the same
+      // Firebase project and is therefore accepted as-is. Passing a server
+      // client ID anyway forwards it to the token endpoint as `audience`, and
+      // Google rejects anything that is not a client ID of this project with
+      // `invalid_audience`, failing sign-in outright.
+      serverClientId: _isApplePlatform ? null : _webClientIdOrNull,
     );
   }
 

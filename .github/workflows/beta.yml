@@ -296,10 +296,40 @@ jobs:
                     'the Firebase Android app.')
               failed = True
 
-          if not web_clients:
-              print(f'::warning::No web OAuth client (client_type 3) in {CONFIG}. Not fatal '
-                    'while GOOGLE_OAUTH_WEB_CLIENT_ID_PROD supplies the serverClientId, but '
-                    'the two can then drift apart unnoticed.')
+          # GoogleSignIn.initialize is handed this as serverClientId, and Google uses
+          # it as the ID token's audience. An audience that is not a real client of
+          # this project is rejected outright -- `invalid_audience` at the token
+          # endpoint -- so a plausible-looking but wrong value fails sign-in just as
+          # surely as a missing one. Where this config names the project's own web
+          # clients the injected value has to be one of them; where it names none,
+          # nothing here can confirm it either way.
+          env_text = open('.env').read()
+          web_match = re.search(r'^GOOGLE_OAUTH_WEB_CLIENT_ID_PROD=(\S+)$', env_text, re.M)
+          web_ids = [o.get('client_id') for o in web_clients]
+
+          if web_match is None:
+              print('::error::GOOGLE_OAUTH_WEB_CLIENT_ID_PROD is missing from .env, so '
+                    'GoogleSignInService would initialize without a serverClientId. '
+                    'Android cannot mint a usable ID token without one.')
+              failed = True
+          elif not web_clients:
+              # Firebase does not always list the web client here, so an empty list is
+              # not evidence the injected value is wrong -- only that nothing in this
+              # file can confirm it. Say so rather than guessing either way.
+              print(f'::warning::{CONFIG} lists no web OAuth client, so '
+                    'GOOGLE_OAUTH_WEB_CLIENT_ID_PROD cannot be verified from it. An '
+                    'audience that is not a client of this project is rejected at the '
+                    'token endpoint, so if sign-in fails with invalid_audience, check '
+                    'this value against Firebase > Authentication > Sign-in method > '
+                    'Google > Web SDK configuration before looking anywhere else.')
+          elif web_match.group(1) not in web_ids:
+              print(f'::error::GOOGLE_OAUTH_WEB_CLIENT_ID_PROD is {web_match.group(1)}, which '
+                    f'is not a web client of this project. {CONFIG} lists {", ".join(web_ids)}. '
+                    'Google rejects an audience that is not a client of the project, so '
+                    'sign-in fails with invalid_audience.')
+              failed = True
+          else:
+              print(f'serverClientId {web_match.group(1)} is a web client of this project')
 
           # The ID token audience the app asks for has to belong to the same Firebase
           # project as this config, or Firebase rejects the credential.
